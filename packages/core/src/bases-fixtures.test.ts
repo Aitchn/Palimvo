@@ -2,7 +2,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { baseFile, parseBase, queryBase, type FileValue } from "./bases.ts";
+import { baseFile, parseBase, queryBase, updateBaseSource, type FileValue } from "./bases.ts";
+import { linkResolver } from "./links.ts";
 
 // Bases written in the syntax the Obsidian documentation shows. Keep them as Obsidian would write them.
 const ROOT = fileURLToPath(new URL("../../../tests/fixtures/obsidian-bases/", import.meta.url));
@@ -84,5 +85,29 @@ describe("Obsidian Bases fixtures", () => {
     expect(byPath.get("Books/Neuromancer.md")!.tags).toEqual(["book"]);
     expect(byPath.get("Books/Emma.md")!.tags).toEqual(["book", "classic", "to-read"]);
     expect(byPath.get("Tasks/Plan-trip.md")!.tags).toEqual(["task", "travel/summer"]);
+  });
+
+  it("keeps fields it does not model when a base is edited", () => {
+    const source = read("Views/Books.base");
+    const base = parseBase(source);
+    base.views[0]!.limit = 5;
+    const saved = updateBaseSource(source, base);
+    expect(saved).toContain("summaries:");
+    expect(saved).toContain("price: Average");
+    expect(parseBase(saved).views[0]!.limit).toBe(5);
+  });
+
+  it("matches text case-sensitively and accepts a shared link resolver", () => {
+    const [file] = files;
+    const base = parseBase(
+      "filters: 'author.contains(\"herbert\")'\nviews: [{type: table, name: t}]",
+    );
+    expect(queryBase(base, files, { now: NOW }).rows).toEqual([]);
+    const resolver = linkResolver(notePaths);
+    const viaResolver = baseFile(
+      { path: file!.path, content: read(file!.path), mtime: NOW },
+      resolver,
+    );
+    expect(viaResolver.links).toEqual(file!.links);
   });
 });

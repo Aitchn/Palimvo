@@ -26,7 +26,7 @@ import {
   type FileValue,
   type Scope,
 } from "./base-expr.ts";
-import { extractWikiLinks, linkResolver } from "./links.ts";
+import { extractWikiLinks, LinkResolver, linkResolver } from "./links.ts";
 import { extractInlineTags } from "./tags.ts";
 
 export { displayText, ExprError, parseExpr, evaluate, type FileValue } from "./base-expr.ts";
@@ -198,6 +198,19 @@ export function parseBase(source: string): BaseFile {
   return base;
 }
 
+const MODELED = new Set(["filters", "formulas", "properties", "views"]);
+const VIEW_KEYS = new Set([
+  "type",
+  "name",
+  "filters",
+  "order",
+  "sort",
+  "groupBy",
+  "limit",
+  "image",
+  "plugin",
+]);
+
 /**
  * Writes `next` back into the YAML text, replacing only the top-level sections
  * that changed, so comments and formatting elsewhere survive.
@@ -207,7 +220,23 @@ export function updateBaseSource(source: string, next: BaseFile): string {
   if (doc.errors.length || !isMap(doc.contents)) return stringify(clean(next));
   const before = (doc.toJS() ?? {}) as Record<string, unknown>;
   const after = clean(next) as Record<string, unknown>;
-  for (const key of Object.keys(before)) if (!(key in after)) doc.delete(key);
+  // Fields this module does not model (summaries, groupOrder, ...) stay as they are in the file.
+  for (const key of Object.keys(before)) if (MODELED.has(key) && !(key in after)) doc.delete(key);
+  if (isRecord(after.properties) && isRecord(before.properties)) {
+    for (const [key, value] of Object.entries(after.properties)) {
+      const old = before.properties[key];
+      if (isRecord(old) && isRecord(value)) after.properties[key] = { ...old, ...value };
+    }
+  }
+  if (Array.isArray(after.views) && Array.isArray(before.views)) {
+    const old = before.views.filter(isRecord);
+    after.views = after.views.map((view: Record<string, unknown>, i) => {
+      const prev = old.find((o) => o.name === view.name) ?? old[i];
+      if (!prev) return view;
+      const extra = Object.fromEntries(Object.entries(prev).filter(([k]) => !VIEW_KEYS.has(k)));
+      return { ...view, ...extra };
+    });
+  }
   for (const [key, value] of Object.entries(after)) {
     if (JSON.stringify(before[key]) !== JSON.stringify(value)) doc.set(key, doc.createNode(value));
   }
@@ -265,11 +294,12 @@ export interface BaseNoteInput {
   ctime?: number;
 }
 
-/** What filters and columns see of one note. `paths`: every file in the vault, to resolve links. */
-export function baseFile(input: BaseNoteInput, paths: readonly string[]): FileValue {
+/** What filters and columns see of one note. `paths`: every file in the vault (or a shared `LinkResolver` over them), to resolve links. */
+export function baseFile(input: BaseNoteInput, paths: readonly string[] | LinkResolver): FileValue {
   const properties = noteProperties(input.content);
   const links = new Set<string>();
-  const resolver = linkResolver(paths);
+  // Pass one shared LinkResolver when indexing a whole vault, so the path tables are built once.
+  const resolver = paths instanceof LinkResolver ? paths : linkResolver(paths);
   for (const link of extractWikiLinks(input.content)) {
     links.add(resolver.resolve(link.target, input.path) ?? link.target);
   }

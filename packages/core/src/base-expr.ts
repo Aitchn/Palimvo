@@ -606,11 +606,11 @@ function method(target: unknown, name: string, args: unknown[]): unknown {
   if (typeof target === "string") {
     switch (name) {
       case "contains":
-        return target.toLowerCase().includes(String(args[0] ?? "").toLowerCase());
+        return target.includes(String(args[0] ?? ""));
       case "containsAny":
-        return args.some((a) => target.toLowerCase().includes(String(a).toLowerCase()));
+        return args.some((a) => target.includes(String(a)));
       case "containsAll":
-        return args.every((a) => target.toLowerCase().includes(String(a).toLowerCase()));
+        return args.every((a) => target.includes(String(a)));
       case "startsWith":
         return target.startsWith(String(args[0] ?? ""));
       case "endsWith":
