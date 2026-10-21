@@ -1,0 +1,22 @@
+{
+  "name": "@palimvo/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "palimvo": "./dist/palimvo.mjs"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/palimvo.mjs",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@palimvo/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "vitest": "^5.0.5"
+  }
+}

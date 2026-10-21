@@ -1,0 +1,18 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "agentGuidance": false,
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {},
+    "test": {
+      "passThroughEnv": ["CI"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
