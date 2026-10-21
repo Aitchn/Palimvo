@@ -1,0 +1,49 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { defaultConfig, type Config } from "../src/config/index.ts";
+import { createLogger, type LogLevel } from "../src/log.ts";
+import { startServer, type RunningServer } from "../src/server.ts";
+
+export interface TestServer extends RunningServer {
+  dataDir: string;
+  /** Log lines written so far, parsed. */
+  logs: Record<string, unknown>[];
+  /** Fetches a path on this server. */
+  fetch(path: string, init?: RequestInit): Promise<Response>;
+  /** Stops the server and deletes the temporary data directory. */
+  dispose(): Promise<void>;
+}
+
+/** Starts a server on a random port with a throwaway data directory. */
+export async function startTestServer(overrides: Partial<Config> = {}): Promise<TestServer> {
+  const dataDir = overrides.dataDir ?? (await mkdtemp(path.join(tmpdir(), "palimvo-test-")));
+  const config: Config = {
+    ...defaultConfig(),
+    logLevel: "debug",
+    ...overrides,
+    dataDir,
+    port: overrides.port ?? 0,
+  };
+  const logs: Record<string, unknown>[] = [];
+  const logger = createLogger({
+    level: config.logLevel,
+    write: (_level: LogLevel, line) => logs.push(JSON.parse(line) as Record<string, unknown>),
+  });
+  const sources = Object.fromEntries(Object.keys(config).map((k) => [k, "default"])) as never;
+  const running = await startServer({
+    loaded: { config, sources },
+    logger,
+    shutdownTimeoutMs: 2000,
+  });
+  return {
+    ...running,
+    dataDir,
+    logs,
+    fetch: (p, init) => fetch(new URL(p, running.url), init),
+    dispose: async () => {
+      await running.close();
+      await rm(dataDir, { recursive: true, force: true });
+    },
+  };
+}
