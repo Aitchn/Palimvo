@@ -103,10 +103,9 @@ function parseGitEmail(email: string): { id: string; kind: AuthorKind } | null {
   return EMAIL_ID.test(id) && AUTHOR_KINDS.includes(kind) ? { id, kind } : null;
 }
 
-/** Recovers an author from a git name/email pair; any other address is a `human` identified by the e-mail. */
+/** Recovers an author from a git name/email pair; any other address is `external`, identified by the e-mail. */
 export function authorFromGit(name: string, email: string): Author {
-  const match = GIT_EMAIL.exec(email.trim().toLowerCase());
-  if (match)
-    return { kind: match[2] as AuthorKind, id: match[1]!, name: cleanName(name) || match[1]! };
+  const parsed = parseGitEmail(email);
+  if (parsed) return { kind: parsed.kind, id: parsed.id, name: cleanName(name) || parsed.id };
   return makeAuthor("external", name, { id: email });
 }
