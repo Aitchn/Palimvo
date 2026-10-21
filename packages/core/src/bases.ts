@@ -16,6 +16,7 @@ import {
 import {
   compareValues,
   displayText,
+  trimSlashes,
   evaluate,
   fileBasename,
   fileFolder,
@@ -253,7 +254,7 @@ export function noteProperties(content: string): Record<string, unknown> {
 export function noteTags(content: string, properties = noteProperties(content)): string[] {
   const tags = new Set(propertyTags(properties));
   for (const tag of extractInlineTags(parseFrontmatter(content).body))
-    tags.add(tag.replace(/\/+$/, ""));
+    tags.add(trimSlashes(tag, "end"));
   return [...tags];
 }
 
@@ -617,7 +618,7 @@ export function newRowTemplate(
       let m = /^file\.hasTag\(\s*["']([^"']+)["']\s*\)$/.exec(s);
       if (m) tags.push(m[1]!.replace(/^#/, ""));
       m = /^file\.inFolder\(\s*["']([^"']+)["']\s*\)$/.exec(s);
-      if (m) folder ??= m[1]!.replace(/^\/+|\/+$/g, "");
+      if (m) folder ??= trimSlashes(m[1]!);
       m =
         /^(?:note\.)?([\p{L}_][\p{L}\p{N}_]*)\s*==\s*(?:"([^"]*)"|'([^']*)'|(-?\d+(?:\.\d+)?)|(true|false))$/u.exec(
           s,

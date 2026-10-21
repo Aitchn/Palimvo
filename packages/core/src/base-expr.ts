@@ -215,6 +215,15 @@ export interface Scope {
 const isFile = (v: unknown): v is FileValue =>
   typeof v === "object" && v !== null && (v as FileValue).kind === "file";
 
+/** Strips leading and trailing slashes (a loop rather than a regex, so long runs of "/" stay linear). */
+export function trimSlashes(text: string, ends: "both" | "start" | "end" = "both"): string {
+  let start = 0;
+  let end = text.length;
+  if (ends !== "end") while (start < end && text[start] === "/") start++;
+  if (ends !== "start") while (end > start && text[end - 1] === "/") end--;
+  return text.slice(start, end);
+}
+
 export const fileName = (path: string) => path.slice(path.lastIndexOf("/") + 1);
 export const fileBasename = (path: string) => fileName(path).replace(/\.[^.]+$/, "");
 export const fileFolder = (path: string) =>
@@ -274,7 +283,7 @@ function linkTarget(v: unknown): string {
 
 function samePath(path: string, target: string): boolean {
   const p = path.toLowerCase();
-  const t = target.toLowerCase().replace(/^\/+/, "");
+  const t = trimSlashes(target.toLowerCase(), "start");
   return p === t || p === `${t}.md` || p.endsWith(`/${t}`) || p.endsWith(`/${t}.md`);
 }
 
@@ -549,9 +558,7 @@ function method(target: unknown, name: string, args: unknown[]): unknown {
       case "hasTag":
         return args.some((t) => target.tags.some((tag) => tagMatches(tag, String(t))));
       case "inFolder": {
-        const folder = String(args[0] ?? "")
-          .replace(/^\/+|\/+$/g, "")
-          .toLowerCase();
+        const folder = trimSlashes(String(args[0] ?? "")).toLowerCase();
         return folder === "" || target.path.toLowerCase().startsWith(`${folder}/`);
       }
       case "hasLink": {
