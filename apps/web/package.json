@@ -7,13 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -p .",
+    "typecheck": "tsc6 -p .",
     "test": "vitest run"
   },
   "dependencies": {
     "@palimvo/core": "workspace:*"
   },
   "devDependencies": {
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   }

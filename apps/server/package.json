@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/palimvo.mjs",
-    "typecheck": "tsc -p .",
+    "typecheck": "tsc6 -p .",
     "test": "vitest run"
   },
   "dependencies": {
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "esbuild": "^0.28.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.5"
   }
 }
