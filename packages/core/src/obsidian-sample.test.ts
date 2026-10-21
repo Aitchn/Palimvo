@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { canvasFileRefs, parseCanvas, serializeCanvas } from "./canvas.ts";
 import { parseFrontmatter, propertyTags, removeProperty, setProperty } from "./frontmatter.ts";
@@ -8,15 +9,15 @@ import { fileKind, normalizeVaultPath } from "./paths.ts";
 import { extractInlineTags } from "./tags.ts";
 
 // A small vault written the way Obsidian writes it. Keep the files byte-for-byte as Obsidian would.
-const ROOT = new URL("../../../tests/fixtures/obsidian-sample/", import.meta.url);
+const ROOT = fileURLToPath(new URL("../../../tests/fixtures/obsidian-sample/", import.meta.url));
 
 function walk(dir: string, prefix = ""): string[] {
-  return readdirSync(join(ROOT.pathname, dir), { withFileTypes: true }).flatMap((entry) => {
+  return readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((entry) => {
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     return entry.isDirectory() ? walk(rel, rel) : [rel];
   });
 }
-const read = (path: string) => readFileSync(join(ROOT.pathname, path), "utf8");
+const read = (path: string) => readFileSync(join(ROOT, path), "utf8");
 const paths = walk("").filter((p) => !p.startsWith(".obsidian/"));
 
 describe("obsidian sample vault", () => {
