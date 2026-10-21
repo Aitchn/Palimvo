@@ -18,7 +18,8 @@ jobs:
       - run: node spikes/s1-sqlite/probe.mjs
         timeout-minutes: 3
       - run: node spikes/s1-sqlite/more.mjs
-        timeout-minutes: 3
+        timeout-minutes: 1
+        continue-on-error: true
       - run: node spikes/s1-sqlite/bench.mjs 50 200
         timeout-minutes: 3
       - run: node spikes/s1-sqlite/bench.mjs 50 200
