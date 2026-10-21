@@ -1,0 +1,21 @@
+name: s1-sqlite
+on:
+  push:
+    branches: [claude/project-thread-djezys]
+jobs:
+  spike:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['24', '26']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node spikes/s1-sqlite/probe.mjs
+      - run: node spikes/s1-sqlite/more.mjs
+      - run: node spikes/s1-sqlite/bench.mjs 50 200
+      - run: node spikes/s1-sqlite/bench.mjs 50 200
