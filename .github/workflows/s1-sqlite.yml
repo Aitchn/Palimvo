@@ -16,7 +16,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: node spikes/s1-sqlite/probe.mjs
+        timeout-minutes: 3
       - run: node spikes/s1-sqlite/more.mjs
+        timeout-minutes: 3
       - run: node spikes/s1-sqlite/bench.mjs 50 200
+        timeout-minutes: 3
       - run: node spikes/s1-sqlite/bench.mjs 50 200
+        timeout-minutes: 3
       - run: node spikes/s1-sqlite/bench.mjs 200 50
+        timeout-minutes: 3
