@@ -91,9 +91,17 @@ export function gitAuthorString(author: Author): string {
   return `${author.name} <${gitEmail(author)}>`;
 }
 
-const GIT_EMAIL = new RegExp(
-  `^([a-z0-9-]+)@(${AUTHOR_KINDS.join("|")})\\.${GIT_EMAIL_DOMAIN.replace(/\./g, "\\.")}$`,
-);
+const EMAIL_SUFFIX = `.${GIT_EMAIL_DOMAIN}`;
+const EMAIL_ID = /^[a-z0-9-]+$/;
+
+function parseGitEmail(email: string): { id: string; kind: AuthorKind } | null {
+  const text = email.trim().toLowerCase();
+  const at = text.indexOf("@");
+  if (at < 1 || !text.endsWith(EMAIL_SUFFIX)) return null;
+  const id = text.slice(0, at);
+  const kind = text.slice(at + 1, text.length - EMAIL_SUFFIX.length) as AuthorKind;
+  return EMAIL_ID.test(id) && AUTHOR_KINDS.includes(kind) ? { id, kind } : null;
+}
 
 /** Recovers an author from a git name/email pair; any other address is a `human` identified by the e-mail. */
 export function authorFromGit(name: string, email: string): Author {
