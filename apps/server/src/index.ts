@@ -1,5 +1,3 @@
-import { PACKAGE } from "@palimvo/core";
+import { main } from "./cli.ts";
 
-export const SERVER_NAME = "palimvo";
-
-console.log(`${SERVER_NAME} (pre-alpha) using ${PACKAGE}`);
+process.exitCode = await main(process.argv.slice(2), process.env);
