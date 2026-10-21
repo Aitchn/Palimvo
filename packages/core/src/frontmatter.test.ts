@@ -16,6 +16,7 @@ describe("splitFrontmatter", () => {
       yaml: "title: Hello\n# keep me\ntags: [a, b]\nstatus:   draft",
       body: "# Body\n",
       eol: "\n",
+      bom: false,
     });
   });
 
