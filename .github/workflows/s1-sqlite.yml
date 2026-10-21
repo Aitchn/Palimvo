@@ -19,3 +19,4 @@ jobs:
       - run: node spikes/s1-sqlite/more.mjs
       - run: node spikes/s1-sqlite/bench.mjs 50 200
       - run: node spikes/s1-sqlite/bench.mjs 50 200
+      - run: node spikes/s1-sqlite/bench.mjs 200 50
