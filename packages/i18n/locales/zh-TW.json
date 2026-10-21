@@ -1,0 +1,28 @@
+{
+  "common": {
+    "appName": "Palimvo",
+    "save": "儲存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "confirm": "確認",
+    "close": "關閉",
+    "back": "返回",
+    "retry": "重試",
+    "loading": "載入中…",
+    "search": "搜尋",
+    "language": "語言",
+    "itemCount": "{count, plural, other {# 個項目}}",
+    "greeting": "你好，{name}"
+  },
+  "errors": {
+    "unknown": "發生未知的錯誤。",
+    "badRequest": "請求內容無效。",
+    "unauthorized": "請先登入。",
+    "forbidden": "你沒有執行此操作的權限。",
+    "notFound": "找不到該項目。",
+    "conflict": "此項目已被其他人修改，請重新載入後再試。",
+    "payloadTooLarge": "檔案超過 {limit} 的上限。",
+    "rateLimited": "請求過於頻繁，請在 {seconds, plural, other {# 秒}}後再試。",
+    "internal": "伺服器發生未預期的錯誤。"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "// review": ["common.itemCount", "errors.conflict", "errors.rateLimited"],
+  "common": {
+    "appName": "Palimvo",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "confirm": "确认",
+    "close": "关闭",
+    "back": "返回",
+    "retry": "重试",
+    "loading": "加载中…",
+    "search": "搜索",
+    "language": "语言",
+    "itemCount": "{count, plural, other {# 个项目}}",
+    "greeting": "你好，{name}"
+  },
+  "errors": {
+    "unknown": "发生未知错误。",
+    "badRequest": "请求内容无效。",
+    "unauthorized": "请先登录。",
+    "forbidden": "你没有执行此操作的权限。",
+    "notFound": "找不到该项目。",
+    "conflict": "此项目已被其他人修改，请重新加载后再试。",
+    "payloadTooLarge": "文件超过 {limit} 的上限。",
+    "rateLimited": "请求过于频繁，请在 {seconds, plural, other {# 秒}}后再试。",
+    "internal": "服务器发生意外错误。"
+  }
+}

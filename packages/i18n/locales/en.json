@@ -1,0 +1,28 @@
+{
+  "common": {
+    "appName": "Palimvo",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "search": "Search",
+    "language": "Language",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "greeting": "Hello, {name}"
+  },
+  "errors": {
+    "unknown": "Something went wrong.",
+    "badRequest": "The request is invalid.",
+    "unauthorized": "You need to sign in first.",
+    "forbidden": "You do not have permission to do that.",
+    "notFound": "That item could not be found.",
+    "conflict": "This item was changed by someone else. Reload and try again.",
+    "payloadTooLarge": "The file is larger than the {limit} limit.",
+    "rateLimited": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+    "internal": "The server ran into an unexpected error."
+  }
+}
