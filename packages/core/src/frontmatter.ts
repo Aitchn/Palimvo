@@ -10,6 +10,8 @@ export interface FrontmatterSplit {
   body: string;
   /** Line ending the block uses, so edits keep a file's CRLF or LF. */
   eol: "\n" | "\r\n";
+  /** Whether the text started with a byte order mark, which `body` no longer carries. */
+  bom: boolean;
 }
 
 const BOM = "﻿";
@@ -19,9 +21,10 @@ const BOM = "﻿";
  * on the very first line and a closing `---` (or `...`) line; anything else is plain body.
  */
 export function splitFrontmatter(markdown: string): FrontmatterSplit {
-  const text = markdown.startsWith(BOM) ? markdown.slice(1) : markdown;
+  const bom = markdown.startsWith(BOM);
+  const text = bom ? markdown.slice(1) : markdown;
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
-  const none: FrontmatterSplit = { yaml: null, body: markdown, eol };
+  const none: FrontmatterSplit = { yaml: null, body: text, eol, bom };
   if (!/^---[ \t]*\r?\n/.test(text)) return none;
   const open = text.indexOf("\n") + 1;
   const closing = /^(---|\.\.\.)[ \t]*$/gm;
@@ -32,7 +35,7 @@ export function splitFrontmatter(markdown: string): FrontmatterSplit {
   let end = match.index + match[0].length;
   if (text[end] === "\r") end++;
   if (text[end] === "\n") end++;
-  return { yaml, body: text.slice(end), eol };
+  return { yaml, body: text.slice(end), eol, bom };
 }
 
 export interface ParsedNote {
@@ -81,12 +84,13 @@ export function removeProperty(markdown: string, key: string): string {
   if (yaml === null) return markdown;
   const edited = editFrontmatter(markdown, (doc) => doc.delete(key));
   const after = splitFrontmatter(edited);
-  return after.yaml !== null && after.yaml.trim() === "" ? after.body : edited;
+  return after.yaml !== null && after.yaml.trim() === ""
+    ? (after.bom ? BOM : "") + after.body
+    : edited;
 }
 
 function editFrontmatter(markdown: string, edit: (doc: Document) => void): string {
-  const hasBom = markdown.startsWith(BOM);
-  const { yaml, body, eol } = splitFrontmatter(markdown);
+  const { yaml, body, eol, bom } = splitFrontmatter(markdown);
   const doc = parseDocument(yaml ?? "", { prettyErrors: false });
   if (doc.errors.length > 0)
     throw new FrontmatterError(`Cannot edit invalid frontmatter: ${doc.errors[0]!.message}`);
@@ -97,7 +101,7 @@ function editFrontmatter(markdown: string, edit: (doc: Document) => void): strin
   let text = doc.toString({ lineWidth: 0, flowCollectionPadding: false }).replace(/\r?\n$/, "");
   if (text === "{}") text = "";
   const block = `---${eol}${text === "" ? "" : text.replace(/\r?\n/g, eol) + eol}---${eol}`;
-  return (hasBom ? BOM : "") + block + body;
+  return (bom ? BOM : "") + block + body;
 }
 
 /** The note's tags from its `tags` / `tag` property: a list, or a comma or space separated string. */

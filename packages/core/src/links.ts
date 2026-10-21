@@ -1,3 +1,5 @@
+import { pathKey } from "./paths.ts";
+
 export interface WikiLink {
   /** Target note name or path, without heading/block/alias parts. */
   target: string;
@@ -12,7 +14,9 @@ const WIKILINK = /(!?)\[\[([^[\]\n]+?)\]\]/g;
 
 /** Removes fenced and inline code, where link and tag syntax does not apply. */
 export function stripCode(markdown: string): string {
-  return markdown.replace(/(```|~~~)[\s\S]*?(\1|$)/g, "").replace(/`[^`\n]*`/g, "");
+  return markdown
+    .replace(/(```|~~~)[\s\S]*?(\1|$)/g, "")
+    .replace(/(`+)(?!`)[^\n]*?(?<!`)\1(?!`)/g, "");
 }
 
 /** Extracts Obsidian-style [[wikilinks]] and ![[embeds]] from markdown, skipping code. */
@@ -62,7 +66,7 @@ export class LinkResolver {
 
   constructor(private readonly paths: readonly string[]) {
     paths.forEach((p, i) => {
-      const lower = p.toLowerCase();
+      const lower = pathKey(p);
       this.byLower.set(lower, p);
       const name = lower.slice(lower.lastIndexOf("/") + 1);
       const list = this.byName.get(name);
@@ -74,13 +78,13 @@ export class LinkResolver {
   resolve(target: string, fromPath?: string): string | undefined {
     const clean = target.trim().replace(/^\/+/, "");
     if (clean === "") return undefined;
-    const candidates = [clean, `${clean}.md`].map((c) => c.toLowerCase());
+    const candidates = [clean, `${clean}.md`].map(pathKey);
     for (const c of candidates) {
       const hit = this.byLower.get(c);
       if (hit) return hit;
     }
     if (fromPath?.includes("/")) {
-      const folder = fromPath.slice(0, fromPath.lastIndexOf("/") + 1).toLowerCase();
+      const folder = pathKey(fromPath.slice(0, fromPath.lastIndexOf("/") + 1));
       for (const c of candidates) {
         const hit = this.byLower.get(folder + c);
         if (hit) return hit;
@@ -91,7 +95,7 @@ export class LinkResolver {
     for (const c of candidates) {
       for (const i of this.byName.get(c.slice(c.lastIndexOf("/") + 1)) ?? []) {
         const p = this.paths[i]!;
-        if (!p.toLowerCase().endsWith(`/${c}`)) continue;
+        if (!pathKey(p).endsWith(`/${c}`)) continue;
         if (
           best < 0 ||
           p.length < this.paths[best]!.length ||

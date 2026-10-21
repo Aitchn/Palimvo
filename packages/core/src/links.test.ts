@@ -112,3 +112,17 @@ describe("block references", () => {
     expect(extractWikiLinks("~~~\n[[no]]\n~~~\n[[yes]]")).toHaveLength(1);
   });
 });
+
+describe("code spans and unicode", () => {
+  it("skips multi-backtick code spans", () => {
+    expect(
+      extractWikiLinks("``[[hidden]]`` and ``a ` b [[hidden2]]`` and [[shown]]").map(
+        (l) => l.target,
+      ),
+    ).toEqual(["shown"]);
+  });
+
+  it("matches composed and decomposed spellings alike", () => {
+    expect(resolveWikiLink("café", ["café.md"])).toBe("café.md");
+  });
+});

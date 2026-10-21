@@ -35,3 +35,7 @@ describe("tag helpers", () => {
     expect(tagIsInside("projects", "project")).toBe(false);
   });
 });
+
+it("skips multi-backtick code spans", () => {
+  expect(extractInlineTags("``#hidden`` #shown")).toEqual(["shown"]);
+});

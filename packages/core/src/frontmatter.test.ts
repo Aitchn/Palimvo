@@ -28,7 +28,12 @@ describe("splitFrontmatter", () => {
   it("handles CRLF, BOM and an empty block", () => {
     expect(splitFrontmatter("---\r\na: 1\r\n---\r\nbody").eol).toBe("\r\n");
     expect(splitFrontmatter("\uFEFF---\na: 1\n---\nbody").yaml).toBe("a: 1");
-    expect(splitFrontmatter("---\n---\nbody")).toEqual({ yaml: "", body: "body", eol: "\n" });
+    expect(splitFrontmatter("---\n---\nbody")).toEqual({
+      yaml: "",
+      body: "body",
+      eol: "\n",
+      bom: false,
+    });
   });
 });
 
@@ -108,5 +113,13 @@ describe("propertyTags", () => {
     expect(propertyTags({ tags: "x, y z" })).toEqual(["x", "y", "z"]);
     expect(propertyTags({ tag: "solo" })).toEqual(["solo"]);
     expect(propertyTags({ tags: 5 })).toEqual([]);
+  });
+});
+
+describe("byte order mark", () => {
+  it("is kept exactly once by every edit", () => {
+    expect(removeProperty("﻿---\na: 1\n---\nbody", "a")).toBe("﻿body");
+    expect(setProperty("﻿body", "a", 1)).toBe("﻿---\na: 1\n---\nbody");
+    expect(parseFrontmatter("﻿body").body).toBe("body");
   });
 });
