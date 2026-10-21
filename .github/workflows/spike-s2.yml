@@ -1,0 +1,26 @@
+name: spike-s2-plugin-sandbox
+on:
+  push:
+    branches: [claude/project-thread-cfz8hl]
+  workflow_dispatch:
+jobs:
+  spike:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ['24', '26']
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: spikes/s2-plugin-sandbox
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: node -v
+      - run: npm test
+      - run: npm run probe
+      - run: npm run bench

@@ -1,0 +1,12 @@
+{
+  "name": "s2-plugin-sandbox",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "test": "node src/tests.mjs && node src/pool-tests.mjs",
+    "probe": "node src/probe-memory-limit.mjs",
+    "bench": "node --expose-gc src/bench.mjs && node src/pool-bench.mjs"
+  },
+  "dependencies": { "quickjs-emscripten": "0.32.0" }
+}

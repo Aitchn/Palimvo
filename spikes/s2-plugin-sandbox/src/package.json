@@ -1,0 +1,1 @@
+{"name":"s2-plugin-sandbox","private":true,"type":"module","version":"0.0.0","dependencies":{"quickjs-emscripten":"0.32.0"}}
