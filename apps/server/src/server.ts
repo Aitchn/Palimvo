@@ -68,13 +68,14 @@ export async function startServer({
       (closed ??= (async () => {
         closing = true;
         log.info("shutting down");
+        const deadline = Date.now() + shutdownTimeoutMs;
         const force = setTimeout(() => server.closeAllConnections(), shutdownTimeoutMs);
         force.unref();
         const stopped = new Promise<void>((resolve) => server.close(() => resolve()));
         server.closeIdleConnections();
         for (const { name, hook } of hooks.toReversed()) {
           try {
-            await hook();
+            await withTimeout(hook(), deadline - Date.now(), `shutdown hook "${name}" timed out`);
           } catch (err) {
             log.error("shutdown hook failed", { hook: name, ...errorFields(err) });
           }
@@ -95,6 +96,21 @@ export async function startServer({
   } catch (err) {
     await lock.release();
     throw err;
+  }
+}
+
+/** Rejects if `work` has not settled in `ms`, so one stuck hook cannot block shutdown forever. */
+async function withTimeout<T>(work: T | Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), Math.max(ms, 0));
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 

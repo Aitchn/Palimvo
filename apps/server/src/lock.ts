@@ -1,8 +1,11 @@
-import { mkdir, open, readFile, rm } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { link, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AppError } from "./errors.ts";
 
 export const LOCK_FILE = "server.lock";
+
+const GUARD_STALE_MS = 10_000;
 
 interface LockInfo {
   pid: number;
@@ -27,27 +30,71 @@ export async function acquireLock(dataDir: string): Promise<InstanceLock> {
   if (held.has(file))
     throw alreadyRunning({ pid: process.pid, startedAt: "this process" }, dataDir);
   const info: LockInfo = { pid: process.pid, startedAt: new Date().toISOString() };
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const handle = await open(file, "wx");
-      await handle.writeFile(JSON.stringify(info));
-      await handle.close();
-      held.add(file);
-      return { release: () => release(file) };
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+  held.add(file); // claimed before any await, so concurrent callers in this process lose
+  try {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      if (await tryCreate(file, info)) return { release: () => release(file) };
+      const owner = await readOwner(file);
+      if (owner && isRunning(owner.pid)) throw alreadyRunning(owner, dataDir);
+      await takeOver(file, owner);
     }
-    const owner = await readOwner(file);
-    if (owner && isRunning(owner.pid)) {
-      throw alreadyRunning(owner, dataDir);
-    }
-    await rm(file, { force: true });
+  } catch (err) {
+    held.delete(file);
+    throw err;
   }
+  held.delete(file);
   throw new AppError(
     "lock_failed",
     500,
     `Could not take the lock ${file}; remove it if no server is running.`,
   );
+}
+
+/**
+ * Creates the lock with its content already complete: the file is written under a private name and
+ * hard-linked into place, which fails if the lock exists. A reader therefore never sees a half-written lock.
+ */
+async function tryCreate(file: string, info: LockInfo): Promise<boolean> {
+  const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}`;
+  await writeFile(tmp, JSON.stringify(info), { flag: "wx" });
+  try {
+    await link(tmp, file);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw err;
+  } finally {
+    await rm(tmp, { force: true });
+  }
+}
+
+/**
+ * Removes a stale lock. Contenders take a guard first and re-check the lock under it, so a lock
+ * freshly created by another server is never deleted by mistake.
+ */
+async function takeOver(file: string, inspected: LockInfo | undefined): Promise<void> {
+  const guard = `${file}.takeover`;
+  try {
+    await writeFile(guard, String(process.pid), { flag: "wx" });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    // Someone else is taking over; if they died mid-way their guard goes stale.
+    const age = await stat(guard).then(
+      (s) => Date.now() - s.mtimeMs,
+      () => 0,
+    );
+    if (age > GUARD_STALE_MS) await rm(guard, { force: true });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    return;
+  }
+  try {
+    const current = await readOwner(file);
+    const unchanged =
+      current?.pid === inspected?.pid && current?.startedAt === inspected?.startedAt;
+    if (unchanged && !(current && isRunning(current.pid))) await rm(file, { force: true });
+  } finally {
+    await rm(guard, { force: true });
+  }
 }
 
 function alreadyRunning(owner: LockInfo, dataDir: string): AppError {

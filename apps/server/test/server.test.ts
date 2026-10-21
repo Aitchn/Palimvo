@@ -7,7 +7,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import { AppError } from "../src/errors.ts";
-import { LOCK_FILE } from "../src/lock.ts";
+import { acquireLock, LOCK_FILE } from "../src/lock.ts";
 import { startTestServer, type TestServer } from "./harness.ts";
 
 const exec = promisify(execFile);
@@ -68,6 +68,31 @@ describe("server", () => {
     await writeFile(path.join(dir, LOCK_FILE), "{half");
     const s = await start({ dataDir: dir });
     expect((await s.fetch("/api/health")).status).toBe(200);
+  });
+
+  it("lets only one of many concurrent starters take over a stale lock", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "palimvo-lock-"));
+    await writeFile(
+      path.join(dir, LOCK_FILE),
+      JSON.stringify({ pid: 2 ** 22 + 12345, startedAt: "then" }),
+    );
+    const results = await Promise.allSettled(Array.from({ length: 8 }, () => acquireLock(dir)));
+    const won = results.filter((r) => r.status === "fulfilled");
+    expect(won).toHaveLength(1);
+    for (const r of results)
+      if (r.status === "rejected") expect(r.reason).toMatchObject({ code: "already_running" });
+    await won[0]?.value.release();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("does not wait forever for a stuck shutdown hook", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "palimvo-hang-"));
+    const s = await startTestServer({ dataDir: dir });
+    s.onShutdown("stuck", () => new Promise(() => {}));
+    await s.close();
+    expect(s.logs.some((l) => l.msg === "shutdown hook failed" && l.hook === "stuck")).toBe(true);
+    expect(existsSync(path.join(dir, LOCK_FILE))).toBe(false);
+    await rm(dir, { recursive: true, force: true });
   });
 
   it("shuts down: runs hooks in reverse order, reports not ready, frees the lock and port", async () => {
