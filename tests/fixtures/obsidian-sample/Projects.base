@@ -1,0 +1,11 @@
+filters:
+  and:
+    - file.inFolder("Projects")
+    - 'status == "active"'
+views:
+  - type: table
+    name: Active projects
+    order:
+      - file.name
+      - status
+      - due

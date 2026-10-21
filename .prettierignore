@@ -6,3 +6,4 @@ pnpm-lock.yaml
 LICENSE
 .changeset/*.md
 CHANGELOG.md
+tests/fixtures/
