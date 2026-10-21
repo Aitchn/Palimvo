@@ -1,0 +1,12 @@
+filters:
+  and:
+    - file.hasLink(this.file)
+    - not:
+        - file.hasTag("task")
+views:
+  - type: table
+    name: Links to this note
+    order:
+      - file.name
+      - file.folder
+      - file.links
