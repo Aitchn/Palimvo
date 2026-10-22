@@ -172,6 +172,12 @@ Design: [ADR 0018](../adr/0018-plugin-installation-and-library.md).
   added at start-up when their files pass the checks (a folder whose files are not there yet is
   skipped with a warning) and cannot be removed.
 
+- **Web host endpoints.** `GET /api/vaults/:vault/plugin-runtime` (needs `vault.view`) lists the
+  running plugins as `{ plugins: [{ id, version, hash, manifest }] }`. `GET .../plugin-runtime/:id`
+  returns `{ id, hash, files }`, the text of `main`, the locale files and the theme stylesheet,
+  after the files are re-hashed (`plugin_not_approved` otherwise). The host checks that `hash`
+  matches the list.
+
 ## Moving a version 1 plugin
 
 `convertLegacyManifest(oldManifest)` returns a version 2 manifest and a list of notes about
