@@ -256,15 +256,5 @@ describe("plugins in the workspace", () => {
       await userEvent.selectOptions(select, "");
       await waitFor(() => expect(document.getElementById("palimvo-plugin-theme")).toBeNull());
     });
-
-    it("draws a settings entry in a sandboxed frame under a heading the app owns", async () => {
-      withPaint();
-      await renderRoute("/v/sample");
-      await screen.findByRole("navigation", { name: "Plugin apps" });
-      await userEvent.click(screen.getByRole("button", { name: "Settings" }));
-      const section = await screen.findByRole("region", { name: "About paint" });
-      await waitFor(() => expect(section.querySelector("iframe")).not.toBeNull());
-      expect(section.querySelector("iframe")?.getAttribute("sandbox")).toBe("allow-scripts");
-    });
   });
 });

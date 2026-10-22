@@ -83,7 +83,10 @@ export function PluginCommands({ path }: { path: string | null }) {
 export function PluginSettingsSections() {
   const { i18n } = useTranslation();
   const runtime = usePluginRuntime();
-  const entries = runtime?.registry.slotEntries("settings") ?? [];
+  const visible = useSlotItems("settings", {});
+  const entries = (runtime?.registry.slotEntries("settings") ?? []).filter((entry) =>
+    visible.some((item) => item.pluginId === entry.pluginId && item.id === entry.id),
+  );
   if (entries.length === 0) return null;
   return (
     <>

@@ -40,6 +40,8 @@ export interface SlotItem {
   run: () => Promise<void>;
 }
 
+const EMPTY: ReadonlySet<string> = new Set();
+
 function withDeadline<T>(start: (signal: AbortSignal) => Promise<T>, ms: number): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
@@ -72,12 +74,18 @@ export function useSlotItems(slot: SlotName, moment: SlotMoment | null): SlotIte
   const toast = useToast();
   const runtime = usePluginRuntime();
   const entries = useMemo(() => runtime?.registry.slotEntries(slot) ?? [], [runtime, slot]);
-  const [shown, setShown] = useState<ReadonlySet<string>>(new Set());
   const path = moment === null ? null : (moment.path ?? "");
+  // Answers belong to the moment and entries they were asked for; others are not used.
+  const [answer, setAnswer] = useState<{
+    path: string | null;
+    entries: readonly SlotEntry[];
+    shown: ReadonlySet<string>;
+  } | null>(null);
+  const shown = answer && answer.path === path && answer.entries === entries ? answer.shown : EMPTY;
 
   useEffect(() => {
     if (!runtime || path === null || entries.length === 0) {
-      setShown((old) => (old.size === 0 ? old : new Set()));
+      setAnswer(null);
       return;
     }
     let current = true;
@@ -92,7 +100,12 @@ export function useSlotItems(slot: SlotName, moment: SlotMoment | null): SlotIte
         }
       }),
     ).then((keys) => {
-      if (current) setShown(new Set(keys.filter((key): key is string => key !== null)));
+      if (current)
+        setAnswer({
+          path,
+          entries,
+          shown: new Set(keys.filter((key): key is string => key !== null)),
+        });
     });
     return () => {
       current = false;

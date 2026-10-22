@@ -77,7 +77,7 @@ export function Shell({
 
   useEffect(() => {
     if (isMobile) closeDrawer();
-  }, [location.pathname, isMobile, closeDrawer]);
+  }, [location.pathname, location.search, isMobile, closeDrawer]);
 
   const rail = (
     <Rail
