@@ -429,6 +429,19 @@ describe("defaults and the list people choose from", () => {
     expect(server.services.assistant.defaults()).toBeUndefined();
   });
 
+  it("refuses a disabled provider as default and drops the default when it is disabled", async () => {
+    const root = await signIn("root", true);
+    const p = await create(root.client, { kind: "anthropic", name: "Main", apiKey: KEY });
+    await root.client.put(`/api/assistant/providers/${p.id}/models`, {
+      enabled: ["claude-opus-5-5"],
+    });
+    const body = { providerId: p.id, model: "claude-opus-5-5" };
+    expect((await root.client.put("/api/assistant/defaults", body)).status).toBe(200);
+    await root.client.patch(`/api/assistant/providers/${p.id}`, { enabled: false });
+    expect(server.services.assistant.defaults()).toBeUndefined();
+    expect((await root.client.put("/api/assistant/defaults", body)).status).toBe(400);
+  });
+
   it("shows people with assistant.use the enabled models, without provider details", async () => {
     const root = await signIn("root", true);
     const dana = await signIn("dana");

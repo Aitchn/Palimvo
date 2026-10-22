@@ -189,6 +189,8 @@ export class AssistantConfig {
         ...(secretId !== undefined ? { secretId } : {}),
         ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
       });
+      if (patch.enabled === false && this.defaults()?.providerId === id)
+        this.store.settings.delete(DEFAULTS_KEY);
       if (secretId === null && current.secretId) this.store.secrets.delete(current.secretId);
     });
     return this.get(id);
@@ -313,6 +315,8 @@ export class AssistantConfig {
   /** The model must be switched on, the level one the model supports. */
   setDefaults(input: AssistantDefaults): AssistantDefaults {
     const view = this.get(input.providerId);
+    if (!view.enabled)
+      throw new CoreError("invalid_request", undefined, { reason: "that provider is disabled" });
     const row = this.store.assistant.listModels(view.id).find((m) => m.modelId === input.model);
     if (!row?.enabled)
       throw new CoreError("invalid_request", undefined, { reason: "that model is not enabled" });
