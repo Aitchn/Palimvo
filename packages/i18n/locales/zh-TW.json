@@ -115,6 +115,29 @@
     "detailsName": "名稱",
     "detailsPath": "路徑"
   },
+  "search": {
+    "viewLabel": "側邊欄檢視",
+    "files": "檔案",
+    "title": "搜尋",
+    "open": "在筆記庫中搜尋",
+    "placeholder": "搜尋名稱與內容…",
+    "clear": "清除搜尋",
+    "hint": "輸入文字，搜尋筆記、白板與資料庫的名稱與內容。",
+    "total": "結果：{count}",
+    "empty": "找不到「{query}」的結果。",
+    "more": "顯示更多",
+    "moreLoading": "載入中…",
+    "list": "搜尋結果"
+  },
+  "backlinks": {
+    "title": "連結",
+    "linkedFrom": "反向連結（{count}）",
+    "linksTo": "連出的連結（{count}）",
+    "none": "沒有其他檔案連到這裡。",
+    "noLinks": "這個檔案沒有連結。",
+    "unresolved": "找不到",
+    "embed": "嵌入"
+  },
   "errors": {
     "unknown": "發生未知的錯誤。",
     "network": "無法連線到伺服器。",

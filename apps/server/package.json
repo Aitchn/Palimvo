@@ -9,6 +9,7 @@
   "scripts": {
     "build": "node scripts/bundle.mjs",
     "bench": "node scripts/bench-vault.mjs 10000 --check",
+    "bench:search": "node scripts/bench-search.mjs 10000 --check",
     "typecheck": "tsc6 -p .",
     "test": "vitest run"
   },
