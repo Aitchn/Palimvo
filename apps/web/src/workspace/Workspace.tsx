@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { basename, dirname, type TreeNode } from "@palimvo/core";
@@ -12,10 +12,11 @@ import { useFileOperations } from "../files/useFileOperations.ts";
 import { useVaultTree } from "../files/useVaultTree.ts";
 import { Shell } from "../shell/Shell.tsx";
 import { Tabs } from "../shell/Tabs.tsx";
+import { BacklinksPanel } from "../search/BacklinksPanel.tsx";
 import { Icon } from "../ui/index.ts";
 import { fileHref, pathFromLocation, vaultHref } from "./deepLinks.ts";
 import { FileView } from "./FileView.tsx";
-import { Sidebar } from "./Sidebar.tsx";
+import { Sidebar, type SidebarView } from "./Sidebar.tsx";
 import { useExpanded } from "./useExpanded.ts";
 import { useTabs } from "./useTabs.ts";
 
@@ -42,6 +43,20 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const folders = useExpanded(vault);
   const [quickOpen, setQuickOpen] = useState(false);
   const [palette, setPalette] = useState(false);
+  const [sidebarView, setSidebarView] = useState<SidebarView>("files");
+  // Each request shows the sidebar and puts the cursor in the search box.
+  const [searchRequest, setSearchRequest] = useState(0);
+  const openSearch = useCallback(() => {
+    setSidebarView("search");
+    setSearchRequest((n) => n + 1);
+  }, []);
+  // Changes with every new file list, so link lists of the open file are fetched again.
+  const revision = useRef(0);
+  const lastNodes = useRef(nodes);
+  if (lastNodes.current !== nodes) {
+    lastNodes.current = nodes;
+    revision.current++;
+  }
 
   const target = tree.status === "ready" && location ? findNode(nodes, location) : undefined;
   const activeFile = target?.type === "file" ? target : null;
@@ -148,6 +163,13 @@ function VaultWorkspace({ vault }: { vault: string }) {
           run: () => setQuickOpen(true),
         },
         {
+          id: "search.open",
+          title: t("search.open"),
+          icon: "search",
+          hint: "Ctrl+Shift+F",
+          run: openSearch,
+        },
+        {
           id: "file.downloadVault",
           title: t("files.downloadVaultZip"),
           icon: "download",
@@ -190,6 +212,11 @@ function VaultWorkspace({ vault }: { vault: string }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const mod = event.ctrlKey || event.metaKey;
+      if (mod && !event.altKey && event.shiftKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        openSearch();
+        return;
+      }
       if (!mod || event.altKey || event.key.toLowerCase() !== "p") return;
       event.preventDefault(); // the browser's print dialog
       if (event.shiftKey) {
@@ -202,7 +229,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [openSearch]);
 
   const runCommand = (id: string) => commands.find((c) => c.id === id)?.run();
 
@@ -222,8 +249,12 @@ function VaultWorkspace({ vault }: { vault: string }) {
             onOpen={openFile}
             onQuickOpen={() => setQuickOpen(true)}
             onCommands={() => setPalette(true)}
+            view={sidebarView}
+            onViewChange={setSidebarView}
+            searchFocus={searchRequest}
           />
         }
+        sidebarRequest={searchRequest}
         tabs={
           <Tabs
             tabs={tabs.tabs.map((path) => ({ id: path, title: tabTitle(path), detail: path }))}
@@ -233,14 +264,23 @@ function VaultWorkspace({ vault }: { vault: string }) {
           />
         }
         inspector={
-          <div className="state">
+          <div className="state inspector-body">
             {activeFile ? (
-              <dl className="details">
-                <dt>{t("workspace.detailsName")}</dt>
-                <dd>{basename(activeFile.path)}</dd>
-                <dt>{t("workspace.detailsPath")}</dt>
-                <dd>{activeFile.path}</dd>
-              </dl>
+              <>
+                <dl className="details">
+                  <dt>{t("workspace.detailsName")}</dt>
+                  <dd>{basename(activeFile.path)}</dd>
+                  <dt>{t("workspace.detailsPath")}</dt>
+                  <dd>{activeFile.path}</dd>
+                </dl>
+                <BacklinksPanel
+                  key={activeFile.path}
+                  vault={vault}
+                  path={activeFile.path}
+                  revision={revision.current}
+                  onOpen={openFile}
+                />
+              </>
             ) : (
               <p className="muted">{t("shell.inspectorEmpty")}</p>
             )}

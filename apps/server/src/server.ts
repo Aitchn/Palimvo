@@ -10,6 +10,7 @@ import { describeConfig, type LoadedConfig } from "./config/index.ts";
 import { errorFields } from "./errors.ts";
 import { acquireLock } from "./lock.ts";
 import { createLogger, type Logger } from "./log.ts";
+import { createVaultIndexes } from "./search/index.ts";
 import { findWebDir } from "./web.ts";
 import { VaultService, type VaultHooks } from "./vault/service.ts";
 import { VaultTrash } from "./vault/trash.ts";
@@ -129,6 +130,7 @@ export async function startServer({
       vaults,
       trash,
       history: history,
+      indexes: createVaultIndexes(vaults),
       backup,
     });
 

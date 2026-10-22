@@ -5,11 +5,14 @@ import { archiveUrl } from "../api/files.ts";
 import { describeError } from "../api/errors.ts";
 import { FileTree, type RowMenuRequest } from "../files/FileTree.tsx";
 import type { useFileOperations } from "../files/useFileOperations.ts";
+import { SearchPanel } from "../search/SearchPanel.tsx";
 import { Button, ContextMenu, Skeleton, type MenuItem } from "../ui/index.ts";
 import type { TreeState } from "../files/useVaultTree.ts";
 import { VaultSwitcher } from "./VaultSwitcher.tsx";
 
 type Operations = ReturnType<typeof useFileOperations>;
+
+export type SidebarView = "files" | "search";
 
 interface Props {
   vault: string;
@@ -21,6 +24,10 @@ interface Props {
   onOpen: (path: string) => void;
   onQuickOpen: () => void;
   onCommands: () => void;
+  view: SidebarView;
+  onViewChange: (view: SidebarView) => void;
+  /** Changes whenever the search box should take focus. */
+  searchFocus: number;
 }
 
 /** Starts the browser's download of a folder (or the whole vault) as a ZIP. */
@@ -44,11 +51,15 @@ export function Sidebar({
   onOpen,
   onQuickOpen,
   onCommands,
+  view,
+  onViewChange,
+  searchFocus,
 }: Props) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState<RowMenuRequest | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const importInto = useRef("");
+  const [query, setQuery] = useState("");
 
   const pickFilesFor = (folder: string) => {
     importInto.current = folder;
@@ -143,78 +154,104 @@ export function Sidebar({
       <div className="sidebar-header">
         <VaultSwitcher vault={vault} />
       </div>
-      <div className="sidebar-toolbar" role="toolbar" aria-label={t("files.toolbar")}>
-        <Button
-          variant="ghost"
-          icon="add"
-          aria-label={t("files.newNote")}
-          title={t("files.newNote")}
-          onClick={() => operations.openPrompt({ kind: "note", folder: here })}
-        />
-        <Button
-          variant="ghost"
-          icon="folderAdd"
-          aria-label={t("files.newFolder")}
-          title={t("files.newFolder")}
-          onClick={() => operations.openPrompt({ kind: "folder", folder: here })}
-        />
-        <Button
-          variant="ghost"
-          icon="upload"
-          aria-label={t("files.import")}
-          title={t("files.import")}
-          onClick={() => pickFilesFor(here)}
-        />
-        <span className="toolbar-spacer" />
-        <Button
-          variant="ghost"
-          icon="search"
-          aria-label={t("quickOpen.open")}
-          title={`${t("quickOpen.open")} (Ctrl+P)`}
-          onClick={onQuickOpen}
-        />
-        <Button
-          variant="ghost"
-          icon="command"
-          aria-label={t("commands.open")}
-          title={`${t("commands.open")} (Ctrl+Shift+P)`}
-          onClick={onCommands}
-        />
+      <div className="sidebar-views" role="group" aria-label={t("search.viewLabel")}>
+        {(["files", "search"] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="sidebar-view"
+            aria-pressed={view === id}
+            onClick={() => onViewChange(id)}
+          >
+            {t(id === "files" ? "search.files" : "search.title")}
+          </button>
+        ))}
       </div>
-      <input
-        ref={picker}
-        type="file"
-        multiple
-        hidden
-        data-testid="import-input"
-        onChange={(event) => {
-          void operations.pickFiles(event.target.files, importInto.current);
-          event.target.value = "";
-        }}
-      />
-      <div className="sidebar-body tree-body">
-        {tree.status === "loading" && <Skeleton lines={5} />}
-        {tree.status === "error" && (
-          <div className="state" role="alert">
-            <p>{describeError(t, tree.error)}</p>
-            <Button onClick={tree.reload}>{t("common.retry")}</Button>
+      {view === "search" ? (
+        <SearchPanel
+          vault={vault}
+          query={query}
+          onQueryChange={setQuery}
+          focusRequest={searchFocus}
+          activePath={activePath}
+          onOpen={onOpen}
+        />
+      ) : (
+        <>
+          <div className="sidebar-toolbar" role="toolbar" aria-label={t("files.toolbar")}>
+            <Button
+              variant="ghost"
+              icon="add"
+              aria-label={t("files.newNote")}
+              title={t("files.newNote")}
+              onClick={() => operations.openPrompt({ kind: "note", folder: here })}
+            />
+            <Button
+              variant="ghost"
+              icon="folderAdd"
+              aria-label={t("files.newFolder")}
+              title={t("files.newFolder")}
+              onClick={() => operations.openPrompt({ kind: "folder", folder: here })}
+            />
+            <Button
+              variant="ghost"
+              icon="upload"
+              aria-label={t("files.import")}
+              title={t("files.import")}
+              onClick={() => pickFilesFor(here)}
+            />
+            <span className="toolbar-spacer" />
+            <Button
+              variant="ghost"
+              icon="search"
+              aria-label={t("quickOpen.open")}
+              title={`${t("quickOpen.open")} (Ctrl+P)`}
+              onClick={onQuickOpen}
+            />
+            <Button
+              variant="ghost"
+              icon="command"
+              aria-label={t("commands.open")}
+              title={`${t("commands.open")} (Ctrl+Shift+P)`}
+              onClick={onCommands}
+            />
           </div>
-        )}
-        {tree.status === "ready" && (
-          <FileTree
-            nodes={tree.tree}
-            expanded={expanded}
-            activePath={activePath}
-            onToggle={onToggle}
-            onOpen={(file) => onOpen(file.path)}
-            onMenu={setMenu}
-            onRename={(node) => operations.openPrompt({ kind: "rename", node })}
-            onDelete={operations.askDelete}
-            onMove={(from, into) => void operations.move(from, into)}
-            onDropFiles={(data, into) => void operations.dropFiles(data, into)}
+          <input
+            ref={picker}
+            type="file"
+            multiple
+            hidden
+            data-testid="import-input"
+            onChange={(event) => {
+              void operations.pickFiles(event.target.files, importInto.current);
+              event.target.value = "";
+            }}
           />
-        )}
-      </div>
+          <div className="sidebar-body tree-body">
+            {tree.status === "loading" && <Skeleton lines={5} />}
+            {tree.status === "error" && (
+              <div className="state" role="alert">
+                <p>{describeError(t, tree.error)}</p>
+                <Button onClick={tree.reload}>{t("common.retry")}</Button>
+              </div>
+            )}
+            {tree.status === "ready" && (
+              <FileTree
+                nodes={tree.tree}
+                expanded={expanded}
+                activePath={activePath}
+                onToggle={onToggle}
+                onOpen={(file) => onOpen(file.path)}
+                onMenu={setMenu}
+                onRename={(node) => operations.openPrompt({ kind: "rename", node })}
+                onDelete={operations.askDelete}
+                onMove={(from, into) => void operations.move(from, into)}
+                onDropFiles={(data, into) => void operations.dropFiles(data, into)}
+              />
+            )}
+          </div>
+        </>
+      )}
       {menu && (
         <ContextMenu
           label={menu.node ? menu.node.name : t("files.tree")}

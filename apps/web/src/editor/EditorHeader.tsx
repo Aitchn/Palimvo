@@ -35,7 +35,7 @@ export function EditorHeader({
             </span>
           </span>
         ))}
-        <span className="editor-crumb current">{parts.at(-1)}</span>
+        <h1 className="editor-crumb current">{parts.at(-1)}</h1>
       </span>
       <span className="editor-meta">
         {peers > 1 && <span className="peers">{t("editor.peers", { count: peers })}</span>}

@@ -115,6 +115,29 @@
     "detailsName": "Name",
     "detailsPath": "Path"
   },
+  "search": {
+    "viewLabel": "Sidebar view",
+    "files": "Files",
+    "title": "Search",
+    "open": "Search in vault",
+    "placeholder": "Search names and text…",
+    "clear": "Clear search",
+    "hint": "Type to search the names and text of notes, canvases and databases.",
+    "total": "Results: {count}",
+    "empty": "No results for “{query}”.",
+    "more": "Show more",
+    "moreLoading": "Loading…",
+    "list": "Search results"
+  },
+  "backlinks": {
+    "title": "Links",
+    "linkedFrom": "Linked from ({count})",
+    "linksTo": "Links to ({count})",
+    "none": "No other file links here.",
+    "noLinks": "This file has no links.",
+    "unresolved": "not found",
+    "embed": "embedded"
+  },
   "editor": {
     "properties": "Properties",
     "copy": "Copy",

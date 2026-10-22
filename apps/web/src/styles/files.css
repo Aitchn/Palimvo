@@ -231,3 +231,126 @@
   margin: 0 0 var(--space-3);
   overflow-wrap: anywhere;
 }
+
+/* Search and links */
+.sidebar-views {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-3) var(--space-2);
+}
+.sidebar-view {
+  flex: 1;
+  min-height: 30px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.sidebar-view:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.sidebar-view[aria-pressed="true"] {
+  background: var(--bg-active);
+  color: var(--fg-strong);
+  font-weight: 600;
+}
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--space-2) var(--space-2);
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-1) var(--space-2);
+}
+.search-box .input {
+  flex: 1;
+  min-width: 0;
+}
+.search-results {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.search-note {
+  margin: var(--space-2) var(--space-2);
+  font-size: 0.9em;
+}
+.search-list,
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.search-hit,
+.link-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.search-hit:hover,
+.link-item:hover {
+  background: var(--bg-hover);
+}
+.search-hit[aria-current="page"] {
+  background: var(--bg-active);
+}
+.search-hit-title,
+.link-item-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.search-hit-path,
+.link-item-detail {
+  font-size: 0.82em;
+}
+.search-hit-line,
+.link-item-line {
+  font-size: 0.88em;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
+.search-hit mark {
+  background: var(--warning-soft);
+  color: inherit;
+  border-radius: 2px;
+}
+.search-more {
+  margin: var(--space-2) var(--space-3);
+}
+.inspector-body {
+  align-items: stretch;
+}
+.link-heading {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.link-panel {
+  width: 100%;
+  text-align: left;
+}
+.link-item-missing {
+  cursor: default;
+  color: var(--fg-muted);
+}
