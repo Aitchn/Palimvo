@@ -4,6 +4,7 @@ import { LoginPage } from "../auth/LoginPage.tsx";
 import { SessionBoundary, SessionProvider, useSession } from "../auth/session.tsx";
 import { SetupPage } from "../auth/SetupPage.tsx";
 import { AccountSection } from "../settings/AccountSection.tsx";
+import { RolesSection } from "../settings/RolesSection.tsx";
 import { SettingsPage } from "../settings/SettingsPage.tsx";
 import { UsersSection } from "../settings/UsersSection.tsx";
 import { VaultSettings } from "../settings/VaultSettings.tsx";
@@ -52,6 +53,7 @@ export const routes: RouteObject[] = [
               { index: true, element: <Navigate to="account" replace /> },
               { path: "account", element: <AccountSection /> },
               { path: "users", element: <UsersSection /> },
+              { path: "roles", element: <RolesSection /> },
               { path: "vaults", element: <VaultsSection /> },
               { path: "vaults/:vault", element: <VaultSettings /> },
             ],

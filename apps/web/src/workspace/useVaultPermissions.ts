@@ -7,10 +7,12 @@ export interface VaultCan {
   write: boolean;
   delete: boolean;
   upload: boolean;
+  /** Open the permissions of a folder. */
+  managePermissions: boolean;
 }
 
-const NOTHING: VaultCan = { write: false, delete: false, upload: false };
-const EVERYTHING: VaultCan = { write: true, delete: true, upload: true };
+const NOTHING: VaultCan = { write: false, delete: false, upload: false, managePermissions: false };
+const EVERYTHING: VaultCan = { write: true, delete: true, upload: true, managePermissions: true };
 
 /**
  * What the signed-in person may do in a vault, for deciding which buttons to show. The server
@@ -44,5 +46,6 @@ export function useVaultPermissions(vault: string, folder = ""): VaultCan {
     delete: names.has("note.delete"),
     // Importing writes the files one by one, so it needs both permissions.
     upload: names.has("file.upload") && names.has("note.write"),
+    managePermissions: names.has("permissions.manage"),
   };
 }

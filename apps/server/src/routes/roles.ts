@@ -115,6 +115,21 @@ export function roleRoutes(auth: AuthService): Hono {
     });
   });
 
+  /** The people who hold a role, for the role's page. Everyone holds @everyone. */
+  app.get("/api/admin/roles/:id/members", (c) => {
+    actor(c);
+    const role = store.roles.require(c.req.param("id"));
+    const ids = role.isEveryone
+      ? store.accounts.list().map((a) => a.id)
+      : store.roles.memberIds(role.id);
+    return c.json({
+      members: ids.map((id) => {
+        const a = store.accounts.require(id);
+        return { id: a.id, username: a.username, displayName: a.displayName };
+      }),
+    });
+  });
+
   app.post("/api/admin/roles", async (c) => {
     const { access, subject, data } = actor(c);
     const body = await readJson(c, createBody);

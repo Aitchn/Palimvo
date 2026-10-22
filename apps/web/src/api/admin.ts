@@ -49,9 +49,48 @@ export function deleteUser(userId: string): Promise<void> {
 export interface RoleRow extends RoleRef {
   color?: string;
   position: number;
+  /** Server-level permissions the role grants. */
+  permissions: string[];
+  /** Vault permissions denied in every vault a holder joins. */
+  joinDeny: string[];
   everyone: boolean;
   manageable: boolean;
   memberCount?: number;
+}
+
+export interface RoleInput {
+  name: string;
+  color?: string;
+  position?: number;
+  permissions?: string[];
+  joinDeny?: string[];
+}
+
+export function createRole(body: RoleInput): Promise<RoleRow> {
+  return request<RoleRow>("/api/admin/roles", { method: "POST", body });
+}
+
+export function updateRole(
+  roleId: string,
+  patch: Partial<Omit<RoleInput, "color">> & { color?: string | null },
+): Promise<RoleRow> {
+  return request<RoleRow>(`/api/admin/roles/${id(roleId)}`, { method: "PATCH", body: patch });
+}
+
+export function deleteRole(roleId: string): Promise<void> {
+  return request<void>(`/api/admin/roles/${id(roleId)}`, { method: "DELETE" });
+}
+
+export interface PersonRef {
+  id: string;
+  username: string;
+  displayName: string;
+}
+
+export async function listRoleMembers(roleId: string, options: Signal = {}): Promise<PersonRef[]> {
+  return (
+    await request<{ members: PersonRef[] }>(`/api/admin/roles/${id(roleId)}/members`, options)
+  ).members;
 }
 
 export async function listRoles(options: Signal = {}): Promise<RoleRow[]> {
@@ -95,11 +134,16 @@ export function revokeInvite(inviteId: string): Promise<void> {
   return request<void>(`/api/admin/invites/${id(inviteId)}`, { method: "DELETE" });
 }
 
+export interface RoleLabel extends RoleRef {
+  color?: string;
+  position: number;
+}
+
 export interface MemberRow {
   account: Account;
   position: "admin" | "member";
   addedAt: number;
-  roles: RoleRef[];
+  roles: RoleLabel[];
 }
 
 export async function listMembers(vault: string, options: Signal = {}): Promise<MemberRow[]> {
@@ -133,4 +177,96 @@ export async function setPublicPaths(vault: string, paths: string[]): Promise<st
       body: { paths },
     })
   ).paths;
+}
+
+/** The two kinds of people and groups a permission override can be about. */
+export type Subject = { type: "role" | "account"; id: string };
+
+export interface OverrideRow {
+  /** Absent for a vault-wide override. */
+  folder?: string;
+  subjectType: Subject["type"];
+  subjectId: string;
+  allow: string[];
+  deny: string[];
+}
+
+export interface VaultPermissions {
+  roles: RoleLabel[];
+  /** The people the overrides are about. */
+  people: PersonRef[];
+  overrides: OverrideRow[];
+}
+
+export function getVaultPermissions(
+  vault: string,
+  options: Signal = {},
+): Promise<VaultPermissions> {
+  return request<VaultPermissions>(`/api/vaults/${id(vault)}/permissions`, options);
+}
+
+/** Sets what `subject` is allowed and denied; with both lists empty the override is removed. */
+export function setOverride(
+  vault: string,
+  body: { folder?: string; subject: Subject; allow: string[]; deny: string[] },
+): Promise<VaultPermissions> {
+  return request<VaultPermissions>(`/api/vaults/${id(vault)}/permissions`, {
+    method: "PUT",
+    body: {
+      ...(body.folder === undefined ? {} : { folder: body.folder }),
+      subjectType: body.subject.type,
+      subjectId: body.subject.id,
+      allow: body.allow,
+      deny: body.deny,
+    },
+  });
+}
+
+/** What the subject can do in the vault, or in `folder` of it. */
+export async function previewPermissions(
+  vault: string,
+  subject: Subject,
+  options: Signal & { folder?: string } = {},
+): Promise<string[]> {
+  const query = new URLSearchParams({
+    [subject.type === "role" ? "roleId" : "accountId"]: subject.id,
+  });
+  if (options.folder) query.set("folder", options.folder);
+  return (
+    await request<{ permissions: string[] }>(
+      `/api/vaults/${id(vault)}/permissions/preview?${query}`,
+      { signal: options.signal },
+    )
+  ).permissions;
+}
+
+export interface PersonHit extends PersonRef {
+  member: boolean;
+}
+
+/** Finds people by name for adding to the vault or giving a personal override. */
+export async function searchPeople(
+  vault: string,
+  query: string,
+  options: Signal = {},
+): Promise<PersonHit[]> {
+  return (
+    await request<{ people: PersonHit[] }>(
+      `/api/vaults/${id(vault)}/people?q=${encodeURIComponent(query)}`,
+      options,
+    )
+  ).people;
+}
+
+export interface RosterEntry {
+  /** The id the person's changes carry as author. */
+  authorId: string;
+  name: string;
+  position: "admin" | "member";
+  roles: RoleLabel[];
+}
+
+export async function getRoster(vault: string, options: Signal = {}): Promise<RosterEntry[]> {
+  return (await request<{ people: RosterEntry[] }>(`/api/vaults/${id(vault)}/roster`, options))
+    .people;
 }

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TreeNode } from "@palimvo/core";
 import { archiveUrl } from "../api/files.ts";
 import { describeError } from "../api/errors.ts";
+import { FolderPermissionsDialog } from "../roles/FolderPermissionsDialog.tsx";
 import { FileTree, type RowMenuRequest } from "../files/FileTree.tsx";
 import type { useFileOperations } from "../files/useFileOperations.ts";
 import { SearchPanel } from "../search/SearchPanel.tsx";
@@ -61,6 +62,7 @@ export function Sidebar({
 }: Props) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState<RowMenuRequest | null>(null);
+  const [permissionsOf, setPermissionsOf] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const importInto = useRef("");
   const [query, setQuery] = useState("");
@@ -161,6 +163,16 @@ export function Sidebar({
         icon: "download",
         onSelect: () => download(vault, node.path),
       },
+      ...(can.managePermissions
+        ? [
+            {
+              id: "permissions",
+              label: t("permissions.menu"),
+              icon: "settings" as const,
+              onSelect: () => setPermissionsOf(node.path),
+            },
+          ]
+        : []),
       ...(can.delete ? [remove] : []),
     ];
   };
@@ -286,6 +298,11 @@ export function Sidebar({
           </div>
         </>
       )}
+      <FolderPermissionsDialog
+        vault={vault}
+        folder={permissionsOf}
+        onClose={() => setPermissionsOf(null)}
+      />
       {menu && (
         <ContextMenu
           label={menu.node ? menu.node.name : t("files.tree")}

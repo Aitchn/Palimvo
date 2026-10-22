@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import {
   getPublicPaths,
   listMembers,
-  listUsers,
   removeMember,
   setMember,
   setPublicPaths,
@@ -15,20 +14,17 @@ import { describeError } from "../api/errors.ts";
 import { useAsync } from "../app/useAsync.ts";
 import { FormError } from "../auth/forms.tsx";
 import { useSession } from "../auth/session.tsx";
+import { PersonPicker } from "../roles/PersonPicker.tsx";
+import { RoleBadge } from "../roles/RoleBadge.tsx";
 import { Button, Skeleton, useToast } from "../ui/index.ts";
 import { Confirm } from "./Confirm.tsx";
+import { VaultPermissions } from "./VaultPermissions.tsx";
 
 function Members({ vault }: { vault: string }) {
   const { t } = useTranslation();
   const toast = useToast();
   const { session } = useSession();
   const members = useAsync((signal) => listMembers(vault, { signal }), `members:${vault}`);
-  // Only people who may manage users can see who could be added.
-  const users = useAsync(
-    (signal) => listUsers({ signal }).catch(() => []),
-    `member-candidates:${vault}`,
-  );
-  const [adding, setAdding] = useState("");
   const [removing, setRemoving] = useState<MemberRow | null>(null);
   const me = session.status === "account" ? session.account.id : null;
 
@@ -41,11 +37,6 @@ function Members({ vault }: { vault: string }) {
       fail(error);
     }
   };
-
-  const candidates =
-    members.status === "ready" && users.status === "ready"
-      ? users.data.filter((u) => !u.disabled && !members.data.some((m) => m.account.id === u.id))
-      : [];
 
   return (
     <section aria-labelledby="members-title">
@@ -62,9 +53,7 @@ function Members({ vault }: { vault: string }) {
                 <span className="muted">@{m.account.username}</span>
                 <span className="chips">
                   {m.roles.map((r) => (
-                    <span key={r.id} className="role-chip">
-                      {r.name}
-                    </span>
+                    <RoleBadge key={r.id} role={r} />
                   ))}
                 </span>
               </div>
@@ -94,39 +83,17 @@ function Members({ vault }: { vault: string }) {
           ))}
         </ul>
       )}
-      {candidates.length > 0 && (
-        <div className="inline-form">
-          <div className="field">
-            <label htmlFor="add-member">{t("members.add")}</label>
-            <select
-              id="add-member"
-              className="select"
-              value={adding}
-              onChange={(event) => setAdding(event.target.value)}
-            >
-              <option value="">{t("members.choose")}</option>
-              {candidates.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.displayName} (@{u.username})
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button
-            variant="primary"
-            disabled={!adding}
-            onClick={() =>
-              void act(async () => {
-                await setMember(vault, adding, "member");
-                setAdding("");
-                users.reload();
-              })
-            }
-          >
-            {t("members.addButton")}
-          </Button>
-        </div>
-      )}
+      <PersonPicker
+        vault={vault}
+        label={t("members.add")}
+        onPick={(person) => {
+          if (members.status === "ready" && members.data.some((m) => m.account.id === person.id)) {
+            toast.push({ message: t("members.alreadyMember", { name: person.displayName }) });
+            return;
+          }
+          void act(() => setMember(vault, person.id, "member"));
+        }}
+      />
       <Confirm
         open={removing !== null}
         danger
@@ -222,10 +189,12 @@ export function VaultSettings() {
       {permissions.status === "error" && (
         <FormError message={describeError(t, permissions.error)} />
       )}
-      {permissions.status === "ready" && !has("members.manage") && !has("public.manage") && (
-        <p className="muted">{t("vaults.nothingToManage")}</p>
-      )}
+      {permissions.status === "ready" &&
+        !has("members.manage") &&
+        !has("public.manage") &&
+        !has("permissions.manage") && <p className="muted">{t("vaults.nothingToManage")}</p>}
       {has("members.manage") && <Members vault={vault} />}
+      {has("permissions.manage") && <VaultPermissions vault={vault} />}
       {has("public.manage") && <PublicAccess vault={vault} />}
     </div>
   );
