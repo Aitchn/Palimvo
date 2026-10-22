@@ -14,6 +14,11 @@ export interface Config {
   /** Folder holding the built web app. Unset: look for one next to the server (see `findWebDir`). */
   webDir?: string;
   logLevel: LogLevel;
+  /**
+   * Development only: with no account yet the API stays open instead of waiting for the setup
+   * wizard. Refused unless the server listens on a loopback address.
+   */
+  devInsecure: boolean;
 }
 
 export type ConfigSource = "default" | "env" | "cli";
@@ -30,6 +35,8 @@ interface Setting {
   key: keyof Config;
   env: string;
   flag: string;
+  /** A bare `--flag` on the command line means true. */
+  bare?: true;
   parse(raw: string, name: string): Config[keyof Config];
 }
 
@@ -41,9 +48,27 @@ const SETTINGS: Setting[] = [
   { key: "webDir", env: "PALIMVO_WEB_DIR", flag: "web-dir", parse: (v) => path.resolve(v) },
   { key: "trustProxy", env: "PALIMVO_TRUST_PROXY", flag: "trust-proxy", parse: parseBool },
   { key: "logLevel", env: "PALIMVO_LOG_LEVEL", flag: "log-level", parse: parseLogLevel },
+  {
+    key: "devInsecure",
+    env: "PALIMVO_DEV_INSECURE",
+    flag: "dev-insecure",
+    bare: true,
+    parse: parseBool,
+  },
 ];
 
 export const CONFIG_FLAGS = SETTINGS.map((s) => s.flag);
+/** Flags that take no value on the command line. */
+export const BARE_CONFIG_FLAGS = SETTINGS.filter((s) => s.bare).map((s) => s.flag);
+
+/** Whether `host` only accepts connections from this machine. */
+export function isLoopbackHost(host: string): boolean {
+  const h = host
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "");
+  return h === "localhost" || h === "::1" || /^127(\.\d{1,3}){3}$/.test(h);
+}
 
 /** Defaults are chosen to be safe: loopback only, no proxy trust. */
 export function defaultConfig(cwd: string = process.cwd()): Config {
@@ -53,6 +78,7 @@ export function defaultConfig(cwd: string = process.cwd()): Config {
     port: 3000,
     trustProxy: false,
     logLevel: "info",
+    devInsecure: false,
   };
 }
 
@@ -76,7 +102,14 @@ export function loadConfig(
     config[s.key] = s.parse(raw, name);
     sources[s.key] = fromFlag !== undefined ? "cli" : "env";
   }
-  return { config: config as unknown as Config, sources };
+  const loaded = config as unknown as Config;
+  if (loaded.devInsecure && !isLoopbackHost(loaded.host))
+    throw new AppError(
+      "config_invalid",
+      400,
+      `--dev-insecure only works when the server listens on a loopback address (127.0.0.1, ::1 or localhost), not "${loaded.host}".`,
+    );
+  return { config: loaded, sources };
 }
 
 function invalid(name: string, why: string): never {

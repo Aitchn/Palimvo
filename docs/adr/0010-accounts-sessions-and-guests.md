@@ -28,7 +28,8 @@ replace route by route.
   grant. Only a hash of the secret is stored. The account is created and the invite consumed in one
   transaction, so two people cannot both use one link.
 - **Setup mode**: while no account exists nothing is enforced (the server listens on loopback by
-  default). T11 replaces this with the setup wizard. Once an account exists, requests without a
+  default). T11 replaces this with the setup wizard (ADR 0012: setup mode is now closed unless
+  `--dev-insecure` is set). Once an account exists, requests without a
   session are guests.
 - **Guests** may only `GET` the vault list, file tree, files and search. A vault is visible to
   guests only if it has public entries. Public entries are a vault (`""`), folders or files, stored
