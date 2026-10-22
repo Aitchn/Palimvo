@@ -1,0 +1,7 @@
+{
+  "overdue": "已逾期 {days} 天",
+  "today": "今天到期",
+  "tomorrow": "明天到期",
+  "inDays": "{days} 天后到期",
+  "dueOn": "到期日 {date}"
+}
