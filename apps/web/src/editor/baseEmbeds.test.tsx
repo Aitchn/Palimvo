@@ -105,6 +105,21 @@ describe("databases inside a note", () => {
     expect(view().state.doc.toString()).toMatch(/```base\n[\s\S]*type: cards[\s\S]*\n```\n\nafter/);
   });
 
+  it("changes the block that was used when two blocks have the same YAML", async () => {
+    const block =
+      "```base\nviews:\n  - type: table\n    name: Inline\n    order:\n      - file.name\n```";
+    const user = userEvent.setup();
+    await open(`# Plan\n\n${block}\n\nmiddle\n\n${block}\n`);
+    await waitFor(() => expect(document.querySelectorAll(".cm-base-embed")).toHaveLength(2));
+    const second = document.querySelectorAll<HTMLElement>(".cm-base-embed")[1]!;
+    await within(second).findByRole("table");
+    await user.selectOptions(within(second).getByRole("combobox", { name: "Display as" }), "cards");
+    await waitFor(() => expect(view().state.doc.toString()).toContain("type: cards"));
+    const doc = view().state.doc.toString();
+    expect(doc.match(/type: cards/g)).toHaveLength(1);
+    expect(doc.indexOf("type: cards")).toBeGreaterThan(doc.indexOf("middle"));
+  });
+
   it("keeps the source visible while the cursor is on it", async () => {
     await open(PLAN);
     await waitFor(() => expect(document.querySelector(".cm-base-embed")).not.toBeNull());

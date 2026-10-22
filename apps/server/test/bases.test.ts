@@ -1,3 +1,5 @@
+import { symlink } from "node:fs/promises";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Client, PASSWORD, json } from "./client.ts";
 import { startTestServer, type TestServer } from "./harness.ts";
@@ -70,6 +72,19 @@ describe("base query", () => {
     expect(body.rows.map((r) => r.path)).toEqual(["Tasks/a.md"]);
     const hidden = await query({ path: "Notes.base" }, new Client(server));
     expect(hidden.status).toBe(404);
+  });
+
+  it("does not follow a link from a public folder to a private base", async () => {
+    await write("pub/readme.md", "public");
+    await admin.put("/api/vaults/demo/public", { paths: ["pub"] });
+    const dir = path.join(server.dataDir, "vaults", "demo");
+    try {
+      await symlink(path.join(dir, "Tasks.base"), path.join(dir, "pub", "alias.base"));
+    } catch {
+      return; // no permission to create links on this machine
+    }
+    expect((await query({ path: "pub/alias.base" }, new Client(server))).status).toBe(404);
+    expect((await query({ path: "pub/alias.base" })).status).toBe(200);
   });
 
   it("gives guests nothing in a vault without public content", async () => {

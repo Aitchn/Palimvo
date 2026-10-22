@@ -72,8 +72,12 @@ export function baseRoutes(vaults: VaultService, history: VaultHistory, auth: Au
       : limited
         ? (p: string) => access.can("note.read", folderScope(vault, dirname(p)))
         : undefined;
-    if (include && body.path !== undefined && !include(cleanPath(body.path)))
-      throw new AppError("not_found");
+    if (include && body.path !== undefined) {
+      const target = cleanPath(body.path);
+      // A public-looking path may be a link to a private file; like the file route, only direct paths count for guests.
+      if (!include(target) || (policy && !(await vaults.isDirectPath(vault, target))))
+        throw new AppError("not_found");
+    }
     const result = await runBase(vaults, vault, body, include);
     if (policy) c.header("Cache-Control", "no-store");
     return c.json(result);

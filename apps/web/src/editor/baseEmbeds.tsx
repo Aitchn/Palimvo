@@ -60,7 +60,7 @@ class BaseWidget extends WidgetType {
     wrap.addEventListener("keydown", (e) => e.stopPropagation());
     const root = createRoot(wrap);
     wrap.baseRoot = root;
-    this.render(root, view);
+    this.render(root, view, wrap);
     return wrap;
   }
 
@@ -68,11 +68,11 @@ class BaseWidget extends WidgetType {
   updateDOM(dom: HTMLElement, view: EditorView): boolean {
     const root = (dom as WidgetDom).baseRoot;
     if (!root) return false;
-    this.render(root, view);
+    this.render(root, view, dom);
     return true;
   }
 
-  private render(root: Root, view: EditorView): void {
+  private render(root: Root, view: EditorView, dom: HTMLElement): void {
     const { host, embed } = this;
     let target: BaseTarget | null;
     if (embed.kind === "file") {
@@ -85,7 +85,7 @@ class BaseWidget extends WidgetType {
         thisPath: host.thisPath,
         onChange:
           host.canEdit && view.state.facet(EditorView.editable)
-            ? (next) => replaceBlock(view, embed.source, next)
+            ? (next) => replaceBlock(view, dom, embed.source, next)
             : undefined,
       };
     }
@@ -122,10 +122,22 @@ class BaseWidget extends WidgetType {
   }
 }
 
-/** Writes changed settings back into the ```base block that still holds `previous`. */
-function replaceBlock(view: EditorView, previous: string, next: string): void {
+/**
+ * Writes changed settings back into the ```base block this widget stands for. The block is found
+ * by where the widget is in the document now (two blocks may hold the same YAML), and only
+ * replaced while it still holds `previous`.
+ */
+function replaceBlock(view: EditorView, dom: HTMLElement, previous: string, next: string): void {
+  let at: number;
+  try {
+    at = view.posAtDOM(dom);
+  } catch {
+    return;
+  }
   let range: { from: number; to: number } | null = null;
   syntaxTree(view.state).iterate({
+    from: at,
+    to: at,
     enter(node) {
       if (range) return false;
       if (node.name !== "FencedCode") return undefined;
