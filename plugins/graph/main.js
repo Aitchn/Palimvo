@@ -1709,11 +1709,20 @@ function mountLocal(palimvo, context) {
     return map;
   }
 
-  const off = palimvo.events.on("theme:changed", () => canvasView?.setColors());
+  // Files appearing or going away change the neighborhood (edits of the open note are not reported yet).
+  let refreshTimer = 0;
+  const offs = [
+    palimvo.events.on("theme:changed", () => canvasView?.setColors()),
+    palimvo.events.on("file:changed", () => {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => void load(), 1500);
+    }),
+  ];
   void load();
   return () => {
     disposed = true;
-    off();
+    clearTimeout(refreshTimer);
+    for (const off of offs) off();
     canvasView?.dispose();
     if (window.__graph === canvasView) delete window.__graph;
     root.replaceChildren();

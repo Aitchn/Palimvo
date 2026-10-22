@@ -166,13 +166,25 @@ describe("graph", () => {
   });
 
   it("passes the center, depth and tags on and checks the center", async () => {
-    const { call, backend } = setup({ read: ["decisions"] });
+    const { call, backend } = setup({ read: ["**"] });
     await call("vault.graph", { around: "decisions/0001-a.md", depth: 2, tags: true });
     expect(backend.calls).toEqual(["graph decisions/0001-a.md"]);
-    expect(await code(call("vault.graph", { around: "private/diary.md" }))).toBe(
+    const narrow = setup({ read: ["decisions"] }).call;
+    expect(await code(narrow("vault.graph", { around: "private/diary.md" }))).toBe(
       "permission_denied",
     );
     expect(await code(call("vault.graph", { around: "../x.md" }))).toBe("invalid_argument");
+  });
+
+  it("does not reach through files the plugin may not read", async () => {
+    // Welcome -> decisions/0001-a and Welcome -> private/diary: a plugin that sees decisions and
+    // Welcome but not private gets the graph first and the neighborhood afterwards.
+    const { call, backend } = setup({ read: ["decisions", "Welcome.md"] });
+    const result = (await call("vault.graph", { around: "decisions/0001-a.md", depth: 2 })) as {
+      nodes: Array<{ path: string }>;
+    };
+    expect(result.nodes.map((n) => n.path).sort()).toEqual(["Welcome.md", "decisions/0001-a.md"]);
+    expect(backend.calls).toEqual(["graph "]);
   });
 
   it("refuses a plugin that may not read, and bad depths", async () => {

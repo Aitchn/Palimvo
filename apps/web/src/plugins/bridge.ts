@@ -101,6 +101,32 @@ export function visibleEntries(
   return out;
 }
 
+/** The files within `depth` links of `start`, following links in either direction. */
+function neighborhood(
+  edges: ReadonlyArray<{ from: string; to: string }>,
+  start: string,
+  depth: number,
+): Set<string> {
+  const next = new Map<string, string[]>();
+  for (const { from, to } of edges) {
+    next.set(from, [...(next.get(from) ?? []), to]);
+    next.set(to, [...(next.get(to) ?? []), from]);
+  }
+  const reached = new Set([start]);
+  let frontier = [start];
+  for (let step = 0; step < depth && frontier.length > 0; step++) {
+    const found: string[] = [];
+    for (const path of frontier)
+      for (const other of next.get(path) ?? []) {
+        if (reached.has(other)) continue;
+        reached.add(other);
+        found.push(other);
+      }
+    frontier = found;
+  }
+  return reached;
+}
+
 interface Pending {
   controller: AbortController;
   reject: (reason: Error) => void;
@@ -230,25 +256,31 @@ export class PluginBridge {
           throw new RpcError("permission_denied", "The plugin may not read this vault");
         const around = p.around ? pathOf(p.around) : undefined;
         if (around !== undefined && !canRead(binding, around)) throw denied("read", around);
+        const depth = typeof p.depth === "number" ? p.depth : 1;
+        // A plugin that sees the whole vault can let the server cut out the neighborhood. One that
+        // sees only some folders gets the whole graph, filtered first and cut afterwards: a
+        // neighborhood computed through files it may not read would reveal what they link to.
+        const whole = binding.read.includes("**");
         const graph = await this.backend.graph(
           {
-            ...(around !== undefined ? { around } : {}),
-            ...(typeof p.depth === "number" ? { depth: p.depth } : {}),
+            ...(around !== undefined && whole ? { around, depth } : {}),
             ...(p.tags === true ? { tags: true } : {}),
           },
           signal,
         );
-        // Only files in the plugin's folders, and links between two of them.
         const shown = new Set<string>();
-        const nodes = graph.nodes.filter((node) => {
+        let nodes = graph.nodes.filter((node) => {
           const ok = canRead(binding, node.path);
           if (ok) shown.add(node.path);
           return ok;
         });
-        return {
-          nodes,
-          edges: graph.edges.filter((edge) => shown.has(edge.from) && shown.has(edge.to)),
-        };
+        let edges = graph.edges.filter((edge) => shown.has(edge.from) && shown.has(edge.to));
+        if (around !== undefined && !whole) {
+          const reached = neighborhood(edges, around, depth);
+          nodes = nodes.filter((node) => reached.has(node.path));
+          edges = edges.filter((edge) => reached.has(edge.from) && reached.has(edge.to));
+        }
+        return { nodes, edges };
       }
       case "vault.write": {
         const path = pathOf(p.path);
