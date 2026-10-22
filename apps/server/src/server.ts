@@ -10,6 +10,7 @@ import { describeConfig, type LoadedConfig } from "./config/index.ts";
 import { errorFields } from "./errors.ts";
 import { acquireLock } from "./lock.ts";
 import { createLogger, type Logger } from "./log.ts";
+import { Store } from "./store/index.ts";
 import { createVaultIndexes } from "./search/index.ts";
 import { findWebDir } from "./web.ts";
 import { VaultService, type VaultHooks } from "./vault/service.ts";
@@ -26,6 +27,8 @@ export interface RunningServer {
   url: string;
   port: number;
   logger: Logger;
+  /** Server-level metadata (accounts, tokens, audit log, …) in `<dataDir>/palimvo.db`. */
+  store: Store;
   /**
    * Registers work to run during shutdown, after new connections stop and before the lock is
    * released (e.g. saving live documents). Hooks run in reverse registration order.
@@ -61,13 +64,17 @@ export async function startServer({
   // Version history is not optional: fail now with a clear message, not on the first save.
   const gitVersion = await assertGit();
   const lock = await acquireLock(config.dataDir);
+  let store: Store | undefined;
   try {
+    store = await Store.openInDataDir(config.dataDir);
     log.info("starting palimvo", {
       version: VERSION,
       node: process.version,
       git: gitVersion,
       ...describeConfig(loaded),
+      schemaVersion: store.schemaVersion,
     });
+    const openStore = store;
 
     const webDir = await findWebDir(config.webDir, import.meta.dirname);
     log.info(webDir ? "serving web app" : "no built web app found; serving the API only", {
@@ -124,6 +131,7 @@ export async function startServer({
     const app = createApp({
       webDir,
       logger: log,
+      store: openStore,
       version: VERSION,
       ready: () => !closing,
       startedAt: Date.now(),
@@ -159,6 +167,7 @@ export async function startServer({
         }
         await stopped;
         clearTimeout(force);
+        openStore.close();
         await lock.release();
         log.info("shutdown complete");
       })());
@@ -167,11 +176,13 @@ export async function startServer({
       url,
       port,
       logger: log,
+      store: openStore,
       services: { vaults, history: history, backup },
       onShutdown: (name, hook) => void hooks.push({ name, hook }),
       close,
     };
   } catch (err) {
+    store?.close();
     await lock.release();
     throw err;
   }

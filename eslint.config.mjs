@@ -47,4 +47,26 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // S1 rule 6: the wrapper in store/db.ts is the only place that may touch node:sqlite.
+    files: ["**/*.ts", "**/*.tsx", "**/*.mjs"],
+    ignores: ["apps/server/src/store/db.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "node:sqlite",
+              message: "Use the Db wrapper in apps/server/src/store/db.ts instead.",
+            },
+            {
+              name: "sqlite",
+              message: "Use the Db wrapper in apps/server/src/store/db.ts instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

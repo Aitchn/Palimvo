@@ -3,6 +3,7 @@ import type { BackupService } from "./history/backup.ts";
 import type { VaultHistory } from "./history/history.ts";
 import { AppError, errorHandler } from "./errors.ts";
 import type { Logger } from "./log.ts";
+import type { Store } from "./store/index.ts";
 import { archiveRoutes } from "./routes/archive.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { historyRoutes } from "./routes/history.ts";
@@ -15,6 +16,7 @@ import type { VaultTrash } from "./vault/trash.ts";
 
 export interface AppDeps {
   logger: Logger;
+  store: Store;
   version: string;
   /** False once shutdown has begun, so load balancers stop sending traffic. */
   ready: () => boolean;
