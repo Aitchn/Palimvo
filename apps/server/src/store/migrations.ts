@@ -182,4 +182,32 @@ create table library_plugins (
 ) strict;
 `,
   },
+  {
+    version: 2,
+    name: "invites and public access",
+    sql: `
+-- One-time sign-up links. The secret is shown once; only its hash is stored.
+create table invites (
+  id text primary key,
+  token_hash text not null unique,
+  created_by text references accounts (id) on delete set null,
+  note text,
+  roles text not null default '[]', -- JSON array of role ids granted on sign-up
+  vaults text not null default '[]', -- JSON array of {vaultId, position}
+  created_at integer not null,
+  expires_at integer not null,
+  used_at integer,
+  used_by text references accounts (id) on delete set null
+) strict;
+create index invites_expires on invites (expires_at);
+
+-- What guests (people who are not signed in) may read: a whole vault (path ''), a folder or a file.
+create table public_access (
+  vault_id text not null,
+  path text not null,
+  created_at integer not null,
+  primary key (vault_id, path)
+) strict;
+`,
+  },
 ];

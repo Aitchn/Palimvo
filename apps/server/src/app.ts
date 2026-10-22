@@ -1,12 +1,17 @@
 import { Hono } from "hono";
+import { accessGate, principalMiddleware } from "./auth/principal.ts";
+import type { AuthService } from "./auth/service.ts";
 import type { BackupService } from "./history/backup.ts";
 import type { VaultHistory } from "./history/history.ts";
 import { AppError, errorHandler } from "./errors.ts";
 import type { Logger } from "./log.ts";
 import type { Store } from "./store/index.ts";
+import { adminRoutes } from "./routes/admin.ts";
 import { archiveRoutes } from "./routes/archive.ts";
+import { authRoutes } from "./routes/auth.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { historyRoutes } from "./routes/history.ts";
+import { publicRoutes } from "./routes/public.ts";
 import { searchRoutes } from "./routes/search.ts";
 import type { VaultIndexes } from "./search/index.ts";
 import { vaultRoutes } from "./routes/vaults.ts";
@@ -17,6 +22,10 @@ import type { VaultTrash } from "./vault/trash.ts";
 export interface AppDeps {
   logger: Logger;
   store: Store;
+  auth: AuthService;
+  /** Externally visible origin; decides the cookie's `Secure` flag and invite links. */
+  publicUrl?: string | undefined;
+  trustProxy?: boolean;
   version: string;
   /** False once shutdown has begun, so load balancers stop sending traffic. */
   ready: () => boolean;
@@ -62,10 +71,22 @@ export function createApp(deps: AppDeps): Hono {
     );
   });
 
+  app.use("/api/*", principalMiddleware({ auth: deps.auth, publicUrl: deps.publicUrl }));
+  app.use("/api/*", accessGate());
+  app.route(
+    "/",
+    authRoutes({
+      auth: deps.auth,
+      publicUrl: deps.publicUrl,
+      trustProxy: deps.trustProxy ?? false,
+    }),
+  );
+  app.route("/", adminRoutes({ auth: deps.auth, vaults: deps.vaults, publicUrl: deps.publicUrl }));
+  app.route("/", publicRoutes(deps.auth, deps.vaults));
   app.route("/", vaultRoutes(deps));
-  app.route("/", fileRoutes(deps.vaults, deps.history));
+  app.route("/", fileRoutes(deps.vaults, deps.history, deps.auth));
   app.route("/", historyRoutes(deps));
-  app.route("/", searchRoutes(deps.vaults, deps.indexes));
+  app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
   // Last: anything the API did not claim is a file of the web app or one of its routes.
   if (deps.webDir) app.route("/", webRoutes(deps.webDir));

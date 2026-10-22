@@ -9,16 +9,21 @@ import {
   readCompatHeader,
   type Author,
 } from "@palimvo/core";
+import { principalOf } from "../auth/principal.ts";
 import type { ChangeNote } from "../history/history.ts";
 
-/** Who the history credits when a request does not say. Accounts (T10) replace this with the signed-in user. */
+/** Who the history credits when a request does not say (only possible before the first account exists). */
 const ANONYMOUS = makeAuthor("human", "Anonymous", { id: "anonymous" });
 
 /**
- * The author a client states with `X-Palimvo-Author` (`ai:Claude Code`, URI-encoded). Until
- * accounts arrive (T10) this is taken on trust.
+ * The signed-in person, always: a browser session cannot pass itself off as someone else. In setup
+ * mode (no accounts yet) the client's `X-Palimvo-Author` (`ai:Claude Code`, URI-encoded) is taken on
+ * trust; AI tokens (T12) will name their own client.
  */
 export function requestAuthor(c: Context): Author {
+  const principal = principalOf(c);
+  if (principal.kind === "account")
+    return makeAuthor("human", principal.account.displayName, { id: principal.account.username });
   const header = readCompatHeader(
     (name) => c.req.header(name),
     AUTHOR_HEADER,

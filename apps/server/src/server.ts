@@ -3,6 +3,7 @@ import path from "node:path";
 import { serve } from "@hono/node-server";
 import pkg from "../package.json" with { type: "json" };
 import { createApp } from "./app.ts";
+import { AuthService } from "./auth/service.ts";
 import { BackupService, type BackupOptions } from "./history/backup.ts";
 import { assertGit } from "./history/git.ts";
 import { SYSTEM_AUTHOR, VaultHistory, type HistoryOptions } from "./history/history.ts";
@@ -29,6 +30,8 @@ export interface RunningServer {
   logger: Logger;
   /** Server-level metadata (accounts, tokens, audit log, …) in `<dataDir>/palimvo.db`. */
   store: Store;
+  /** Passwords, sessions and invites. */
+  auth: AuthService;
   /**
    * Registers work to run during shutdown, after new connections stop and before the lock is
    * released (e.g. saving live documents). Hooks run in reverse registration order.
@@ -128,10 +131,14 @@ export async function startServer({
       },
     });
     backup.start();
+    const auth = new AuthService(openStore);
     const app = createApp({
       webDir,
       logger: log,
       store: openStore,
+      auth,
+      publicUrl: config.publicUrl,
+      trustProxy: config.trustProxy,
       version: VERSION,
       ready: () => !closing,
       startedAt: Date.now(),
@@ -177,6 +184,7 @@ export async function startServer({
       port,
       logger: log,
       store: openStore,
+      auth,
       services: { vaults, history: history, backup },
       onShutdown: (name, hook) => void hooks.push({ name, hook }),
       close,
