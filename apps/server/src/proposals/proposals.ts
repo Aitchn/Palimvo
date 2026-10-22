@@ -234,7 +234,11 @@ function resolveHunks(
   });
   hunks.sort((a, b) => a.start - b.start || a.end - b.end);
   for (let i = 1; i < hunks.length; i++) {
-    if (hunks[i]!.start < hunks[i - 1]!.end) throw bad("changes must not overlap");
+    // Two changes at the same offset (insertions, or an insertion and a replacement) would apply
+    // in a different order depending on which is accepted first.
+    if (hunks[i]!.start < hunks[i - 1]!.end || hunks[i]!.start === hunks[i - 1]!.start) {
+      throw bad("changes must not overlap");
+    }
   }
   return hunks;
 }
@@ -263,8 +267,7 @@ export class ProposalService {
   /** Newest first. `open` leaves out proposals with nothing left to decide. */
   async list(vault: string, options: { open?: boolean } = {}): Promise<ProposalSummary[]> {
     const names = (await this.vaults.listMeta(vault, FOLDER))
-      .filter((n) => /^[a-f0-9-]{36}\.json$/.test(n))
-      .slice(0, MAX_LISTED);
+      .filter((n) => /^[a-f0-9-]{36}\.json$/.test(n));
     const out: ProposalSummary[] = [];
     for (const name of names) {
       const id = name.slice(0, -".json".length);
@@ -281,7 +284,8 @@ export class ProposalService {
       if (options.open && !["pending", "partial"].includes(proposal.state)) continue;
       out.push(await this.summary(vault, proposal));
     }
-    return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    // Newest first, then cut: file names are random, so the cut must come after the ordering.
+    return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, MAX_LISTED);
   }
 
   async get(vault: string, id: string): Promise<ProposalView> {
@@ -484,6 +488,13 @@ export class ProposalService {
       if ((await this.read(vault, entry.path))?.version === entry.resultVersion) {
         written.add(entry.path);
       }
+    }
+    // The attribution kept in memory died with the process; give the recovered files theirs again.
+    if (written.size > 0) {
+      this.history.record(vault, [...written], proposal.proposedBy, {
+        reason: proposal.title,
+        approvedBy: proposal.applying.reviewer,
+      });
     }
     this.settleApplied(proposal, new Date().toISOString(), written);
     delete proposal.applying;

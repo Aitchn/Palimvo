@@ -315,7 +315,7 @@ describe("edit proposals", () => {
       ],
     };
     await vaults.writeMeta("demo", `proposals/${p.id}.json`, JSON.stringify(raw));
-    await put("notes.md", next, claude);
+    await put("notes.md", next, aitchn);
 
     const view = await json<ProposalView>(await send("GET", `${base}/${p.id}`));
     expect(view.files[0]!.hunks.map((h) => h.state)).toEqual(["accepted", "pending"]);
@@ -323,6 +323,60 @@ describe("edit proposals", () => {
     expect(view.stale).toBe(false);
     expect((await review(view, "accept")).status).toBe(200);
     expect((await read("notes.md")).content).toBe("A\nbeta\nG\n");
+  });
+
+  it("credits a recovered accept to the proposer and the approver", async () => {
+    const p = await created([{ path: "notes.md", hunks: [{ before: "alpha", after: "A" }] }]);
+    const { vaults } = server.services;
+    const raw = JSON.parse((await vaults.readMeta("demo", `proposals/${p.id}.json`))!);
+    const { createHash } = await import("node:crypto");
+    const next = "A\nbeta\ngamma\n";
+    raw.applying = {
+      reviewer: makeAuthor("human", "Dana", { id: "dana-login" }),
+      files: [
+        {
+          path: "notes.md",
+          hunkIds: [raw.files[0].hunks[0].id],
+          resultVersion: createHash("sha256").update(next).digest("hex").slice(0, 16),
+        },
+      ],
+    };
+    await vaults.writeMeta("demo", `proposals/${p.id}.json`, JSON.stringify(raw));
+    // Written by the interrupted accept, whose attribution was lost with the process.
+    await put("notes.md", next);
+    await send("GET", `${base}/${p.id}`);
+    await server.services.history.commit("demo");
+    const { commits } = await json<{ commits: CommitInfo[] }>(
+      await send("GET", "/api/vaults/demo/history?path=notes.md"),
+    );
+    expect(commits[0]).toMatchObject({
+      author: { kind: "ai", name: "Claude" },
+      reasons: ["Tidy the plan"],
+      approvedBy: [{ kind: "human", name: "Dana", id: "dana-login" }],
+    });
+  });
+
+  it("refuses changes that start at the same place", async () => {
+    const version = (await read("notes.md")).version;
+    const res = await send(
+      "POST",
+      base,
+      {
+        title: "t",
+        files: [
+          {
+            path: "notes.md",
+            baseRevision: version,
+            hunks: [
+              { start: 6, end: 6, before: "", after: "x" },
+              { start: 6, end: 6, before: "", after: "y" },
+            ],
+          },
+        ],
+      },
+      claude,
+    );
+    expect(res.status).toBe(400);
   });
 
   it("drops an interrupted accept whose file never got written", async () => {

@@ -760,7 +760,7 @@ export class VaultHistory implements ChangeRecorder {
     const trailers = [
       `${GIT_AUTHOR_TRAILER}: ${c.author.kind}:${c.author.name}${c.author.client ? `/${c.author.client}` : ""}`,
       ...c.reasons.map((r) => `${GIT_REASON_TRAILER}: ${r}`),
-      ...(c.approvedBy ?? []).map((a) => `${GIT_APPROVER_TRAILER}: ${a.kind}:${a.name}`),
+      ...(c.approvedBy ?? []).map((a) => `${GIT_APPROVER_TRAILER}: ${a.kind}:${a.name} <${a.id}>`),
       ...(c.checkpoint ? [`${CHECKPOINT_TRAILER}: true`] : []),
       ...c.co.map((a) => `Co-authored-by: ${a.name} <${gitEmail(a)}>`),
     ];
@@ -880,8 +880,13 @@ function parseMessage(body: string): {
         out.reasons.push(value);
         break;
       case GIT_APPROVER_TRAILER: {
-        const approver = parseAuthor(encodeURIComponent(value));
-        if (approver) out.approvedBy.push(approver);
+        // `kind:name <id>`; older commits have no id, which is then made from the name.
+        const at = value.lastIndexOf(" <");
+        const withId = at > 0 && value.endsWith(">");
+        const approver = parseAuthor(encodeURIComponent(withId ? value.slice(0, at) : value));
+        if (approver) {
+          out.approvedBy.push(withId ? { ...approver, id: value.slice(at + 2, -1) } : approver);
+        }
         break;
       }
       case CHECKPOINT_TRAILER:
