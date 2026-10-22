@@ -1,5 +1,5 @@
 import { validateManifest, type PluginManifest } from "@palimvo/plugin-sdk";
-import { getPluginFile, listRuntimePlugins } from "../api/plugins.ts";
+import { getRuntimeBundle, listRuntimePlugins } from "../api/plugins.ts";
 import type { LoadedPlugin } from "./frame.ts";
 
 export interface LoadFailure {
@@ -61,30 +61,6 @@ export function assemble(
 }
 
 /**
- * Fetches the files a plugin needs to run: its entry, the locale tables and a theme stylesheet.
- * The server serves a file only while the package still matches the approved hash, so a plugin
- * that changed meanwhile fails here instead of running mixed.
- */
-async function fetchBundle(
-  vault: string,
-  info: { id: string; version: string; hash: string; manifest: unknown },
-  signal?: AbortSignal,
-): Promise<{ id: string; hash: string; files: Record<string, string> }> {
-  const checked = validateManifest(info.manifest);
-  if (!checked.ok) throw new Error(`manifest: ${checked.issues[0]?.message ?? "invalid"}`);
-  const { manifest } = checked;
-  const paths = new Set([manifest.main, ...Object.values(manifest.locales ?? {})]);
-  if (manifest.contributes.theme) paths.add(manifest.contributes.theme.css);
-  const files: Record<string, string> = {};
-  await Promise.all(
-    [...paths].map(async (path) => {
-      files[path] = await getPluginFile(vault, info.id, path, { signal });
-    }),
-  );
-  return { id: info.id, hash: info.hash, files };
-}
-
-/**
  * Fetches the plugins that may run in `vault`. Bundles of plugins already loaded at the same
  * hash are not fetched again (`known`).
  */
@@ -101,7 +77,8 @@ export async function loadPlugins(
         const have = known.get(info.id);
         if (have && have.hash === info.hash) return have;
         try {
-          return assemble(info, await fetchBundle(vault, info, signal));
+          const bundle = await getRuntimeBundle(vault, info.id, { signal });
+          return assemble(info, bundle);
         } catch (error) {
           if (signal?.aborted) throw error;
           failures.push({

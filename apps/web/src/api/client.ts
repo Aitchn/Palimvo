@@ -78,13 +78,3 @@ export async function requestIfChanged<T>(
   if (!response.ok) throw await failed(response);
   return { data: (await response.json()) as T, etag: response.headers.get("ETag") };
 }
-
-/** A GET whose answer is text, not JSON (a file the server serves as it is). */
-export async function requestText(
-  path: string,
-  options: Pick<RequestOptions, "signal"> = {},
-): Promise<string> {
-  const response = await send(path, { ...options, headers: { Accept: "*/*" } });
-  if (!response.ok) throw await failed(response);
-  return response.text();
-}

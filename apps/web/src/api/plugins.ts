@@ -1,8 +1,8 @@
-import { encodePath, request, requestText, type RequestOptions } from "./client.ts";
+import { request, type RequestOptions } from "./client.ts";
 
 type Signal = Pick<RequestOptions, "signal">;
 
-const base = (vault: string) => `/api/vaults/${encodeURIComponent(vault)}/plugins`;
+const base = (vault: string) => `/api/vaults/${encodeURIComponent(vault)}/plugin-runtime`;
 
 /** A plugin that may run now in this vault: enabled, approved at exactly this hash, dependencies met. */
 export interface RuntimePluginInfo {
@@ -14,36 +14,25 @@ export interface RuntimePluginInfo {
   manifest: unknown;
 }
 
-interface InstalledPluginDto {
+/** The files of one approved plugin that the browser needs to run it (text only). */
+export interface RuntimeBundle {
   id: string;
-  version: string;
-  sha256: string;
-  state: "running" | "disabled" | "needs_approval" | "blocked";
-  manifest: unknown;
+  hash: string;
+  /** Package path → text: `manifest.main`, the `locales` files and a theme stylesheet. */
+  files: Record<string, string>;
 }
 
-/** The installed plugins that are running, i.e. approved at their current hash. */
 export async function listRuntimePlugins(
   vault: string,
   options: Signal = {},
 ): Promise<RuntimePluginInfo[]> {
-  const { plugins } = await request<{ plugins: InstalledPluginDto[] }>(base(vault), options);
-  return plugins
-    .filter((plugin) => plugin.state === "running")
-    .map((plugin) => ({
-      id: plugin.id,
-      version: plugin.version,
-      hash: plugin.sha256,
-      manifest: plugin.manifest,
-    }));
+  return (await request<{ plugins: RuntimePluginInfo[] }>(base(vault), options)).plugins;
 }
 
-/** One text file of a running plugin; the server re-hashes the package before it serves it. */
-export function getPluginFile(
+export function getRuntimeBundle(
   vault: string,
   id: string,
-  path: string,
   options: Signal = {},
-): Promise<string> {
-  return requestText(`${base(vault)}/${encodeURIComponent(id)}/files/${encodePath(path)}`, options);
+): Promise<RuntimeBundle> {
+  return request<RuntimeBundle>(`${base(vault)}/${encodeURIComponent(id)}`, options);
 }

@@ -51,29 +51,24 @@ async function serve(page: Page, plugins: FakePlugin[], widgets: Array<[string, 
       },
     }),
   );
-  await page.route("**/api/vaults/sample/plugins", (route) =>
+  await page.route("**/api/vaults/sample/plugin-runtime", (route) =>
     route.fulfill({
       json: {
         plugins: plugins.map((p) => ({
           id: p.manifest.id,
           version: p.manifest.version,
-          sha256: p.hash,
-          state: "running",
+          hash: p.hash,
           manifest: p.manifest,
         })),
       },
     }),
   );
-  await page.route("**/api/vaults/sample/plugins/*/files/**", (route) => {
-    const [id, , ...rest] = new URL(route.request().url()).pathname
-      .split("/plugins/")[1]!
-      .split("/")
-      .map(decodeURIComponent);
+  await page.route("**/api/vaults/sample/plugin-runtime/*", (route) => {
+    const id = decodeURIComponent(new URL(route.request().url()).pathname.split("/").pop()!);
     const found = plugins.find((p) => p.manifest.id === id);
-    const body = found?.files[rest.join("/")];
-    return body === undefined
-      ? route.fulfill({ status: 404, json: { code: "not_found", message: "no" } })
-      : route.fulfill({ contentType: "text/plain", body });
+    return found
+      ? route.fulfill({ json: { id, hash: found.hash, files: found.files } })
+      : route.fulfill({ status: 404, json: { code: "not_found", message: "no" } });
   });
 }
 

@@ -136,10 +136,9 @@ the frame follows light and dark.
 
 ## How the browser loads a plugin
 
-The browser lists `GET /api/vaults/:vault/plugins`, runs the entries whose `state` is `running`
-(enabled, approved at exactly the current hash, dependencies met) and reads `manifest.main`, the
-`locales` files and a theme stylesheet from `GET /api/vaults/:vault/plugins/:id/files/<path>`. The
-server re-hashes the package before it serves a file. The browser validates the manifest again.
+The browser lists `GET /api/vaults/:vault/plugin-runtime` (running plugins only) and fetches
+`GET /api/vaults/:vault/plugin-runtime/:id` for the text of `main`, the locale files and the theme
+stylesheet. It validates the manifest again and refuses a bundle whose hash is not the listed one.
 
 ## server.js (MCP tools)
 
