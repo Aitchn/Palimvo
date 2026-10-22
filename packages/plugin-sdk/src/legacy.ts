@@ -17,6 +17,15 @@ const asList = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const text = (v: unknown): string | undefined =>
   typeof v === "string" && v !== "" ? v : undefined;
 
+/** Strips leading and trailing slashes without a backtracking pattern. */
+function trimSlashes(path: string): string {
+  let start = 0;
+  let end = path.length;
+  while (start < end && path[start] === "/") start++;
+  while (end > start && path[end - 1] === "/") end--;
+  return path.slice(start, end);
+}
+
 export function convertLegacyManifest(v1: unknown): LegacyConversion {
   const notes: string[] = [];
   if (!isObj(v1)) {
@@ -42,7 +51,7 @@ export function convertLegacyManifest(v1: unknown): LegacyConversion {
   if (scope) {
     globs = [];
     for (const raw of scope) {
-      const path = typeof raw === "string" ? raw.replace(/^\/+|\/+$/g, "") : "";
+      const path = typeof raw === "string" ? trimSlashes(raw) : "";
       if (path === "") globs.push("**");
       else if (/[*?[\]{}!\\]/.test(path))
         notes.push(`Scope path "${String(raw)}" has wildcard characters and was dropped.`);
