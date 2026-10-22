@@ -60,8 +60,7 @@
           "type": "object",
           "properties": {
             "id": { "type": "string" },
-            "status": { "enum": ["proposed", "accepted", "rejected", "superseded"] },
-            "reason": { "type": "string" }
+            "status": { "enum": ["proposed", "accepted", "rejected", "superseded"] }
           },
           "required": ["id", "status"]
         }

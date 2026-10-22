@@ -82,6 +82,14 @@ export class PluginToolProvider implements ToolProvider {
   ): AnyTool | null {
     const name = pluginToolName(manifest.id, tool.name);
     if (!NAME.test(name)) return null;
+    // `vault` and `reason` belong to the registry; a tool that declared them could never be called.
+    const props = (tool.inputSchema as { properties?: Record<string, unknown> }).properties ?? {};
+    if ("vault" in props || "reason" in props) {
+      this.deps.logger.warn("plugin tool declares a reserved argument; the tool is not offered", {
+        tool: name,
+      });
+      return null;
+    }
     const checker = this.checker(sha256, tool);
     if (!checker) return null;
     const readOnly = tool.readOnly === true;

@@ -162,7 +162,11 @@ async function connect(path: string, secret: string, author?: string) {
 }
 
 /** A write AI client on vault `a` working for mia. */
-async function ai(mia: { client: Client }, access: "read" | "write" = "write", name = "Claude") {
+async function ai(
+  mia: { client: Client },
+  access: "read" | "propose" | "write" = "write",
+  name = "Claude",
+) {
   return connect("/mcp/a", await makeToken(mia, { name, access, vaultId: "a" }), name);
 }
 
@@ -354,6 +358,44 @@ describe("running tools", () => {
     expect(proposal.title).toBe("From plugin");
     expect(JSON.stringify(proposal)).toContain("Decider");
     expect((await mia.client.get("/api/vaults/a/files/decisions/p.md")).status).toBe(404);
+  });
+
+  it("lets a propose-only caller use vault.propose but not vault.write", async () => {
+    const { root, mia } = await world();
+    await install(root);
+    const p = await ai(mia, "propose", "Suggester");
+    expect((await p.plugin("propose", { text: "# From proposer" })).result.state).toBe("pending");
+    expect((await p.plugin("save", { title: "direct" })).error).toBeDefined();
+    expect((await mia.client.get("/api/vaults/a/files/decisions/direct.md")).status).toBe(404);
+  });
+
+  it("keeps the backup and plugin-tool settings that share config.json", async () => {
+    const { root } = await world();
+    await Promise.all([
+      root.client.put("/api/vaults/a/plugin-tools", { listed: true }),
+      server.services.vaults.modifyMeta("a", "config.json", (t) =>
+        JSON.stringify({ ...JSON.parse(t!), other: 1 }),
+      ),
+    ]);
+    const config = JSON.parse((await server.services.vaults.readMeta("a", "config.json"))!);
+    expect(config).toMatchObject({ other: 1, pluginTools: { listed: true } });
+  });
+
+  it("does not offer a tool that declares vault or reason itself", async () => {
+    const { root, mia } = await world();
+    const bad = [
+      {
+        name: "clash",
+        description: "x",
+        inputSchema: schema({ reason: { type: "string" } }),
+      },
+    ];
+    // The validator refuses such a manifest at install time.
+    const res = await root.client.post("/api/vaults/a/plugins", {
+      files: asRequestFiles(pluginFiles(SERVER_JS, { contributes: { tools: bad } })),
+    });
+    expect(res.status).toBe(400);
+    void mia;
   });
 
   it("reports a plugin's own exception as a failure with the message", async () => {

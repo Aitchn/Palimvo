@@ -23,7 +23,7 @@ export class PluginToolSettingsStore {
   private readonly cache = new Map<string, { at: number; value: PluginToolSettings }>();
 
   constructor(
-    private readonly vaults: Pick<VaultService, "readMetaBytes" | "writeMetaBytes">,
+    private readonly vaults: Pick<VaultService, "readMetaBytes" | "modifyMeta">,
     private readonly history: ChangeRecorder,
     private readonly now: () => number = Date.now,
   ) {}
@@ -46,20 +46,23 @@ export class PluginToolSettingsStore {
     settings: PluginToolSettings,
     by: { author: Author; note?: ChangeNote },
   ): Promise<PluginToolSettings> {
-    const bytes = await this.vaults.readMetaBytes(vault, VAULT_CONFIG_FILE);
-    const config = bytes ? parseVaultConfig(new TextDecoder().decode(bytes)) : null;
-    if (!config) throw new Error("The vault has no config.json.");
-    const next = { ...config, [KEY]: { listed: settings.listed } };
-    await this.vaults.writeMetaBytes(
+    await this.vaults.modifyMeta(
       vault,
       VAULT_CONFIG_FILE,
-      new TextEncoder().encode(JSON.stringify(next, null, 2) + "\n"),
+      (text) => {
+        if (text === null) throw new Error("The vault has no config.json.");
+        const next = { ...parseVaultConfig(text), [KEY]: { listed: settings.listed } };
+        return JSON.stringify(next, null, 2) + "\n";
+      },
+      () =>
+        this.history.record(vault, [`${VAULT_META_DIR}/${VAULT_CONFIG_FILE}`], by.author, {
+          reason:
+            by.note?.reason ??
+            (settings.listed
+              ? "List plugin tools in tools/list"
+              : "Hide plugin tools from tools/list"),
+        }),
     );
-    this.history.record(vault, [`${VAULT_META_DIR}/${VAULT_CONFIG_FILE}`], by.author, {
-      reason:
-        by.note?.reason ??
-        (settings.listed ? "List plugin tools in tools/list" : "Hide plugin tools from tools/list"),
-    });
     this.cache.set(vault, { at: this.now(), value: { listed: settings.listed } });
     return { listed: settings.listed };
   }

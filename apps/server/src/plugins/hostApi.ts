@@ -1,6 +1,6 @@
 import { isAppError, makeAuthor, vaultScope } from "@palimvo/core";
 import type { Author } from "@palimvo/core";
-import { resolveLocalized, type PluginManifest } from "@palimvo/plugin-sdk";
+import { pathAllowed, resolveLocalized, type PluginManifest } from "@palimvo/plugin-sdk";
 import type { HostFunctions } from "./sandbox/index.ts";
 import { cleanPath, readableIn, type Ctx } from "../mcp/tools/shared.ts";
 import { pluginMayAccess } from "./summary.ts";
@@ -147,7 +147,10 @@ export function createHostApi(ctx: Ctx, manifest: PluginManifest): HostFunctions
       const a = object(raw, "vault.propose");
       const p = path(a.path);
       const content = string(a.content, "content");
-      if (!mayWrite(p)) throw denied(`propose changes to ${p}`);
+      // Proposing changes nothing, so a caller who may only propose needs the manifest's write
+      // folders (what the plugin may touch) but not `note.write`; reading the file is enough.
+      if (!pathAllowed(manifest.permissions.write, p) || !mayRead(p))
+        throw denied(`propose changes to ${p}`);
       if (!ctx.access.can("proposal.create", vaultScope(vault)))
         throw denied("create edit proposals");
       let current: { version: string; content: string } | null = null;

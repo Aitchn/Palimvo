@@ -90,6 +90,7 @@ export async function startServer({
   const gitVersion = await assertGit();
   const lock = await acquireLock(config.dataDir);
   let store: Store | undefined;
+  let sandbox: SandboxPool | undefined;
   try {
     store = await Store.openInDataDir(config.dataDir);
     log.info("starting palimvo", {
@@ -142,16 +143,17 @@ export async function startServer({
       if (added.length > 0) log.info("official plugins added to the library", { plugins: added });
     }
     // Plugin MCP tools run in QuickJS workers. Started now so the first call does not wait for a worker.
-    const sandbox = new SandboxPool({ ...sandboxOptions, size: config.pluginWorkers });
+    const pool = new SandboxPool({ ...sandboxOptions, size: config.pluginWorkers });
+    sandbox = pool;
     const toolSettings = new PluginToolSettingsStore(vaults, history);
     const pluginTools = new PluginToolProvider({
       manager: plugins,
-      pool: sandbox,
+      pool,
       settings: toolSettings,
       logger: log,
     });
-    void sandbox.warm().then(
-      () => log.info("plugin sandbox ready", { workers: sandbox.stats().workers }),
+    void pool.warm().then(
+      () => log.info("plugin sandbox ready", { workers: pool.stats().workers }),
       (err: unknown) => log.error("plugin sandbox failed to start", errorFields(err)),
     );
     const backup = new BackupService(vaults, history, { logger: log, ...backupOptions });
@@ -178,7 +180,7 @@ export async function startServer({
         await history.flushAll();
       },
     });
-    hooks.push({ name: "plugin sandbox", hook: () => sandbox.close() });
+    hooks.push({ name: "plugin sandbox", hook: () => pool.close() });
     backup.start();
     const auth = new AuthService(openStore);
     const setup = new SetupService(openStore, config.dataDir, {
@@ -259,6 +261,8 @@ export async function startServer({
       close,
     };
   } catch (err) {
+    // A failed start (the port is taken, say) must not leave sandbox workers keeping the process alive.
+    await sandbox?.close();
     store?.close();
     await lock.release();
     throw err;
