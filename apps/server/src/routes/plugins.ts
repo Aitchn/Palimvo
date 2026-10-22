@@ -212,6 +212,7 @@ export function pluginRoutes(plugins: PluginManager, vaults: VaultService): Hono
   /** The plugins the web host should start: switched on, approved at their current hash, runnable. */
   app.get("/api/vaults/:vault/plugin-runtime", async (c) => {
     const vault = await vaultOf(c);
+    c.header("cache-control", "private, no-store");
     const running = (await plugins.list(vault)).filter((p) => p.state === "running");
     return c.json({
       plugins: running.map((p) => ({
@@ -229,6 +230,7 @@ export function pluginRoutes(plugins: PluginManager, vaults: VaultService): Hono
    */
   app.get("/api/vaults/:vault/plugin-runtime/:id", async (c) => {
     const vault = await vaultOf(c);
+    c.header("cache-control", "private, no-store");
     const { plugin, files } = await plugins.load(vault, c.req.param("id")!);
     const { manifest } = plugin;
     const wanted = [

@@ -218,7 +218,9 @@ describe("installing and approving in a vault", () => {
     expect((await mia.client.get("/api/vaults/a/plugin-runtime/board")).status).toBe(403);
     await root.client.post("/api/vaults/a/plugins/board/approve", { sha256: first.sha256 });
 
-    const list = await json<Json>(await mia.client.get("/api/vaults/a/plugin-runtime"));
+    const listRes = await mia.client.get("/api/vaults/a/plugin-runtime");
+    expect(listRes.headers.get("cache-control")).toContain("no-store");
+    const list = await json<Json>(listRes);
     expect(list.plugins).toHaveLength(1);
     expect(list.plugins[0]).toMatchObject({ id: "board", version: "1.0.0", hash: first.sha256 });
     expect(list.plugins[0].manifest.id).toBe("board");
