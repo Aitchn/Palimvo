@@ -39,6 +39,14 @@ export default tseslint.config(
     },
   },
   {
+    // Example plugins run in the sandbox iframe: browser ES modules.
+    files: ["plugins/examples/**/*.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: { document: "readonly" },
+    },
+  },
+  {
     // Runs inside the plugin sandbox iframe, as a raw string; it is a browser script.
     files: ["apps/web/src/plugins/runtime.js"],
     languageOptions: {

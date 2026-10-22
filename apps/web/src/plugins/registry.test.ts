@@ -66,4 +66,36 @@ describe("ContributionRegistry", () => {
     entry.session.revoke();
     expect(new ContributionRegistry(list).views).toEqual([]);
   });
+
+  it("lists slot entries by slot, apps and themes of running plugins", () => {
+    const host = hostWith(
+      makePlugin({
+        id: "tools",
+        contributes: {
+          slots: [
+            { slot: "toolbar", id: "a", title: "A" },
+            { slot: "status-bar", id: "b", title: "B", icon: "info" },
+            { slot: "toolbar", id: "c", title: "C" },
+          ],
+          app: { name: "Tools app" },
+        },
+      }),
+      makePlugin({ id: "paint", contributes: { theme: { name: "Paint", css: "theme.css" } } }, {}),
+      makePlugin({ id: "no-css", contributes: { theme: { name: "No css", css: "theme.css" } } }),
+    );
+    const withCss = host
+      .list()
+      .map((entry) =>
+        entry.plugin.manifest.id === "paint"
+          ? { ...entry, plugin: { ...entry.plugin, themeCss: ":root{--a:1}" } }
+          : entry,
+      );
+    const registry = new ContributionRegistry(withCss);
+    expect(registry.slotEntries("toolbar").map((s) => s.id)).toEqual(["a", "c"]);
+    expect(registry.slotEntries("status-bar")[0]?.icon).toBe("info");
+    expect(registry.slotEntries("settings")).toEqual([]);
+    expect(registry.apps.map((a) => a.pluginId)).toEqual(["tools"]);
+    // A theme without a stylesheet in the bundle is not offered.
+    expect(registry.themes.map((t) => t.pluginId)).toEqual(["paint"]);
+  });
 });

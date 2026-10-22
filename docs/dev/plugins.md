@@ -5,7 +5,7 @@ browser code in a sandboxed iframe and its server code (MCP tools) in a QuickJS 
 approves each exact version before anything runs. Design reasons:
 [ADR 0017](../adr/0017-plugin-manifest-v2.md) (manifest) and
 [ADR 0019](../adr/0019-plugin-web-host.md) (browser host). This page is a first draft; the UI
-layers (T33) and server tools (T34) land in later changes. The installer and the library are
+layers are described under [Changing the interface](#changing-the-interface); server tools (T34) land in a later change. The installer and the library are
 described under [Installing, approving and the library](#installing-approving-and-the-library).
 
 ```
@@ -90,11 +90,62 @@ if (!result.ok) console.error(result.issues); // [{ path, code, message }]
 | `app`             | `{ name, icon? }`: takes over the main area                 | `ui.registerApp(render)`         |
 | `tools`           | `{ name, description, inputSchema, readOnly? }`: MCP tools  | `server.js` (below)              |
 
-Slots: `toolbar`, `context-menu`, `command-palette`, `status-bar`, `settings`. The host draws the
-frame; your content runs in the sandbox. Names the core owns are reserved (code block languages
+Names the core owns are reserved (code block languages
 `component`, `mermaid`, `math`, `base`; base views `table`, `cards`, `list`, `map`; the note
 extensions `md`, `canvas`, `base`). File types may not use HTML, SVG, XML or script media types:
 files are always served as inert downloads.
+
+## Changing the interface
+
+Three layers, from the least to the most a plugin can change. Design:
+[ADR 0020](../adr/0020-plugin-ui-layers.md). One example of each is in `plugins/examples/`.
+
+### 1. Theme (`contributes.theme`)
+
+A stylesheet of colours and fonts. It is the only thing a plugin puts into the app's own page, so
+the host parses it and keeps a small subset; the rest is dropped (the plugin settings do not
+fail, the dropped parts simply have no effect).
+
+- Rules may use `:root`, `:root[data-theme="light"]`, `:root[data-theme="dark"]` or
+  `[data-theme="light"|"dark"]` as their only selector.
+- Declarations may set custom properties (`--accent: #6c8cff`) and `color-scheme`, `font-family`,
+  `font-size`, `line-height`, `letter-spacing`. See `apps/web/src/styles/tokens.css` for the
+  variables the app reads.
+- Values may not contain `url()`, `image-set()`, `src()`, `expression()`, `javascript:`,
+  `data:`, backslash escapes, braces, `;`, `<`, `>`, `@` or `!important`. At-rules (`@import`,
+  `@media`, `@font-face`) and nested blocks are dropped. Up to 64 KB.
+- Themes win over the app's own tokens without `!important` (the host writes each selector with
+  the same specificity as the app's and places the sheet later in the page).
+- A person picks one in **Settings → Plugin theme**; the choice is kept on that device.
+
+### 2. Slots (`contributes.slots`)
+
+The app draws the frame; the plugin supplies what happens. Register each entry with
+`ui.registerSlot(slot, id, handler)`.
+
+| Slot              | The app draws                               | Handler                          |
+| ----------------- | ------------------------------------------- | -------------------------------- |
+| `toolbar`         | a button in the top bar (icon or title)     | `run(context)`                   |
+| `context-menu`    | an item in the file tree's right-click menu | `run(context)`, `context.path`   |
+| `command-palette` | a command in the palette (Ctrl+Shift+P)     | `run(context)`                   |
+| `status-bar`      | an item in the bar under the main area      | `run(context)`                   |
+| `settings`        | a section titled with the entry's title     | `render({ el })`, drawn in frame |
+
+- `title` is shown by the app (localised); `icon` is used when it names one of the app's own
+  icons, otherwise toolbar entries show the title and the other slots show no icon.
+- `visible(context)` is optional and decides per moment whether the entry shows (for example
+  only on `.md` files). It must answer within 5 seconds; a plugin that fails or stays silent is
+  hidden. `run` has 30 seconds.
+- `context.path` is the open or clicked file. It is left out when the plugin's `permissions.read`
+  does not cover it, so a slot never tells a plugin about files it may not read.
+- Entries run in the plugin's hidden frame, with the plugin's own permissions. Nothing a plugin
+  sends is put into the page: there is no way to supply HTML for the frame.
+
+### 3. App (`contributes.app`)
+
+`ui.registerApp(render)` draws the whole main area, like a view that fills the page, and is
+listed under **Plugin apps** in the sidebar (address `?app=<plugin id>`). The app's own rail,
+sidebar, top bar and sign-in stay; opening any file or page ends the takeover.
 
 ## main.js
 

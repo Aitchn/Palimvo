@@ -11,9 +11,10 @@ import { useAsync } from "../app/useAsync.ts";
 import { ChangeLog } from "../history/ChangeLog.tsx";
 import { ProposalsPanel } from "../proposals/ProposalsPanel.tsx";
 import { SearchPanel } from "../search/SearchPanel.tsx";
-import { Button, ContextMenu, Skeleton, type MenuItem } from "../ui/index.ts";
+import { Button, ContextMenu, isIconName, Skeleton, type MenuItem } from "../ui/index.ts";
 import type { TreeState } from "../files/useVaultTree.ts";
-import { PluginViewLinks, type PluginViewRef } from "../plugins/PluginViews.tsx";
+import { PluginAppLinks, PluginViewLinks, type PluginViewRef } from "../plugins/PluginViews.tsx";
+import { useSlotItems } from "../plugins/slots.ts";
 import { VaultSwitcher } from "./VaultSwitcher.tsx";
 import type { VaultCan } from "./useVaultPermissions.ts";
 
@@ -37,6 +38,9 @@ interface Props {
   /** The plugin page open in the main area, if any. */
   pluginView: PluginViewRef | null;
   onOpenPluginView: (ref: PluginViewRef) => void;
+  /** The plugin application open in the main area, if any. */
+  pluginApp: string | null;
+  onOpenPluginApp: (plugin: string) => void;
   view: SidebarView;
   onViewChange: (view: SidebarView) => void;
   /** Changes whenever the search box should take focus. */
@@ -77,6 +81,8 @@ export function Sidebar({
   onCommands,
   pluginView,
   onOpenPluginView,
+  pluginApp,
+  onOpenPluginApp,
   view,
   onViewChange,
   searchFocus,
@@ -86,6 +92,11 @@ export function Sidebar({
   const [menu, setMenu] = useState<RowMenuRequest | null>(null);
   const [permissionsOf, setPermissionsOf] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
+  // Plugin entries are asked about only while a menu is open, for the row it was opened on.
+  const pluginMenuItems = useSlotItems(
+    "context-menu",
+    menu ? { path: menu.node?.path ?? null } : null,
+  );
   const importInto = useRef("");
   const [query, setQuery] = useState("");
   const [allProposals, setAllProposals] = useState(false);
@@ -369,6 +380,7 @@ export function Sidebar({
             )}
           </div>
           <PluginViewLinks active={pluginView} onOpen={onOpenPluginView} />
+          <PluginAppLinks active={pluginApp} onOpen={onOpenPluginApp} />
         </>
       )}
       <FolderPermissionsDialog
@@ -379,7 +391,15 @@ export function Sidebar({
       {menu && (
         <ContextMenu
           label={menu.node ? menu.node.name : t("files.tree")}
-          items={itemsFor(menu.node)}
+          items={[
+            ...itemsFor(menu.node),
+            ...pluginMenuItems.map((item): MenuItem => ({
+              id: `plugin:${item.key}`,
+              label: item.title,
+              ...(isIconName(item.icon) ? { icon: item.icon } : {}),
+              onSelect: () => void item.run(),
+            })),
+          ]}
           x={menu.x}
           y={menu.y}
           onClose={() => setMenu(null)}

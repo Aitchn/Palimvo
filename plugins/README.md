@@ -13,3 +13,14 @@ Plugins shipped with the server (disabled by default) live here, one folder per 
 
 For now these folders hold only the manifests (validated by the plugin SDK tests); the loader must
 skip a folder whose `main` file is missing until the code arrives.
+
+## Examples
+
+`examples/` holds one small plugin per UI layer for plugin authors. They are not seeded into the
+server library.
+
+| Folder                    | Shows                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `examples/theme-midnight` | a CSS-variable theme (`contributes.theme`)                                              |
+| `examples/slots-demo`     | an entry in every UI slot: toolbar, context menu, command palette, status bar, settings |
+| `examples/hello-app`      | a whole-page application (`contributes.app`)                                            |

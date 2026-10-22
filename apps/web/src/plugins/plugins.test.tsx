@@ -177,4 +177,84 @@ describe("plugins in the workspace", () => {
     await renderRoute("/v/sample", "zh-TW");
     expect(await screen.findByRole("region", { name: "問候" })).toBeInTheDocument();
   });
+
+  describe("apps and themes", () => {
+    const PAINT_HASH = "e".repeat(64);
+    const paintManifest = {
+      manifestVersion: 2,
+      id: "paint",
+      version: "1.0.0",
+      name: { en: "Paint" },
+      permissions: { read: ["**"] },
+      contributes: {
+        theme: { name: { en: "Midnight" }, css: "theme.css" },
+        app: { name: { en: "Paint app" } },
+        slots: [{ slot: "settings", id: "about", title: { en: "About paint" } }],
+      },
+    };
+    const paintListing = {
+      id: "paint",
+      version: "1.0.0",
+      hash: PAINT_HASH,
+      manifest: paintManifest,
+    };
+    const css = `:root[data-theme="dark"] { --accent: #123456; background: url(https://evil.example/x.png); }
+      body { --leak: 1 }`;
+    const paintBundle = {
+      id: "paint",
+      hash: PAINT_HASH,
+      files: { "main.js": "export default () => {};", "theme.css": css },
+    };
+    const withPaint = () =>
+      routes({
+        "GET /api/vaults/sample/plugin-runtime": () =>
+          Response.json({ plugins: [listing, paintListing] }),
+        "GET /api/vaults/sample/plugin-runtime/paint": () => Response.json(paintBundle),
+      });
+
+    it("lists apps in the sidebar and lets one take over the main area", async () => {
+      withPaint();
+      await renderRoute("/v/sample");
+      const nav = await screen.findByRole("navigation", { name: "Plugin apps" });
+      await userEvent.click(within(nav).getByRole("button", { name: "Paint app" }));
+      await waitFor(() => expect(document.querySelector(".plugin-app iframe")).not.toBeNull());
+      expect(within(nav).getByRole("button", { name: "Paint app" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      // The app's own navigation stays.
+      expect(screen.getByRole("navigation", { name: "Main navigation" })).toBeInTheDocument();
+    });
+
+    it("opens an app from its address and says so when it is not running", async () => {
+      withPaint();
+      await renderRoute("/v/sample?app=paint");
+      await waitFor(() => expect(document.querySelector(".plugin-app iframe")).not.toBeNull());
+    });
+
+    it("says so for an app that does not exist", async () => {
+      routes();
+      await renderRoute("/v/sample?app=nobody");
+      expect(await screen.findByText("This plugin app is not available.")).toBeInTheDocument();
+    });
+
+    it("applies a chosen plugin theme as sanitised CSS and removes it again", async () => {
+      withPaint();
+      await renderRoute("/v/sample");
+      await screen.findByRole("navigation", { name: "Plugin apps" });
+      await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+      const select = await screen.findByRole("combobox", { name: "Plugin theme" });
+      expect(document.getElementById("palimvo-plugin-theme")).toBeNull();
+      await userEvent.selectOptions(select, "paint");
+      const style = await waitFor(() => {
+        const found = document.getElementById("palimvo-plugin-theme");
+        expect(found).not.toBeNull();
+        return found!;
+      });
+      expect(style.textContent).toBe(':root[data-theme="dark"]{--accent:#123456;}');
+      expect(localStorage.getItem("palimvo.pluginTheme")).toBe("paint");
+      await userEvent.selectOptions(select, "");
+      await waitFor(() => expect(document.getElementById("palimvo-plugin-theme")).toBeNull());
+    });
+  });
 });

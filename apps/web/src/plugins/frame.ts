@@ -57,6 +57,7 @@ export interface MountedFrame {
     id: string,
     op: "run" | "visible",
     context: Record<string, unknown>,
+    signal?: AbortSignal,
   ) => Promise<unknown>;
 }
 
@@ -388,7 +389,7 @@ export function mountPlugin(container: HTMLElement, options: MountOptions): Moun
     emit: (name, data) => post({ type: "event", name, data }),
     invoke: (plugin, point, input, signal) =>
       callFrame((requestId) => ({ type: "invoke", requestId, plugin, point, input }), signal),
-    invokeSlot: (slot, id, op, context) =>
-      callFrame((requestId) => ({ type: "slot", requestId, slot, id, op, context })),
+    invokeSlot: (slot, id, op, context, signal) =>
+      callFrame((requestId) => ({ type: "slot", requestId, slot, id, op, context }), signal),
   };
 }
