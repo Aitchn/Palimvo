@@ -2,6 +2,11 @@
   "name": "palimvo-spike-s3",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test test/*.test.ts", "live": "node live.ts" },
-  "dependencies": { "@anthropic-ai/sdk": "latest" }
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "live": "node live.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest"
+  }
 }

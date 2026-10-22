@@ -18,11 +18,31 @@ export type ProviderEvent =
   | { type: "tool_start"; index: number; id: string; name: string }
   | { type: "tool_input_delta"; index: number; json: string }
   // Emitted only when the block is complete. input is parsed JSON, or inputError is set.
-  | { type: "tool_end"; index: number; id: string; name: string; input?: unknown; inputError?: string }
+  | {
+      type: "tool_end";
+      index: number;
+      id: string;
+      name: string;
+      input?: unknown;
+      inputError?: string;
+    }
   | { type: "fallback"; fromModel?: string; toModel?: string }
   | { type: "usage"; usage: Usage }
-  | { type: "message_end"; stopReason: StopReason; rawStopReason: string; refusalCategory?: string | null; assistant: AssistantBlock[] }
-  | { type: "error"; kind: "aborted" | "rate_limit" | "overloaded" | "auth" | "bad_request" | "network" | "protocol"; message: string; status?: number; retryable: boolean };
+  | {
+      type: "message_end";
+      stopReason: StopReason;
+      rawStopReason: string;
+      refusalCategory?: string | null;
+      assistant: AssistantBlock[];
+    }
+  | {
+      type: "error";
+      kind:
+        "aborted" | "rate_limit" | "overloaded" | "auth" | "bad_request" | "network" | "protocol";
+      message: string;
+      status?: number;
+      retryable: boolean;
+    };
 
 export type AssistantBlock =
   | { type: "text"; text: string }

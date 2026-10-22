@@ -1,4 +1,11 @@
-import type { ChatProvider, Message, ProviderEvent, StreamRequest, ToolDef, Usage } from "./events.ts";
+import type {
+  ChatProvider,
+  Message,
+  ProviderEvent,
+  StreamRequest,
+  ToolDef,
+  Usage,
+} from "./events.ts";
 
 export interface LoopOptions {
   provider: ChatProvider;
@@ -10,8 +17,13 @@ export interface LoopOptions {
   onEvent?: (e: ProviderEvent) => void;
 }
 
-export type LoopResult =
-  | { status: "done" | "refused" | "max_tokens" | "aborted" | "error" | "turn_limit"; messages: Message[]; usage: Usage; executed: string[]; detail?: string };
+export type LoopResult = {
+  status: "done" | "refused" | "max_tokens" | "aborted" | "error" | "turn_limit";
+  messages: Message[];
+  usage: Usage;
+  executed: string[];
+  detail?: string;
+};
 
 /**
  * The safety rule this spike validates: a tool runs only when
@@ -24,16 +36,24 @@ export async function runLoop(o: LoopOptions): Promise<LoopResult> {
   const messages = [...o.messages];
   const usage: Usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
   const executed: string[] = [];
-  const res = (status: LoopResult["status"], detail?: string): LoopResult => ({ status, messages, usage, executed, detail });
+  const res = (status: LoopResult["status"], detail?: string): LoopResult => ({
+    status,
+    messages,
+    usage,
+    executed,
+    detail,
+  });
   for (let turn = 0; turn < (o.maxTurns ?? 8); turn++) {
     const done: { id: string; name: string; input: unknown; inputError?: string }[] = [];
     let end: Extract<ProviderEvent, { type: "message_end" }> | undefined;
     for await (const e of o.provider.stream({ ...o.request, messages }, o.signal)) {
       o.onEvent?.(e);
       if (e.type === "tool_end") done.push(e);
-      else if (e.type === "usage") for (const k of Object.keys(usage) as (keyof Usage)[]) usage[k] += e.usage[k];
+      else if (e.type === "usage")
+        for (const k of Object.keys(usage) as (keyof Usage)[]) usage[k] += e.usage[k];
       else if (e.type === "message_end") end = e;
-      else if (e.type === "error") return res(e.kind === "aborted" ? "aborted" : "error", e.message);
+      else if (e.type === "error")
+        return res(e.kind === "aborted" ? "aborted" : "error", e.message);
     }
     if (!end || o.signal.aborted) return res("aborted");
     if (end.stopReason === "refusal") return res("refused", end.refusalCategory ?? undefined);
@@ -42,11 +62,21 @@ export async function runLoop(o: LoopOptions): Promise<LoopResult> {
     if (end.stopReason !== "tool_use") return res("done");
     const results = [];
     for (const t of done) {
-      if (t.inputError) { results.push({ toolUseId: t.id, content: `invalid JSON input: ${t.inputError}`, isError: true }); continue; }
+      if (t.inputError) {
+        results.push({
+          toolUseId: t.id,
+          content: `invalid JSON input: ${t.inputError}`,
+          isError: true,
+        });
+        continue;
+      }
       if (o.signal.aborted) return res("aborted");
       executed.push(t.name);
-      try { results.push({ toolUseId: t.id, content: await o.execute(t.name, t.input) }); }
-      catch (err) { results.push({ toolUseId: t.id, content: String((err as Error).message), isError: true }); }
+      try {
+        results.push({ toolUseId: t.id, content: await o.execute(t.name, t.input) });
+      } catch (err) {
+        results.push({ toolUseId: t.id, content: String((err as Error).message), isError: true });
+      }
     }
     messages.push({ role: "tool", results });
   }
@@ -54,7 +84,34 @@ export async function runLoop(o: LoopOptions): Promise<LoopResult> {
 }
 
 export const TOOLS: ToolDef[] = [
-  { name: "read_note", description: "Read a note by path", inputSchema: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false } },
-  { name: "update_note", description: "Replace the text of a note", inputSchema: { type: "object", properties: { path: { type: "string" }, text: { type: "string" } }, required: ["path", "text"], additionalProperties: false } },
-  { name: "search", description: "Search notes", inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"], additionalProperties: false } },
+  {
+    name: "read_note",
+    description: "Read a note by path",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "update_note",
+    description: "Replace the text of a note",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" }, text: { type: "string" } },
+      required: ["path", "text"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "search",
+    description: "Search notes",
+    inputSchema: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      required: ["query"],
+      additionalProperties: false,
+    },
+  },
 ];

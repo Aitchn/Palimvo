@@ -11,8 +11,16 @@ export interface ModelCaps {
 // Draft of models.json entries (T45).
 export const MODEL_CAPS: Record<string, ModelCaps> = {
   "claude-opus-5-5": { family: "anthropic", efforts: ["low", "medium", "high", "xhigh", "max"] },
-  "claude-sonnet-5-5": { family: "anthropic", efforts: ["low", "medium", "high", "xhigh", "max"], off: "between_tools" },
-  "claude-opus-5": { family: "anthropic", efforts: ["low", "medium", "high", "xhigh", "max"], off: "disabled" },
+  "claude-sonnet-5-5": {
+    family: "anthropic",
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    off: "between_tools",
+  },
+  "claude-opus-5": {
+    family: "anthropic",
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    off: "disabled",
+  },
   "gpt-reasoning": { family: "openai", efforts: ["low", "medium", "high"], off: "omit" },
   "local-plain": { family: "openai", efforts: [], off: "omit" },
 };
@@ -24,7 +32,10 @@ export function levelsFor(model: string): EffortLevel[] {
 }
 
 /** Request-body fragment for Anthropic. Never sends budget_tokens or sampling params (both 400). */
-export function anthropicEffort(model: string, level: EffortLevel | undefined): Record<string, unknown> {
+export function anthropicEffort(
+  model: string,
+  level: EffortLevel | undefined,
+): Record<string, unknown> {
   const c = MODEL_CAPS[model];
   if (!c || c.family !== "anthropic") return {};
   if (level === "off") {
@@ -41,7 +52,10 @@ export function anthropicEffort(model: string, level: EffortLevel | undefined): 
 }
 
 /** Request-body fragment for OpenAI-compatible endpoints. */
-export function openaiEffort(model: string, level: EffortLevel | undefined): Record<string, unknown> {
+export function openaiEffort(
+  model: string,
+  level: EffortLevel | undefined,
+): Record<string, unknown> {
   const c = MODEL_CAPS[model];
   if (!c || c.family !== "openai" || !level || level === "off") return {};
   if (!c.efforts.includes(level)) throw new Error(`${model} does not support effort ${level}`);
