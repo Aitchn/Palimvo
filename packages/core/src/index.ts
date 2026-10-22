@@ -15,3 +15,4 @@ export * from "./base-expr.ts";
 export * from "./bases.ts";
 export * from "./search.ts";
 export * from "./permissions/index.ts";
+export * from "./home.ts";

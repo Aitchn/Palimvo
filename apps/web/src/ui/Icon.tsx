@@ -32,6 +32,8 @@ const paths = {
   user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-8 9a8 8 0 0 1 16 0",
   logout: "M10 4H4v16h6M15 8l4 4-4 4M19 12H9",
   copy: "M8 8h12v12H8V8Zm-4 8V4h12",
+  home: "M3 11 12 3l9 8M5 9.5V21h5v-6h4v6h5V9.5",
+  pin: "M9 4h6l-1 6 3 3v2H7v-2l3-3-1-6ZM12 15v6",
   history: "M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 8v4l3 2",
   offline:
     "M3 3l18 18M8.5 8.8A9 9 0 0 0 3 12M21 12a9 9 0 0 0-4.6-3.6M12 18h.01M8 15a5 5 0 0 1 3-1.5",

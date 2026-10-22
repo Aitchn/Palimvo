@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { basename, dirname, type TreeNode } from "@palimvo/core";
+import { basename, dirname, fileKind, type TreeNode } from "@palimvo/core";
+import { describeError } from "../api/errors.ts";
 import { archiveUrl } from "../api/files.ts";
 import { Palette, type PaletteItem } from "../commands/Palette.tsx";
 import { rank } from "../commands/fuzzy.ts";
@@ -12,9 +13,11 @@ import { useFileOperations } from "../files/useFileOperations.ts";
 import { useVaultTree } from "../files/useVaultTree.ts";
 import { Shell } from "../shell/Shell.tsx";
 import { Tabs } from "../shell/Tabs.tsx";
+import { setPinned } from "../api/home.ts";
 import { HistoryPanel } from "../history/HistoryPanel.tsx";
+import { VaultHome } from "../home/VaultHome.tsx";
 import { BacklinksPanel } from "../search/BacklinksPanel.tsx";
-import { Icon } from "../ui/index.ts";
+import { Icon, useToast } from "../ui/index.ts";
 import { fileHref, pathFromLocation, vaultHref } from "./deepLinks.ts";
 import { FileView } from "./FileView.tsx";
 import { useVaultPermissions } from "./useVaultPermissions.ts";
@@ -36,6 +39,7 @@ function folderOfPath(path: string | null): string {
 
 function VaultWorkspace({ vault }: { vault: string }) {
   const { t, i18n } = useTranslation();
+  const toast = useToast();
   const navigate = useNavigate();
   const params = useParams();
   const location = pathFromLocation(params["*"]);
@@ -48,6 +52,12 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const [sidebarView, setSidebarView] = useState<SidebarView>("files");
   // Each request shows the sidebar and puts the cursor in the search box.
   const [searchRequest, setSearchRequest] = useState(0);
+  // Increases to bring the sidebar back when something outside it wants a view shown.
+  const [sidebarBump, setSidebarBump] = useState(0);
+  const showProposals = useCallback(() => {
+    setSidebarView("proposals");
+    setSidebarBump((n) => n + 1);
+  }, []);
   const openSearch = useCallback(() => {
     setSidebarView("search");
     setSearchRequest((n) => n + 1);
@@ -67,7 +77,12 @@ function VaultWorkspace({ vault }: { vault: string }) {
   // Whether the Proposals view exists depends on the vault, not on the open file's folder; the
   // server checks each file's folder when a decision is made.
   const vaultCan = useVaultPermissions(vault);
-  const can = { ...folderCan, propose: vaultCan.propose, review: vaultCan.review };
+  const can = {
+    ...folderCan,
+    propose: vaultCan.propose,
+    review: vaultCan.review,
+    settings: vaultCan.settings,
+  };
 
   const openFile = useCallback(
     (path: string) => navigate(fileHref(vault, path)),
@@ -189,11 +204,30 @@ function VaultWorkspace({ vault }: { vault: string }) {
           run: () => window.location.assign(archiveUrl(vault, "")),
         },
         {
+          id: "nav.home",
+          title: t("home.open"),
+          icon: "home" as const,
+          run: () => navigate(vaultHref(vault)),
+        },
+        {
           id: "nav.vaults",
           title: t("workspace.allVaults"),
           icon: "files",
           run: () => navigate("/"),
         },
+        ...(activeFile && can.settings && fileKind(activeFile.path) === "markdown"
+          ? (["pin", "unpin"] as const).map((action) => ({
+              id: `home.${action}`,
+              title: t(`home.${action}Command`),
+              icon: "pin" as const,
+              run: () =>
+                void setPinned(vault, activeFile.path, action === "pin").then(
+                  () => toast.push({ message: t(`home.${action}Done`), kind: "success" }),
+                  (error: unknown) =>
+                    toast.push({ message: describeError(t, error), kind: "error" }),
+                ),
+            }))
+          : []),
         ...(activeFile && can.write && can.delete
           ? [
               {
@@ -227,7 +261,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
           : []),
       ]),
     // The commands close over the latest handlers; re-register when what they act on changes.
-    [t, i18n.language, vault, activePath, nodes, can.write, can.delete, can.upload],
+    [t, i18n.language, vault, activePath, nodes, can.write, can.delete, can.upload, can.settings],
   );
 
   useEffect(() => {
@@ -270,6 +304,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
             onToggle={folders.toggle}
             onOpen={openFile}
             onQuickOpen={() => setQuickOpen(true)}
+            onHome={() => navigate(vaultHref(vault))}
             onCommands={() => setPalette(true)}
             view={sidebarView}
             onViewChange={setSidebarView}
@@ -277,7 +312,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
             revision={revision.current}
           />
         }
-        sidebarRequest={searchRequest}
+        sidebarRequest={searchRequest + sidebarBump}
         tabs={
           <Tabs
             tabs={tabs.tabs.map((path) => ({ id: path, title: tabTitle(path), detail: path }))}
@@ -332,14 +367,22 @@ function VaultWorkspace({ vault }: { vault: string }) {
               if (can.write) void operations.createLinked(target);
             }}
           />
-        ) : (
+        ) : missing ? (
           <div className="state">
-            <Icon name={missing ? "warning" : "note"} />
-            <h1>{missing ? t("workspace.notFoundTitle") : t("shell.noFileTitle")}</h1>
-            <p className="muted">
-              {missing ? t("workspace.notFoundBody", { path: location }) : t("shell.noFileBody")}
-            </p>
+            <Icon name="warning" />
+            <h1>{t("workspace.notFoundTitle")}</h1>
+            <p className="muted">{t("workspace.notFoundBody", { path: location })}</p>
           </div>
+        ) : (
+          <VaultHome
+            vault={vault}
+            files={files}
+            revision={revision.current}
+            can={can}
+            onOpen={openFile}
+            onTreeChanged={tree.reload}
+            onShowProposals={showProposals}
+          />
         )}
       </Shell>
       <Palette

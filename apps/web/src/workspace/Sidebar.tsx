@@ -31,6 +31,7 @@ interface Props {
   onToggle: (folder: string) => void;
   onOpen: (path: string) => void;
   onQuickOpen: () => void;
+  onHome: () => void;
   onCommands: () => void;
   view: SidebarView;
   onViewChange: (view: SidebarView) => void;
@@ -68,6 +69,7 @@ export function Sidebar({
   onToggle,
   onOpen,
   onQuickOpen,
+  onHome,
   onCommands,
   view,
   onViewChange,
@@ -210,6 +212,13 @@ export function Sidebar({
     <>
       <div className="sidebar-header">
         <VaultSwitcher vault={vault} />
+        <Button
+          variant="ghost"
+          icon="home"
+          aria-label={t("home.open")}
+          title={t("home.open")}
+          onClick={onHome}
+        />
       </div>
       <div className="sidebar-views" role="group" aria-label={t("search.viewLabel")}>
         {(

@@ -205,6 +205,70 @@
     "accepted": "Accepted changes: {count}.",
     "rejected": "Rejected changes: {count}."
   },
+  "home": {
+    "title": "Home",
+    "open": "Vault home",
+    "customize": "Customize",
+    "startHere": "Start here",
+    "emptyPage": "This page has no blocks yet.",
+    "pinCommand": "Pin this note to the vault home",
+    "unpinCommand": "Unpin this note from the vault home",
+    "pinDone": "Pinned to the vault home.",
+    "unpinDone": "Removed from the vault home.",
+    "activity": {
+      "title": "Recent activity",
+      "filterLabel": "Show changes by",
+      "filter": {
+        "all": "Everyone",
+        "human": "People",
+        "ai": "AIs"
+      },
+      "empty": "No changes yet.",
+      "changes": "Changes: {count}",
+      "entriesOf": "Changes by {name}",
+      "showAll": "Show all {count}",
+      "showFewer": "Show fewer"
+    },
+    "proposals": {
+      "title": "Waiting for review",
+      "more": "{count} more in the Proposals list"
+    },
+    "pinned": {
+      "title": "Pinned notes",
+      "empty": "Nothing is pinned yet.",
+      "missing": "{path} (missing)"
+    },
+    "base": {
+      "title": "Database: {name}"
+    },
+    "plugin": {
+      "unavailable": "The view {view} of the plugin {plugin} is shown once plugins are available."
+    },
+    "settings": {
+      "blocks": "Blocks on this page",
+      "block": {
+        "activity": "Recent activity",
+        "proposals": "Waiting for review",
+        "pinned": "Pinned notes"
+      },
+      "blockBase": "Database: {path}",
+      "blockPlugin": "Plugin: {plugin}",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "remove": "Remove {name}",
+      "chooseBase": "Choose a database",
+      "addBase": "Add database",
+      "pinned": "Pinned notes",
+      "unpin": "Unpin {name}",
+      "choosePin": "Choose a note",
+      "pin": "Pin",
+      "startHere": "Start here note",
+      "startNone": "None",
+      "startHereHelp": "Shown at the top of the page, also to guests when the note is public.",
+      "saved": "Home page saved.",
+      "conflict": "Someone else changed this page. Close this window and open it again."
+    }
+  },
   "backlinks": {
     "title": "Links",
     "linkedFrom": "Linked from ({count})",
