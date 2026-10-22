@@ -3,12 +3,13 @@
 Plugins shipped with the server (in the plugin library from the start; nothing is installed in a vault until a person chooses to) live here, one folder per plugin with a
 `manifest.json` ([manifest v2](../docs/dev/plugins.md)).
 
-| Folder       | Does                                    | Code lands in |
-| ------------ | --------------------------------------- | ------------- |
-| `decisions`  | decision notes, status, 4 MCP tools     | ready         |
-| `kanban`     | board view and `kanban` code block      | ready         |
-| `kanban-due` | due-date badges for the board           | ready         |
-| `graph`      | link graph page and a local graph panel | ready         |
+| Folder       | Does                                                   | Code lands in |
+| ------------ | ------------------------------------------------------ | ------------- |
+| `decisions`  | decision notes, status, 4 MCP tools                    | ready         |
+| `kanban`     | board view and `kanban` code block                     | ready         |
+| `kanban-due` | due-date badges for the board                          | ready         |
+| `graph`      | link graph page and a local graph panel                | ready         |
+| `calendar`   | month and week calendar, `calendar` block, home widget | ready         |
 
 Each plugin folder has its own `README.md`, `main.js` and `locales/{en,zh-TW,zh-CN}.json`. The
 `decisions` has its tools (`server.js`) but no page yet: the timeline arrives with T37.

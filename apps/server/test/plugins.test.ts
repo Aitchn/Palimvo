@@ -138,6 +138,7 @@ describe("the official plugins of this repository", () => {
     const dir = path.resolve(import.meta.dirname, "../../../plugins");
     // plugins/examples/ (chart-pack, json-tree and the UI-layer demos) is for plugin authors.
     expect((await server.services.plugins.seedBuiltins(dir)).sort()).toEqual([
+      "calendar@1.0.0",
       "decisions@0.1.0",
       "graph@1.0.0",
       "kanban-due@1.0.0",
@@ -145,6 +146,7 @@ describe("the official plugins of this repository", () => {
     ]);
     const library = await json<{ plugins: Json[] }>(await root.client.get("/api/plugin-library"));
     expect(library.plugins.map((p) => p.id).sort()).toEqual([
+      "calendar",
       "decisions",
       "graph",
       "kanban",

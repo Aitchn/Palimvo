@@ -14,7 +14,7 @@ const examples = readdirSync(`${root}examples/`, { withFileTypes: true })
 
 describe("official plugin manifests", () => {
   it("ships the planned plugins", () => {
-    expect(folders.sort()).toEqual(["decisions", "graph", "kanban", "kanban-due"]);
+    expect(folders.sort()).toEqual(["calendar", "decisions", "graph", "kanban", "kanban-due"]);
   });
 
   it.each(folders)("%s passes validation and is named after its folder", (folder) => {
@@ -80,6 +80,7 @@ describe("official plugin files", () => {
 
   it("ships code for every official plugin", () => {
     expect(withCode.sort()).toEqual([
+      "calendar",
       "decisions",
       "examples/chart-pack",
       "examples/json-tree",

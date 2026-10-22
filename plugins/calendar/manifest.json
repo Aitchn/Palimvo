@@ -1,0 +1,43 @@
+{
+  "manifestVersion": 2,
+  "id": "calendar",
+  "version": "1.0.0",
+  "name": { "en": "Calendar", "zh-TW": "日曆", "zh-CN": "日历" },
+  "description": {
+    "en": "Show notes on a month or week calendar by a date property or a daily-note file name; click a day to create a note, drag a note to change its date.",
+    "zh-TW": "依日期屬性或每日筆記檔名，把筆記顯示在月／週日曆上；點日期建立筆記，拖曳筆記改日期。",
+    "zh-CN": "按日期属性或每日笔记文件名，把笔记显示在月／周日历上；点日期创建笔记，拖动笔记改日期。"
+  },
+  "author": "Palimvo",
+  "license": "Apache-2.0",
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"], "write": ["**"], "network": false },
+  "contributes": {
+    "views": [
+      {
+        "id": "calendar",
+        "name": { "en": "Calendar", "zh-TW": "日曆", "zh-CN": "日历" },
+        "icon": "calendar"
+      }
+    ],
+    "codeBlocks": [
+      {
+        "language": "calendar",
+        "name": { "en": "Calendar", "zh-TW": "日曆", "zh-CN": "日历" }
+      }
+    ],
+    "homeWidgets": [
+      {
+        "id": "week",
+        "name": { "en": "This week", "zh-TW": "本週", "zh-CN": "本周" },
+        "size": "medium"
+      }
+    ]
+  },
+  "main": "main.js",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-TW": "locales/zh-TW.json",
+    "zh-CN": "locales/zh-CN.json"
+  }
+}
