@@ -14,8 +14,14 @@ const result = (view: "table" | "cards") => ({
     { id: "file.tags", label: "Tags", source: "file", key: "tags" },
   ],
   rows: [
-    { path: "Tasks/Write docs.md", cells: { "file.name": "Write docs", status: "open", "file.tags": ["task", "docs"] } },
-    { path: "Tasks/Ship 0.1.md", cells: { "file.name": "Ship 0.1", status: "done", "file.tags": ["task"] } },
+    {
+      path: "Tasks/Write docs.md",
+      cells: { "file.name": "Write docs", status: "open", "file.tags": ["task", "docs"] },
+    },
+    {
+      path: "Tasks/Ship 0.1.md",
+      cells: { "file.name": "Ship 0.1", status: "done", "file.tags": ["task"] },
+    },
   ],
   groups: null,
   total: 2,
@@ -55,9 +61,9 @@ test.describe("databases on a wide screen", () => {
     await page.keyboard.press("Control+a");
     await page.keyboard.type("doing");
     await page.keyboard.press("Enter");
-    await expect.poll(() => properties).toEqual([
-      { path: "Tasks/Write docs.md", key: "status", value: "doing" },
-    ]);
+    await expect
+      .poll(() => properties)
+      .toEqual([{ path: "Tasks/Write docs.md", key: "status", value: "doing" }]);
 
     await page.getByRole("button", { name: /^Filters/ }).click();
     await expect(page.getByText("In folder Tasks")).toBeVisible();
