@@ -138,6 +138,38 @@
     "unresolved": "not found",
     "embed": "embedded"
   },
+  "editor": {
+    "properties": "Properties",
+    "copy": "Copy",
+    "copied": "Copied",
+    "embedFailed": "This note could not be loaded",
+    "taskDone": "Done",
+    "taskTodo": "Not done",
+    "diagramDrawing": "Drawing diagram…",
+    "diagramError": "Diagram error: {message}",
+    "conflict": "Someone else saved this note first. Your text has not been saved.",
+    "useTheirs": "Use their version",
+    "keepMine": "Keep mine",
+    "peers": "{count, plural, one {# person here} other {# people here}}",
+    "viewOnly": "View only",
+    "edit": "Edit",
+    "read": "Read",
+    "switchToEditing": "Switch to editing",
+    "switchToReading": "Switch to the reading view",
+    "status": {
+      "loading": "Opening…",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes",
+      "offline": "Offline, will retry",
+      "conflict": "Conflict",
+      "error": "Could not open"
+    },
+    "notice": {
+      "recovered": "Unsent text from earlier was restored",
+      "reloaded": "Updated to the latest version"
+    }
+  },
   "errors": {
     "unknown": "Something went wrong.",
     "network": "The server could not be reached.",
