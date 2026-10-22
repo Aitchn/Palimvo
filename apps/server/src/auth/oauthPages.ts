@@ -76,7 +76,13 @@ export function errorPage(locale: Locale, message: string): string {
 
 export function signInPage(
   locale: Locale,
-  input: { client: string; fields: AuthorizeFields; username?: string; error?: string },
+  input: {
+    client: string;
+    fields: AuthorizeFields;
+    base: string;
+    username?: string;
+    error?: string;
+  },
 ): string {
   const title = t(locale, "oauth.pageTitle");
   return shell(
@@ -84,7 +90,7 @@ export function signInPage(
     title,
     `<h1>${escapeHtml(title)}</h1>
 <p>${escapeHtml(t(locale, "oauth.signInIntro", { client: input.client }))}</p>
-<form method="post" action="/oauth/login">${hidden(input.fields)}
+<form method="post" action="${escapeHtml(input.base)}/oauth/login">${hidden(input.fields)}
 <label for="u">${escapeHtml(t(locale, "oauth.username"))}</label>
 <input id="u" type="text" name="username" value="${escapeHtml(input.username ?? "")}" autocomplete="username" required autofocus>
 <label for="p">${escapeHtml(t(locale, "oauth.password"))}</label>
@@ -102,6 +108,8 @@ export function consentPage(
     account: string;
     csrf: string;
     fields: AuthorizeFields;
+    /** Path the server is published under (from the public address), without a trailing slash. */
+    base: string;
     defaultAccess: TokenAccess;
   },
 ): string {
@@ -116,7 +124,7 @@ export function consentPage(
 <p class="muted warn">${escapeHtml(t(locale, "oauth.unverified"))}</p>
 <p class="muted">${escapeHtml(t(locale, "oauth.redirectsTo", { host: input.redirectHost }))}</p>
 <p>${escapeHtml(t(locale, "oauth.canDo"))}</p>
-<form method="post" action="/oauth/authorize">${hidden(input.fields)}
+<form method="post" action="${escapeHtml(input.base)}/oauth/authorize">${hidden(input.fields)}
 <input type="hidden" name="csrf" value="${escapeHtml(input.csrf)}">
 <fieldset><legend>${escapeHtml(t(locale, "oauth.accessLabel"))}</legend>
 ${option("read", "oauth.accessRead")}${option("propose", "oauth.accessPropose")}${option("write", "oauth.accessWrite")}</fieldset>

@@ -101,6 +101,33 @@ async function authorizeAs(
 
 const tokenRequest = (fields: Record<string, string>) => server.fetch("/oauth/token", form(fields));
 
+describe("behind a path prefix", () => {
+  it("posts and redirects under the configured path", async () => {
+    const prefixed = await startTestServer({ publicUrl: "https://example.com/palimvo" });
+    try {
+      await prefixed.auth.createAccount({ username: "mia", password: PASSWORD });
+      const reg = await prefixed.fetch("/oauth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ redirect_uris: [REDIRECT] }),
+      });
+      const { client_id } = await json<{ client_id: string }>(reg);
+      const q = authorizeQuery(client_id, pkce().challenge, {
+        resource: "https://example.com/palimvo/mcp",
+      });
+      const page = await (await prefixed.fetch(`/oauth/authorize?${q}`)).text();
+      expect(page).toContain('action="/palimvo/oauth/login"');
+      const login = await prefixed.fetch("/oauth/login", {
+        ...form({ ...Object.fromEntries(q), username: "mia", password: PASSWORD }),
+        redirect: "manual",
+      });
+      expect(login.headers.get("location")).toMatch(/^\/palimvo\/oauth\/authorize\?/);
+    } finally {
+      await prefixed.dispose();
+    }
+  });
+});
+
 describe("without a public address", () => {
   it("explains what to set", async () => {
     const bare = await startTestServer();

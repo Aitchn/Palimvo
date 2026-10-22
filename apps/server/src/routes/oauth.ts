@@ -102,6 +102,8 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
   const registrations = new FailureLimiter(REGISTER_MAX_PER_IP, HOUR);
   const tokenFailures = new FailureLimiter(TOKEN_FAILURES_PER_IP, 15 * 60 * 1000);
   const secure = publicUrl?.startsWith("https://") ?? false;
+  // Behind a reverse proxy at a sub-path, the pages must post and redirect under that path.
+  const base = publicUrl ? new URL(publicUrl).pathname.replace(/\/+$/, "") : "";
 
   // Browser-based MCP clients call these from other origins. None of them uses cookies.
   const open = cors({
@@ -292,7 +294,7 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
     const locale = localeOf(c);
     const principal = signedIn(c);
     if (!principal)
-      return page(c, signInPage(locale, { client: request.client.clientName, fields }));
+      return page(c, signInPage(locale, { client: request.client.clientName, fields, base }));
     if (!(await mayConnect(principal))) return problem(c, t(locale, "oauth.errorNoVaults"), 403);
     return page(
       c,
@@ -302,6 +304,7 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
         account: principal.account.displayName,
         csrf: principal.csrf,
         fields,
+        base,
         defaultAccess: request.requestedAccess ?? "write",
       }),
     );
@@ -323,7 +326,7 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
       });
       setSessionCookie(c, signed.cookie, { secure });
       const query = new URLSearchParams(Object.entries(fields) as [string, string][]);
-      return c.redirect(`/oauth/authorize?${query.toString()}`, 303);
+      return c.redirect(`${base}/oauth/authorize?${query.toString()}`, 303);
     } catch (err) {
       if (!(err instanceof AppError)) throw err;
       return page(
@@ -331,6 +334,7 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
         signInPage(locale, {
           client: checked.request.client.clientName,
           fields,
+          base,
           username: (form.username ?? "").slice(0, 100),
           error: t(locale, `errors.${err.code}`),
         }),
@@ -350,7 +354,7 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
     const locale = localeOf(c);
     const principal = signedIn(c);
     if (!principal)
-      return page(c, signInPage(locale, { client: request.client.clientName, fields }), 401);
+      return page(c, signInPage(locale, { client: request.client.clientName, fields, base }), 401);
     if (!auth.csrfMatches(principal.cookie, form.csrf))
       return problem(c, t(locale, "errors.csrf_invalid"), 403);
     if (form.decision !== "allow")
