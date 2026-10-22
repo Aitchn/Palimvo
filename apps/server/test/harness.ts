@@ -18,7 +18,7 @@ export interface TestServer extends RunningServer {
 /** Starts a server on a random port with a throwaway data directory. */
 export async function startTestServer(
   overrides: Partial<Config> = {},
-  options: Pick<StartOptions, "history" | "backup"> = {},
+  options: Pick<StartOptions, "history" | "backup" | "mcp"> = {},
 ): Promise<TestServer> {
   const dataDir = overrides.dataDir ?? (await mkdtemp(path.join(tmpdir(), "palimvo-test-")));
   const config: Config = {
@@ -43,6 +43,7 @@ export async function startTestServer(
     // Long enough that tests decide when to commit; no credentials from the developer's environment.
     history: { commitDelayMs: 60_000, commitMaxDelayMs: 60_000, ...options.history },
     backup: { credentials: null, ...options.backup },
+    ...(options.mcp ? { mcp: options.mcp } : {}),
   });
   return {
     ...running,

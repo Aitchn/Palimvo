@@ -242,11 +242,11 @@ describe("the authorization code flow", () => {
       scope: string;
     }>(tokenRes);
     expect(tokens).toMatchObject({ token_type: "Bearer", expires_in: 3600, scope: "mcp:propose" });
-    // 4. The access token gets past the /mcp gate (the MCP server itself is T27).
+    // 4. The access token gets past the /mcp gate; the MCP server answers (GET is not supported: 405).
     const mcp = await server.fetch("/mcp", {
       headers: { authorization: `Bearer ${tokens.access_token}` },
     });
-    expect(mcp.status).toBe(501);
+    expect(mcp.status).toBe(405);
     // 5. Refresh rotates both tokens.
     const refreshed = await tokenRequest({
       grant_type: "refresh_token",
@@ -500,7 +500,7 @@ describe("ending a connection", () => {
     return { browser, client_id, tokens };
   }
   const works = async (token: string) =>
-    (await server.fetch("/mcp", { headers: { authorization: `Bearer ${token}` } })).status === 501;
+    (await server.fetch("/mcp", { headers: { authorization: `Bearer ${token}` } })).status === 405;
 
   it("is revoked from the person's AI connections", async () => {
     const { tokens, client_id } = await connected();

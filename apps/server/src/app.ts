@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { bearerMiddleware } from "./auth/bearer.ts";
+import { coreTools } from "./mcp/tools/index.ts";
+import { mcpCors, mcpRoutes } from "./mcp/server.ts";
+import { ToolRegistry, type AnyTool, type ToolProvider } from "./mcp/registry.ts";
 import { accessGate, principalMiddleware } from "./auth/principal.ts";
 import type { AuthService } from "./auth/service.ts";
 import type { BackupService } from "./history/backup.ts";
@@ -47,6 +50,10 @@ export interface AppDeps {
   backup: BackupService;
   /** Folder with the built web app; leave out to serve the API only. */
   webDir?: string;
+  /** Extra MCP tools per vault (plugins); they appear behind `list_tools`. */
+  toolProviders?: ToolProvider[];
+  /** Extra core MCP tools beyond the built-in ones. */
+  mcpTools?: AnyTool[];
 }
 
 /** Builds the HTTP application. Domain routers are mounted here as they are added. */
@@ -130,20 +137,25 @@ export function createApp(deps: AppDeps): Hono {
       trustProxy: deps.trustProxy ?? false,
     }),
   );
-  // AI calls: bearer secrets only, never the browser session. The MCP server itself (T27) mounts here.
+  // AI calls: bearer secrets only, never the browser session.
   const mcpGate = bearerMiddleware({
     auth: deps.auth,
     tokens: deps.auth.tokens,
     publicUrl: deps.publicUrl,
   });
-  app.use("/mcp", mcpGate);
+  const registry = new ToolRegistry([...coreTools(), ...(deps.mcpTools ?? [])]);
+  for (const provider of deps.toolProviders ?? []) registry.addProvider(provider);
+  // "/mcp/*" also matches "/mcp"; registering both would run the gate (and count the rate limit) twice.
+  app.use("/mcp/*", mcpCors);
   app.use("/mcp/*", mcpGate);
-  app.all("/mcp/*", () => {
-    throw new AppError("not_implemented", 501, "The MCP server is not available yet.");
-  });
-  app.all("/mcp", () => {
-    throw new AppError("not_implemented", 501, "The MCP server is not available yet.");
-  });
+  app.route(
+    "/",
+    mcpRoutes({
+      deps: { logger: deps.logger, store: deps.store, vaults: deps.vaults },
+      registry,
+      version: deps.version,
+    }),
+  );
   // Last: anything the API did not claim is a file of the web app or one of its routes.
   if (deps.webDir) app.route("/", webRoutes(deps.webDir));
 
