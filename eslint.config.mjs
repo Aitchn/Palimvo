@@ -39,6 +39,25 @@ export default tseslint.config(
     },
   },
   {
+    // Runs inside the plugin sandbox iframe, as a raw string; it is a browser script.
+    files: ["apps/web/src/plugins/runtime.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        parent: "readonly",
+        crypto: "readonly",
+        console: "readonly",
+        URL: "readonly",
+        Blob: "readonly",
+        ResizeObserver: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-unused-vars": [

@@ -13,6 +13,7 @@ import { ProposalsPanel } from "../proposals/ProposalsPanel.tsx";
 import { SearchPanel } from "../search/SearchPanel.tsx";
 import { Button, ContextMenu, Skeleton, type MenuItem } from "../ui/index.ts";
 import type { TreeState } from "../files/useVaultTree.ts";
+import { PluginViewLinks, type PluginViewRef } from "../plugins/PluginViews.tsx";
 import { VaultSwitcher } from "./VaultSwitcher.tsx";
 import type { VaultCan } from "./useVaultPermissions.ts";
 
@@ -33,6 +34,9 @@ interface Props {
   onQuickOpen: () => void;
   onHome: () => void;
   onCommands: () => void;
+  /** The plugin page open in the main area, if any. */
+  pluginView: PluginViewRef | null;
+  onOpenPluginView: (ref: PluginViewRef) => void;
   view: SidebarView;
   onViewChange: (view: SidebarView) => void;
   /** Changes whenever the search box should take focus. */
@@ -71,6 +75,8 @@ export function Sidebar({
   onQuickOpen,
   onHome,
   onCommands,
+  pluginView,
+  onOpenPluginView,
   view,
   onViewChange,
   searchFocus,
@@ -362,6 +368,7 @@ export function Sidebar({
               />
             )}
           </div>
+          <PluginViewLinks active={pluginView} onOpen={onOpenPluginView} />
         </>
       )}
       <FolderPermissionsDialog

@@ -3,8 +3,9 @@
 A plugin is a folder (or ZIP) with a `manifest.json` and the files it names. Palimvo runs its
 browser code in a sandboxed iframe and its server code (MCP tools) in a QuickJS sandbox. A person
 approves each exact version before anything runs. Design reasons:
-[ADR 0017](../adr/0017-plugin-manifest-v2.md). This page is a first draft; the host (T31), the
-installer (T32) and server tools (T34) land in later changes.
+[ADR 0017](../adr/0017-plugin-manifest-v2.md) (manifest) and
+[ADR 0018](../adr/0018-plugin-web-host.md) (browser host). This page is a first draft; the
+installer (T32), UI layers (T33) and server tools (T34) land in later changes.
 
 ```
 my-plugin/
@@ -112,6 +113,34 @@ export default definePlugin((palimvo) => {
 `palimvo.i18n` and `palimvo.extensions` are typed in `packages/plugin-sdk/src/api.ts`. Calls
 reject with an error whose `code` is `permission_denied`, `not_found`, `version_conflict`,
 `quota_exceeded`, `invalid_argument` or `unavailable`.
+
+### What the browser host guarantees
+
+Your `main.js` runs in a frame with an opaque origin: no cookies or storage, no access to the app
+page, no forms, popups or navigation. Without the `network` permission nothing leaves the frame;
+with it only the listed hosts are reachable, and scripts can never be loaded from the network
+(bundle what you need into `main.js`). Every `palimvo.vault` call is checked against your
+declared folders and against the rights of the person using the plugin. Paths with `..`,
+backslashes, `.palimvo` or `.git` are rejected, and listings, searches and database rows only
+show files in your folders. A frame that navigates away from its page is stopped.
+
+Each contribution is its own frame: a home widget, a page, a viewer each start `main.js` again,
+so keep activation cheap and register only what the manifest declares (registering something it
+does not declare throws). `palimvo.ui.registerHomeWidget(id, render)` fills a card on the vault
+home; the widget's `id` is what a home page's `{ "type": "plugin", "plugin", "view" }` block
+names. A render function may return a cleanup. `el` is the frame's body: draw into it, and the
+frame grows with the content (widgets, code blocks) or fills its box (pages, viewers).
+The app's colors are available as CSS variables (`--bg`, `--fg`, `--accent`, `--border`, ...) and
+the frame follows light and dark.
+
+## Server routes the host reads (for T32)
+
+| Route                                       | Answer                                                                                                          |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `GET /api/vaults/:vault/plugin-runtime`     | `{ plugins: [{ id, version, hash, manifest }] }`: enabled, approved at exactly that hash, dependencies runnable |
+| `GET /api/vaults/:vault/plugin-runtime/:id` | `{ id, hash, files }`: text of `manifest.main`, the `locales` files and a theme stylesheet                      |
+
+The browser validates the manifest again and refuses a bundle whose hash is not the listed one.
 
 ## server.js (MCP tools)
 

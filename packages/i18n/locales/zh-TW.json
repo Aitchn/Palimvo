@@ -242,7 +242,7 @@
       "title": "資料庫：{name}"
     },
     "plugin": {
-      "unavailable": "插件 {plugin} 的檢視 {view} 會在插件功能就緒後顯示。"
+      "unavailable": "插件 {plugin} 的小工具 {view} 在這個筆記庫無法使用。"
     },
     "settings": {
       "blocks": "這個頁面的區塊",
@@ -617,6 +617,23 @@
     "errorClient": "把你帶到這裡的應用程式尚未註冊，或它的返回位址不符。",
     "errorRequest": "連線請求不完整，或使用了 Palimvo 不支援的內容。",
     "errorNoVaults": "你沒有權限把 AI 連接到任何筆記庫。"
+  },
+  "plugins": {
+    "unavailable": "插件 {plugin} 沒有在這個筆記庫執行。",
+    "loading": "正在載入插件…",
+    "error": "插件 {name} 回報了問題：{detail}",
+    "stopped": {
+      "navigated": "插件 {name} 嘗試離開它的沙箱頁面，已被停止。請檢查它的程式碼，必要時在筆記庫設定中停用。",
+      "revoked": "插件 {name} 已無法使用，可能是核准或你的權限有變動。"
+    },
+    "viewer": {
+      "label": "檢視器",
+      "text": "文字"
+    },
+    "views": {
+      "title": "插件視圖",
+      "missing": "這個插件視圖無法使用。"
+    }
   },
   "errors": {
     "unknown": "發生未知的錯誤。",

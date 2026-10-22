@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { basename, dirname, fileKind, type TreeNode } from "@palimvo/core";
 import { describeError } from "../api/errors.ts";
@@ -24,6 +24,13 @@ import { useVaultPermissions } from "./useVaultPermissions.ts";
 import { Sidebar, type SidebarView } from "./Sidebar.tsx";
 import { useExpanded } from "./useExpanded.ts";
 import { useTabs } from "./useTabs.ts";
+import { PluginsProvider } from "../plugins/PluginsProvider.tsx";
+import {
+  PluginEvents,
+  PluginView,
+  pluginViewHref,
+  type PluginViewRef,
+} from "../plugins/PluginViews.tsx";
 
 /** `/v/:vault/*`: a vault's workspace. A new instance per vault, so tabs and open folders never mix. */
 export function VaultPage() {
@@ -43,6 +50,11 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const navigate = useNavigate();
   const params = useParams();
   const location = pathFromLocation(params["*"]);
+  const [searchParams] = useSearchParams();
+  const pluginView: PluginViewRef | null =
+    searchParams.get("plugin") && searchParams.get("view")
+      ? { plugin: searchParams.get("plugin")!, view: searchParams.get("view")! }
+      : null;
   const tree = useVaultTree(vault);
   const nodes: readonly TreeNode[] = tree.status === "ready" ? tree.tree : NO_NODES;
   const tabs = useTabs(vault);
@@ -86,6 +98,11 @@ function VaultWorkspace({ vault }: { vault: string }) {
 
   const openFile = useCallback(
     (path: string) => navigate(fileHref(vault, path)),
+    [navigate, vault],
+  );
+
+  const openPluginView = useCallback(
+    (ref: PluginViewRef) => navigate(pluginViewHref(vaultHref(vault), ref)),
     [navigate, vault],
   );
 
@@ -291,7 +308,8 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const missing = tree.status === "ready" && location !== "" && !target;
 
   return (
-    <>
+    <PluginsProvider vault={vault} can={vaultCan} openFile={openFile}>
+      <PluginEvents ready={tree.status === "ready"} files={files} activePath={activePath} />
       <Shell
         sidebar={
           <Sidebar
@@ -306,6 +324,8 @@ function VaultWorkspace({ vault }: { vault: string }) {
             onQuickOpen={() => setQuickOpen(true)}
             onHome={() => navigate(vaultHref(vault))}
             onCommands={() => setPalette(true)}
+            pluginView={pluginView}
+            onOpenPluginView={openPluginView}
             view={sidebarView}
             onViewChange={setSidebarView}
             searchFocus={searchRequest}
@@ -354,7 +374,9 @@ function VaultWorkspace({ vault }: { vault: string }) {
           </div>
         }
       >
-        {activeFile ? (
+        {pluginView ? (
+          <PluginView {...pluginView} />
+        ) : activeFile ? (
           <FileView
             key={activeFile.path}
             vault={vault}
@@ -435,6 +457,6 @@ function VaultWorkspace({ vault }: { vault: string }) {
         onClose={operations.cancelDelete}
         onConfirm={operations.confirmDeleteNow}
       />
-    </>
+    </PluginsProvider>
   );
 }
