@@ -2,7 +2,13 @@ import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { getCookie } from "hono/cookie";
-import { AppError, vaultScope, type TokenAccess } from "@palimvo/core";
+import {
+  ADMIN_GRANT_PERMISSIONS,
+  AppError,
+  serverScope,
+  vaultScope,
+  type TokenAccess,
+} from "@palimvo/core";
 import { negotiate, type Locale } from "@palimvo/i18n";
 import {
   OAuthError,
@@ -250,6 +256,12 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
     return ids.some((id) => access.can("mcp.connect", vaultScope(id)));
   };
 
+  /** Whether the person may let an app administer: only what they hold themselves can be handed over. */
+  const mayAdminister = (principal: Extract<Principal, { kind: "account" }>) => {
+    const access = auth.access.forPrincipal(principal);
+    return ADMIN_GRANT_PERMISSIONS.some((p) => access.can(p, serverScope));
+  };
+
   /** Checks an authorize request; either the checked request or the response that ends it. */
   const examine = (c: Context, fields: AuthorizeFields) => {
     const base = requirePublicUrl(publicUrl);
@@ -306,6 +318,7 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
         fields,
         base,
         defaultAccess: request.requestedAccess ?? "write",
+        canAdminister: mayAdminister(principal),
       }),
     );
   });
@@ -366,7 +379,11 @@ export function oauthRoutes({ auth, oauth, vaults, publicUrl, trustProxy }: OAut
     if (!["read", "propose", "write"].includes(access))
       return problem(c, t(locale, "oauth.errorRequest"));
     if (!(await mayConnect(principal))) return problem(c, t(locale, "oauth.errorNoVaults"), 403);
-    const code = oauth.approve(principal.account, request, access);
+    // The box is only shown to people who may administer, and only counts with write access.
+    const admin = form.admin === "1";
+    if (admin && (access !== "write" || !mayAdminister(principal)))
+      return problem(c, t(locale, "oauth.errorRequest"));
+    const code = oauth.approve(principal.account, request, access, admin);
     const url = new URL(request.redirectUri);
     url.searchParams.set("code", code);
     if (request.state !== undefined) url.searchParams.set("state", request.state);

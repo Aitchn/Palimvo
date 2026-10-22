@@ -32,8 +32,16 @@ export function accessOfScope(scope: string): TokenAccess {
   return (found as TokenAccess | undefined) ?? "write";
 }
 
-export function scopeOfAccess(access: TokenAccess): string {
-  return `mcp:${access}`;
+/** A grant made with "also allow administering" carries this word in its scope. */
+const ADMIN_SCOPE = "mcp:admin";
+
+/** Whether an OAuth grant's `scope` says the person allowed it to administer (only with write access). */
+export function adminOfScope(scope: string): boolean {
+  return accessOfScope(scope) === "write" && scope.split(/\s+/).includes(ADMIN_SCOPE);
+}
+
+export function scopeOfAccess(access: TokenAccess, admin = false): string {
+  return admin && access === "write" ? `mcp:${access} ${ADMIN_SCOPE}` : `mcp:${access}`;
 }
 
 /** Who a bearer secret speaks for, and the most it may do. */
@@ -173,7 +181,11 @@ export class TokenService {
       const client = this.store.oauth.getClient(grant.clientId);
       return {
         account,
-        scope: { access: accessOfScope(grant.scope), folders: [] },
+        scope: {
+          access: accessOfScope(grant.scope),
+          folders: [],
+          ...(adminOfScope(grant.scope) ? { admin: true } : {}),
+        },
         source: "oauth",
         sourceId: grant.id,
         label: client?.clientName ?? "OAuth app",

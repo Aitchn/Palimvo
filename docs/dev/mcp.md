@@ -28,6 +28,36 @@ Edits of one file by several clients are queued per file (`modifyText` in `tools
 applied to the newest text. Tokens limited to folders only see those folders. Design reasons:
 [ADR 0015](../adr/0015-native-mcp-tools-and-admin-grants.md).
 
+## Advanced tools
+
+Not in `tools/list`; found with `list_tools` and run with `call_tool` (same permissions, audit and
+history as a listed tool). They appear only when the caller may use them.
+
+| Area      | Tools                                                                                                                 |
+| --------- | --------------------------------------------------------------------------------------------------------------------- |
+| Structure | `create_folder`, `get_graph` (best connected notes first, `limit`, readable folders only)                             |
+| Versions  | `create_checkpoint` (your `reason` is its description, optional `tag`), `restore_version` (one file, as a new change) |
+| Data      | `create_base` (database from a folder and/or tags, columns, table or cards)                                           |
+| Files     | `list_file_types`                                                                                                     |
+| Admin     | `create_vault`, `remove_vault` (`/mcp` only, see below)                                                               |
+
+Still to come with the services they need: plugin management and the plugin library
+(`publish_library_plugin`, T32), components (`add_component`...), chunked
+uploads and upload links (T22), vault settings.
+
+### Administration
+
+`create_vault` and `remove_vault` exist only for an OAuth connection the person allowed to
+administer (a box on the consent page, offered to people who may create vaults or publish plugins;
+needs "Read and write"). API tokens, other OAuth grants and `/mcp/:vault` never see them. The grant
+holds at most `vaults.create` and `library.publish` at server level, cut down to what the person
+holds on every call. `create_vault` makes the person its administrator. `remove_vault` needs
+`vault.settings` in that vault (the person's own right), the vault id repeated as `confirm`, and
+only moves the vault to the trash; restoring stays in the web app. Both are audited
+(`vault.created`, `vault.removed`, next to the generic `mcp.<tool>` line). Design:
+[ADR 0015](../adr/0015-native-mcp-tools-and-admin-grants.md),
+[ADR 0016](../adr/0016-advanced-mcp-tools.md).
+
 ## Adding a tool
 
 ```ts
@@ -35,6 +65,7 @@ applied to the newest text. Tokens limited to folders only see those folders. De
 export const readNote = mcpTool({
   name: "read_note",
   tier: "native", // or "advanced": only reachable through list_tools / call_tool
+  // adminGrant: true, // only for OAuth grants the person allowed to administer (ADR 0015)
   scope: "vault", // "server" for tools that are not about one vault
   permission: "note.read", // all of these must be held; checked before the arguments are parsed
   input: z.object({ path: z.string() }), // plain object; do not declare `vault` or `reason`
