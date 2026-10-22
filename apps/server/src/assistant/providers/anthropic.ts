@@ -34,12 +34,14 @@ function toApiMessages(messages: Message[]): Anthropic.MessageParam[] {
             ? { type: "text" as const, text: b.text }
             : b.type === "thinking"
               ? { type: "thinking" as const, thinking: b.text, signature: b.signature ?? "" }
-              : {
-                  type: "tool_use" as const,
-                  id: b.id,
-                  name: b.name,
-                  input: b.input as Record<string, unknown>,
-                },
+              : b.type === "redacted_thinking"
+                ? { type: "redacted_thinking" as const, data: b.data }
+                : {
+                    type: "tool_use" as const,
+                    id: b.id,
+                    name: b.name,
+                    input: b.input as Record<string, unknown>,
+                  },
         ),
       });
     } else {
@@ -66,7 +68,7 @@ function mapStop(s: string | null | undefined): StopReason {
 }
 
 interface Block {
-  kind: "text" | "thinking" | "tool" | "other";
+  kind: "text" | "thinking" | "redacted" | "tool" | "other";
   text: string;
   sig?: string;
   id?: string;
@@ -165,6 +167,8 @@ export class AnthropicProvider implements ChatProvider {
             if (cb.type === "text") blocks.set(ev.index, { kind: "text", text: "", json: "" });
             else if (cb.type === "thinking")
               blocks.set(ev.index, { kind: "thinking", text: "", json: "" });
+            else if (cb.type === "redacted_thinking")
+              blocks.set(ev.index, { kind: "redacted", text: cb.data ?? "", json: "" });
             else if (cb.type === "tool_use") {
               blocks.set(ev.index, { kind: "tool", text: "", json: "", id: cb.id, name: cb.name });
               yield { type: "tool_start", index: ev.index, id: cb.id, name: cb.name };
@@ -202,6 +206,8 @@ export class AnthropicProvider implements ChatProvider {
             if (b.kind === "text") assistant.push({ type: "text", text: b.text });
             else if (b.kind === "thinking")
               assistant.push({ type: "thinking", text: b.text, signature: b.sig });
+            else if (b.kind === "redacted")
+              assistant.push({ type: "redacted_thinking", data: b.text });
             else if (b.kind === "tool") {
               let input: unknown;
               let inputError: string | undefined;
@@ -210,8 +216,14 @@ export class AnthropicProvider implements ChatProvider {
               } catch (e) {
                 inputError = (e as Error).message;
               }
-              if (inputError === undefined)
-                assistant.push({ type: "tool_use", id: b.id!, name: b.name!, input });
+              // A call with broken JSON stays in the history (with empty input) so that the error
+              // result the caller sends back has a call to answer; the model can then retry.
+              assistant.push({
+                type: "tool_use",
+                id: b.id!,
+                name: b.name!,
+                input: inputError === undefined ? input : {},
+              });
               yield {
                 type: "tool_end",
                 index: ev.index,

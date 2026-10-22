@@ -140,8 +140,12 @@ export class FakeProvider implements ChatProvider {
         } catch (e) {
           inputError = (e as Error).message;
         }
-        if (inputError === undefined)
-          assistant.push({ type: "tool_use", id, name: block.tool, input });
+        assistant.push({
+          type: "tool_use",
+          id,
+          name: block.tool,
+          input: inputError === undefined ? input : {},
+        });
         yield { type: "tool_end", index, id, name: block.tool, input, inputError };
       }
     }

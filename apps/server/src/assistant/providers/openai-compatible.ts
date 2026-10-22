@@ -16,6 +16,12 @@ export interface OpenAICompatibleOptions {
   baseURL: string;
   apiKey?: string;
   catalog?: ModelCatalog;
+  /**
+   * The request field for the output limit. OpenAI's reasoning models only take
+   * `max_completion_tokens`; most local servers only know `max_tokens`. Default: the former for
+   * api.openai.com, the latter everywhere else.
+   */
+  tokenLimitField?: "max_tokens" | "max_completion_tokens";
   /** Extra headers, for example OpenRouter's attribution headers. */
   headers?: Record<string, string>;
 }
@@ -65,9 +71,15 @@ export class OpenAICompatibleProvider implements ChatProvider {
   readonly kind = "openai-compatible" as const;
   private readonly base: string;
   private readonly catalog: ModelCatalog;
+  private readonly tokenField: "max_tokens" | "max_completion_tokens";
 
   constructor(private readonly opts: OpenAICompatibleOptions) {
     this.base = opts.baseURL.replace(/\/+$/, "");
+    this.tokenField =
+      opts.tokenLimitField ??
+      (/^https:\/\/api\.openai\.com(\/|$)/.test(this.base)
+        ? "max_completion_tokens"
+        : "max_tokens");
     this.catalog = opts.catalog ?? new ModelCatalog();
   }
 
@@ -98,7 +110,7 @@ export class OpenAICompatibleProvider implements ChatProvider {
       stream: true,
       // Without this the final usage chunk is never sent.
       stream_options: { include_usage: true },
-      max_tokens: req.maxTokens,
+      [this.tokenField]: req.maxTokens,
       ...(tools.length ? { tools } : {}),
       messages: toApiMessages(req.system, req.messages),
       ...openaiEffort(this.catalog.get(req.model, "openai-compatible"), req.effort),
@@ -258,13 +270,18 @@ export class OpenAICompatibleProvider implements ChatProvider {
       } catch (e) {
         inputError = (e as Error).message;
       }
-      if (inputError === undefined)
-        assistant.push({ type: "tool_use", id: c.id, name: c.name, input });
+      // Kept even when the JSON is broken, so the error result has a call to answer.
+      assistant.push({
+        type: "tool_use",
+        id: c.id,
+        name: c.name,
+        input: inputError === undefined ? input : {},
+      });
       yield { type: "tool_end", index: i, id: c.id, name: c.name, input, inputError };
     }
     yield { type: "usage", usage };
     // Ollama-like servers answer "stop" even when tool calls are present.
-    const hasCall = assistant.some((b) => b.type === "tool_use");
+    const hasCall = calls.size > 0;
     const stopReason = hasCall && finish === "stop" ? "tool_use" : mapFinish(finish);
     yield { type: "message_end", stopReason, rawStopReason: finish, assistant };
   }

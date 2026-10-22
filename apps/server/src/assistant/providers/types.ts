@@ -25,6 +25,8 @@ export type AssistantBlock =
   | { type: "text"; text: string }
   /** Anthropic: `signature` must be sent back unchanged on the next turn. */
   | { type: "thinking"; text: string; signature?: string }
+  /** Anthropic: opaque, must be sent back unchanged or the next request is rejected. */
+  | { type: "redacted_thinking"; data: string }
   | { type: "tool_use"; id: string; name: string; input: unknown };
 
 /**

@@ -405,6 +405,88 @@ describe("anthropic specifics", () => {
   });
 });
 
+describe("review follow-ups", () => {
+  test("redacted thinking is kept and replayed unchanged", async () => {
+    const m = await anthropicMock();
+    try {
+      m.script([
+        {
+          ev: "content_block_start",
+          data: {
+            type: "content_block_start",
+            index: 0,
+            content_block: { type: "redacted_thinking", data: "opaque-xyz" },
+          },
+        },
+        a.toolStop(0),
+        a.toolStart(1, "t1", "read_note"),
+        a.toolDelta(1, '{"path":"a.md"}'),
+        a.toolStop(1),
+        ...a.end("tool_use"),
+      ]);
+      const p = anthropic(m);
+      const msg = await collectMessage(p.stream(base("claude-opus-5-5"), never()));
+      expect(msg.assistant[0]).toEqual({ type: "redacted_thinking", data: "opaque-xyz" });
+      m.script([...a.text(0, "ok"), ...a.end("end_turn")]);
+      await collectMessage(
+        p.stream(
+          {
+            ...base("claude-opus-5-5"),
+            messages: [
+              { role: "user", content: "x" },
+              { role: "assistant", content: msg.assistant },
+              { role: "tool", results: [{ toolUseId: "t1", content: "r" }] },
+            ],
+          },
+          never(),
+        ),
+      );
+      expect(m.requests[1]!.body.messages[1].content[0]).toEqual({
+        type: "redacted_thinking",
+        data: "opaque-xyz",
+      });
+    } finally {
+      await m.close();
+    }
+  });
+
+  test("a malformed tool call stays in the history so its error result has a call to answer", async () => {
+    const om = await openaiMock();
+    try {
+      om.script([
+        o.toolStart(0, "c1", "update_note"),
+        o.toolDelta(0, '{"path":"a'),
+        ...o.end("stop"), // local-server convention
+      ]);
+      const msg = await collectMessage(openai(om).stream(base("local-plain"), never()));
+      expect(msg.outcome).toBe("tool_use");
+      expect(msg.toolCalls).toEqual([]);
+      expect(msg.invalidToolCalls.map((c) => c.id)).toEqual(["c1"]);
+      expect(msg.assistant).toContainEqual({
+        type: "tool_use",
+        id: "c1",
+        name: "update_note",
+        input: {},
+      });
+    } finally {
+      await om.close();
+    }
+  });
+
+  test("the output limit field follows the endpoint", () => {
+    const body = (opts: ConstructorParameters<typeof OpenAICompatibleProvider>[0]) =>
+      new OpenAICompatibleProvider(opts).buildBody(base("gpt-reasoning")) as any;
+    const openaiBody = body({ baseURL: "https://api.openai.com/v1" });
+    expect(openaiBody.max_completion_tokens).toBe(1000);
+    expect(openaiBody).not.toHaveProperty("max_tokens");
+    expect(body({ baseURL: "http://localhost:11434/v1" }).max_tokens).toBe(1000);
+    expect(
+      body({ baseURL: "http://localhost:1234/v1", tokenLimitField: "max_completion_tokens" })
+        .max_completion_tokens,
+    ).toBe(1000);
+  });
+});
+
 describe("openai-compatible specifics", () => {
   test("HTTP errors are classified; 429 and 5xx are retryable, 400 and 401 are not", async () => {
     const om = await openaiMock(); // no script: the mock answers 500
