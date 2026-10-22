@@ -109,6 +109,12 @@ export function Sidebar({
                 onSelect: () => operations.openPrompt({ kind: "note", folder: "" }),
               },
               {
+                id: "base",
+                label: t("files.newBase"),
+                icon: "base" as const,
+                onSelect: () => operations.openPrompt({ kind: "base", folder: "" }),
+              },
+              {
                 id: "folder",
                 label: t("files.newFolder"),
                 icon: "folderAdd" as const,
@@ -162,6 +168,12 @@ export function Sidebar({
               label: t("files.newNote"),
               icon: "add" as const,
               onSelect: () => operations.openPrompt({ kind: "note", folder: node.path }),
+            },
+            {
+              id: "base",
+              label: t("files.newBase"),
+              icon: "base" as const,
+              onSelect: () => operations.openPrompt({ kind: "base", folder: node.path }),
             },
             {
               id: "folder",
@@ -276,6 +288,13 @@ export function Sidebar({
                   aria-label={t("files.newNote")}
                   title={t("files.newNote")}
                   onClick={() => operations.openPrompt({ kind: "note", folder: here })}
+                />
+                <Button
+                  variant="ghost"
+                  icon="base"
+                  aria-label={t("files.newBase")}
+                  title={t("files.newBase")}
+                  onClick={() => operations.openPrompt({ kind: "base", folder: here })}
                 />
                 <Button
                   variant="ghost"

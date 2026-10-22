@@ -61,6 +61,20 @@ export function listFiles(nodes: readonly TreeNode[]): string[] {
 }
 
 /** Folders above `path`, outermost first (`a/b/c.md` → `a`, `a/b`). */
+/** Every folder in the tree, as paths. */
+export function folderPaths(nodes: readonly TreeNode[]): string[] {
+  const out: string[] = [];
+  const visit = (list: readonly TreeNode[]) => {
+    for (const node of list) {
+      if (node.type !== "folder") continue;
+      out.push(node.path);
+      if (node.children) visit(node.children);
+    }
+  };
+  visit(nodes);
+  return out;
+}
+
 export function ancestorsOf(path: string): string[] {
   const parts = path.split("/").slice(0, -1);
   return parts.map((_, i) => parts.slice(0, i + 1).join("/"));

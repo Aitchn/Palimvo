@@ -6,8 +6,9 @@ import { archiveUrl } from "../api/files.ts";
 import { Palette, type PaletteItem } from "../commands/Palette.tsx";
 import { rank } from "../commands/fuzzy.ts";
 import { registerCommands, useCommands } from "../commands/registry.ts";
+import { NewBaseDialog } from "../bases/NewBaseDialog.tsx";
 import { ConfirmDelete, NamePrompt } from "../files/FileDialogs.tsx";
-import { ancestorsOf, findNode, listFiles, tabTitle } from "../files/model.ts";
+import { ancestorsOf, findNode, folderPaths, listFiles, tabTitle } from "../files/model.ts";
 import { useFileOperations } from "../files/useFileOperations.ts";
 import { useVaultTree } from "../files/useVaultTree.ts";
 import { Shell } from "../shell/Shell.tsx";
@@ -41,6 +42,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const location = pathFromLocation(params["*"]);
   const tree = useVaultTree(vault);
   const nodes: readonly TreeNode[] = tree.status === "ready" ? tree.tree : NO_NODES;
+  const folderList = useMemo(() => folderPaths(nodes), [nodes]);
   const tabs = useTabs(vault);
   const folders = useExpanded(vault);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -158,6 +160,13 @@ function VaultWorkspace({ vault }: { vault: string }) {
                 icon: "add" as const,
                 run: () =>
                   operations.openPrompt({ kind: "note", folder: folderOfPath(activePath) }),
+              },
+              {
+                id: "file.newBase",
+                title: t("files.newBase"),
+                icon: "base" as const,
+                run: () =>
+                  operations.openPrompt({ kind: "base", folder: folderOfPath(activePath) }),
               },
               {
                 id: "file.newFolder",
@@ -360,8 +369,21 @@ function VaultWorkspace({ vault }: { vault: string }) {
         search={searchCommands}
         onChoose={runCommand}
       />
+      <NewBaseDialog
+        open={operations.prompt?.kind === "base"}
+        folder={operations.prompt?.kind === "base" ? operations.prompt.folder : ""}
+        folders={folderList}
+        onClose={operations.closePrompt}
+        onCreate={(name, content) =>
+          operations.createBase(
+            operations.prompt?.kind === "base" ? operations.prompt.folder : "",
+            name,
+            content,
+          )
+        }
+      />
       <NamePrompt
-        open={operations.prompt !== null}
+        open={operations.prompt !== null && operations.prompt.kind !== "base"}
         title={
           operations.prompt?.kind === "note"
             ? t("files.newNote")

@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { basename } from "@palimvo/core";
+import { basename, linkResolver } from "@palimvo/core";
 import { describeError } from "../api/errors.ts";
 import { readFile } from "../api/files.ts";
 import { useAsync } from "../app/useAsync.ts";
+import { BaseView } from "../bases/BaseView.tsx";
 import { NoteEditor } from "../editor/NoteEditor.tsx";
 import { Button, Icon, Skeleton } from "../ui/index.ts";
 
@@ -25,6 +27,7 @@ const TEXT = /\.(txt|json|ya?ml|csv|log|toml|ini|js|ts|css|html?)$/i;
 
 /** The main area for an open file: notes are edited; other text files are shown read-only for now. */
 export function FileView({ vault, path, kind, paths, onOpen, onCreate, readOnly = false }: Props) {
+  const resolver = useMemo(() => linkResolver(paths), [paths]);
   if (kind === "markdown") {
     return (
       <article className="file-view note-view" aria-label={basename(path)}>
@@ -35,6 +38,27 @@ export function FileView({ vault, path, kind, paths, onOpen, onCreate, readOnly 
           onOpen={onOpen}
           onCreate={onCreate}
           readOnly={readOnly}
+        />
+      </article>
+    );
+  }
+  if (kind === "base") {
+    return (
+      <article className="file-view base-file-view" aria-label={basename(path)}>
+        <header className="file-view-head">
+          <h1>{basename(path)}</h1>
+          <p className="muted file-view-path">{path}</p>
+        </header>
+        <BaseView
+          vault={vault}
+          target={{ kind: "file", path }}
+          canEdit={!readOnly}
+          onOpen={onOpen}
+          onOpenLink={(target) => {
+            const found = resolver.resolve(target.split("#")[0] ?? target, path);
+            if (found) onOpen(found);
+            else onCreate(target.split("#")[0] ?? target);
+          }}
         />
       </article>
     );

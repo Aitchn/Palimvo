@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { describeError } from "../api/errors.ts";
 import { readFile } from "../api/files.ts";
 import { Button, Skeleton } from "../ui/index.ts";
+import type { BaseEmbedHost } from "./baseEmbeds.tsx";
 import { EditorHeader } from "./EditorHeader.tsx";
 import { MarkdownSurface } from "./MarkdownSurface.tsx";
 import { useEditorLabels } from "./useEditorLabels.ts";
@@ -59,6 +60,18 @@ export function NoteEditor({
     };
   }, [frozen, path, vault, onOpen, onCreate]);
 
+  const bases = useMemo<BaseEmbedHost>(() => {
+    const resolver = linkResolver(frozen);
+    return {
+      vault,
+      thisPath: path,
+      canEdit: !readOnly,
+      resolve: (target) => resolver.resolve(target, path),
+      open: onOpen,
+      openLink: links.open,
+    };
+  }, [frozen, vault, path, readOnly, onOpen, links]);
+
   const editable = !readOnly && !reading;
   return (
     <div className="editor">
@@ -91,6 +104,7 @@ export function NoteEditor({
           source={note.source}
           links={links}
           paths={frozen}
+          bases={bases}
           labels={labels}
           editable={editable}
           autoFocus={autoFocus && editable}

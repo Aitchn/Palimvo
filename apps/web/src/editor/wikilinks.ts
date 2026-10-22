@@ -72,6 +72,8 @@ function build(view: EditorView, host: WikiLinkHost): DecorationSet {
       const path = host.resolve(target);
       const resolved = path !== undefined;
       const rendered = !active.has(view.state.doc.lineAt(start).number);
+      // ![[view.base]] on its own line is drawn as the database itself by baseEmbeds.tsx.
+      if (m[1] && path?.toLowerCase().endsWith(".base")) continue;
       if (m[1] && path && rendered) {
         // ![[embed]]: the image or note itself instead of a link.
         builder.add(

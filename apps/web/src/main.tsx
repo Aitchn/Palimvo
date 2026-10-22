@@ -15,6 +15,7 @@ import "./styles/files.css";
 import "./styles/history.css";
 import "./styles/proposals.css";
 import "./styles/editor.css";
+import "./styles/bases.css";
 import "./styles/auth.css";
 import "./pwa/standalone.css";
 
