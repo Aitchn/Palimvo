@@ -17,7 +17,7 @@ const EVERYTHING: VaultCan = { write: true, delete: true, upload: true };
  * checks every request again; this only keeps the screen from offering what would be refused.
  * Until the answer arrives nothing is offered.
  */
-export function useVaultPermissions(vault: string): VaultCan {
+export function useVaultPermissions(vault: string, folder = ""): VaultCan {
   const { session } = useSession();
   const [names, setNames] = useState<ReadonlySet<string> | null>(null);
   const isAccount = session.status === "account";
@@ -26,7 +26,7 @@ export function useVaultPermissions(vault: string): VaultCan {
     if (!isAccount) return;
     const controller = new AbortController();
     setNames(null);
-    getMyPermissions(vault, { signal: controller.signal }).then(
+    getMyPermissions(vault, { signal: controller.signal, folder }).then(
       (result) => {
         if (!controller.signal.aborted) setNames(new Set(result.vault ?? []));
       },
@@ -35,13 +35,14 @@ export function useVaultPermissions(vault: string): VaultCan {
       },
     );
     return () => controller.abort();
-  }, [vault, isAccount]);
+  }, [vault, folder, isAccount]);
 
   if (session.status === "open") return EVERYTHING;
   if (!isAccount || names === null) return NOTHING;
   return {
     write: names.has("note.write"),
     delete: names.has("note.delete"),
-    upload: names.has("file.upload"),
+    // Importing writes the files one by one, so it needs both permissions.
+    upload: names.has("file.upload") && names.has("note.write"),
   };
 }

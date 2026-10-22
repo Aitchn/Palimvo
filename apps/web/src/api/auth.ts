@@ -32,9 +32,13 @@ export interface MyPermissions {
   vault?: string[];
 }
 
-export function getMyPermissions(vault?: string, options: Signal = {}): Promise<MyPermissions> {
-  const query = vault ? `?vault=${encodeURIComponent(vault)}` : "";
-  return request<MyPermissions>(`/api/me/permissions${query}`, options);
+export function getMyPermissions(
+  vault?: string,
+  options: Signal & { folder?: string } = {},
+): Promise<MyPermissions> {
+  const folder = options.folder ? `&folder=${encodeURIComponent(options.folder)}` : "";
+  const query = vault ? `?vault=${encodeURIComponent(vault)}${folder}` : "";
+  return request<MyPermissions>(`/api/me/permissions${query}`, { signal: options.signal });
 }
 
 /** Keeps the token the server returns so later writes carry it. */

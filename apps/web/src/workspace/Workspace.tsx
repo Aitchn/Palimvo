@@ -39,7 +39,6 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const params = useParams();
   const location = pathFromLocation(params["*"]);
   const tree = useVaultTree(vault);
-  const can = useVaultPermissions(vault);
   const nodes: readonly TreeNode[] = tree.status === "ready" ? tree.tree : NO_NODES;
   const tabs = useTabs(vault);
   const folders = useExpanded(vault);
@@ -63,6 +62,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const target = tree.status === "ready" && location ? findNode(nodes, location) : undefined;
   const activeFile = target?.type === "file" ? target : null;
   const activePath = activeFile?.path ?? null;
+  const can = useVaultPermissions(vault, folderOfPath(activePath));
 
   const openFile = useCallback(
     (path: string) => navigate(fileHref(vault, path)),
@@ -189,7 +189,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
           icon: "files",
           run: () => navigate("/"),
         },
-        ...(activeFile && can.write
+        ...(activeFile && can.write && can.delete
           ? [
               {
                 id: "file.rename",
@@ -222,7 +222,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
           : []),
       ]),
     // The commands close over the latest handlers; re-register when what they act on changes.
-    [t, i18n.language, vault, activePath, nodes, can.write, can.delete],
+    [t, i18n.language, vault, activePath, nodes, can.write, can.delete, can.upload],
   );
 
   useEffect(() => {

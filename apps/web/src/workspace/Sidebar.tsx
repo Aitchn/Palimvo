@@ -120,7 +120,7 @@ export function Sidebar({
       danger: true,
       onSelect: () => operations.askDelete(node),
     };
-    const editing = [...(can.write ? [rename] : []), ...(can.delete ? [remove] : [])];
+    const editing = [...(can.write && can.delete ? [rename] : []), ...(can.delete ? [remove] : [])];
     if (node.type === "file") {
       return [
         { id: "open", label: t("files.open"), icon: "note", onSelect: () => onOpen(node.path) },
@@ -154,7 +154,7 @@ export function Sidebar({
             },
           ]
         : []),
-      ...(can.write ? [rename] : []),
+      ...(can.write && can.delete ? [rename] : []),
       {
         id: "zip",
         label: t("files.downloadZip"),
@@ -270,13 +270,13 @@ export function Sidebar({
                 onOpen={(file) => onOpen(file.path)}
                 onMenu={setMenu}
                 onRename={(node) => {
-                  if (can.write) operations.openPrompt({ kind: "rename", node });
+                  if (can.write && can.delete) operations.openPrompt({ kind: "rename", node });
                 }}
                 onDelete={(node) => {
                   if (can.delete) operations.askDelete(node);
                 }}
                 onMove={(from, into) => {
-                  if (can.write) void operations.move(from, into);
+                  if (can.write && can.delete) void operations.move(from, into);
                 }}
                 onDropFiles={(data, into) => {
                   if (can.upload) void operations.dropFiles(data, into);

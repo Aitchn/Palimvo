@@ -44,7 +44,9 @@ export const SESSION_LOST_EVENT = "palimvo:session-lost";
 
 async function failed(response: Response): Promise<ApiError> {
   const error = await errorFromResponse(response);
-  if (error.code === "unauthenticated") window.dispatchEvent(new Event(SESSION_LOST_EVENT));
+  // A stale token (another tab signed in as someone else) is as good as a lost session.
+  if (error.code === "unauthenticated" || error.code === "csrf_invalid")
+    window.dispatchEvent(new Event(SESSION_LOST_EVENT));
   return error;
 }
 
