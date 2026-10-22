@@ -11,3 +11,5 @@ export * from "./tags.ts";
 export * from "./frontmatter.ts";
 export * from "./canvas.ts";
 export * from "./file-types.ts";
+export * from "./base-expr.ts";
+export * from "./bases.ts";

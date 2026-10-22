@@ -1,0 +1,18 @@
+filters:
+  and:
+    - file.inFolder("Tasks")
+    - or:
+        - 'status == "todo"'
+        - file.hasTag("home")
+formulas:
+  overdue: 'if(due < today(), "late", "")'
+views:
+  - type: table
+    name: Open
+    order:
+      - file.name
+      - due
+      - formula.overdue
+    sort:
+      - property: due
+        direction: ASC

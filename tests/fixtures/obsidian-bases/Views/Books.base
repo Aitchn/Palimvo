@@ -1,0 +1,37 @@
+filters:
+  and:
+    - file.hasTag("book")
+    - 'file.ext == "md"'
+formulas:
+  formatted_price: 'if(price, price.toFixed(2) + " dollars")'
+  ppu: "(price / age).toFixed(2)"
+properties:
+  status:
+    displayName: Status
+  formula.formatted_price:
+    displayName: "Price"
+  formula.ppu:
+    displayName: "Price per year"
+views:
+  - type: table
+    name: "My table"
+    limit: 10
+    groupBy:
+      property: note.status
+      direction: ASC
+    order:
+      - file.name
+      - author
+      - formula.formatted_price
+      - formula.ppu
+    sort:
+      - property: price
+        direction: DESC
+    summaries:
+      price: Average
+  - type: cards
+    name: "Cheap"
+    filters: price < 10
+    order:
+      - file.name
+      - note.price
