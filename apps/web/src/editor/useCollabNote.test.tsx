@@ -124,9 +124,45 @@ describe("useCollabNote", () => {
     expect(result.current.notice).toBe("savedCopy");
     const put = sent.find((c) => c.method === "PUT")!;
     expect(decodeURIComponent(put.url)).toMatch(
-      /^\/api\/vaults\/v\/files\/Plan \(offline \d{8} \d{4}\)\.md$/,
+      /^\/api\/vaults\/v\/files\/Plan \(offline \d{8} \d{6} [a-z0-9]+\)\.md$/,
     );
     expect(JSON.parse(put.body!)).toEqual({ content: "hello + offline", baseVersion: null });
+  });
+
+  it("keeps the typed text and tries again while the separate note cannot be saved", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    let ok = false;
+    const sent: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      sent.push(url);
+      return ok
+        ? Response.json({ path: "x", version: "v1", mtime: 1 })
+        : Response.json({ code: "internal", message: "no" }, { status: 500 });
+    });
+    try {
+      const { result } = renderHook(() => useCollabNote("v", "Plan.md"), { wrapper });
+      act(() => current().serve());
+      act(() => current().drop());
+      act(() => (result.current.source as { text: Y.Text }).text.insert(5, " + offline"));
+      await act(async () => {
+        current().emit("connection-close", { code: STALE_LINEAGE });
+        await Promise.resolve();
+      });
+      // Still the same document, still unsent, nothing restarted.
+      expect(FakeProvider.all).toHaveLength(1);
+      expect(result.current.unsent).toBe(true);
+      expect((result.current.source as { text: Y.Text }).text.toString()).toBe("hello + offline");
+      ok = true;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4100);
+      });
+      expect(sent.length).toBeGreaterThan(1);
+      expect(new Set(sent).size).toBe(sent.length); // a new name each time
+      expect(FakeProvider.all).toHaveLength(2);
+      expect(result.current.notice).toBe("savedCopy");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("disconnects when the note is closed", () => {

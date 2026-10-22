@@ -162,6 +162,7 @@ class LiveDoc {
   unloadTimer: ReturnType<typeof setTimeout> | undefined;
   private diskTimer: ReturnType<typeof setInterval> | undefined;
   private closed = false;
+  private frozen = false;
   private diskCandidate: string | undefined;
   private stateWrites: Promise<void> = Promise.resolve();
   /** Whether the saved state on disk matches `persisted`. */
@@ -320,7 +321,7 @@ class LiveDoc {
   }
 
   private onMessage(ws: WebSocket, data: Uint8Array): void {
-    if (this.closed) return;
+    if (this.closed || this.frozen) return;
     if (this.batchHeld) {
       // Bounded buffering: a noisy peer reconnects rather than consuming unbounded RAM.
       if (
@@ -377,24 +378,37 @@ class LiveDoc {
       this.opts.persistDelayMs,
       this.firstDirtyAt + this.opts.persistMaxDelayMs - Date.now(),
     );
-    this.persistTimer = setTimeout(() => void this.persist(), Math.max(0, wait));
+    this.persistTimer = setTimeout(
+      () => void this.persist().catch(() => undefined),
+      Math.max(0, wait),
+    );
   }
 
-  /** Writes the document to disk if it changed. Persists run one after another. */
+  /**
+   * Writes the document to disk if it changed. Persists run one after another. Rejects when the
+   * write failed, so a caller that needs the text on disk (a move, a checkpoint, shutdown) can
+   * tell; the failure is also retried in the background while the document lives.
+   */
   persist(): Promise<void> {
     clearTimeout(this.persistTimer);
     this.firstDirtyAt = undefined;
-    this.persisting = this.persisting
-      .then(() => this.persistNow())
-      .catch((err) => {
-        this.opts.logger.error("persist failed", {
-          vault: this.vault,
-          path: this.path,
-          ...errorFields(err),
-        });
-        this.schedulePersist(); // retry later; the edits are still in memory
+    const run = this.persisting.then(() => this.persistNow());
+    this.persisting = run.catch((err) => {
+      this.opts.logger.error("persist failed", {
+        vault: this.vault,
+        path: this.path,
+        ...errorFields(err),
       });
-    return this.persisting;
+      this.schedulePersist(); // retry later; the edits are still in memory
+    });
+    return run;
+  }
+
+  /** Shutdown: from now on messages from clients are ignored and every socket is closed. */
+  freeze(): void {
+    this.frozen = true;
+    clearTimeout(this.unloadTimer);
+    for (const ws of this.conns.keys()) ws.close(1001, "server shutting down");
   }
 
   /** Resolves when no persist or state write is running. */
@@ -807,8 +821,9 @@ export class CollabHub {
       );
       await Promise.all(
         inside.map(async (live) => {
-          this.docs.delete(key(vault, live.path));
+          // A failed save stops the move: closing now would throw the unsaved text away.
           if (reason === "moved") await live.persist();
+          this.docs.delete(key(vault, live.path));
           live.close(GONE, reason);
           await live.settled();
           await this.vaults.deleteMeta(vault, stateName(live.path)).catch(() => undefined);
@@ -846,6 +861,20 @@ export class CollabHub {
   async flushAll(): Promise<void> {
     await Promise.all([...this.docs.values()].map((d) => d.persist()));
     await Promise.all([...this.docs.values()].map((d) => d.settled()));
+  }
+
+  /**
+   * Shutdown: stops taking edits from clients (they keep theirs and merge after the restart),
+   * writes every document, then closes them. Rejects if a write failed; documents are closed
+   * either way.
+   */
+  async shutdown(): Promise<void> {
+    for (const live of this.docs.values()) live.freeze();
+    try {
+      await this.flushAll();
+    } finally {
+      await this.closeAll();
+    }
   }
 
   /** Re-checks who may still use each open connection, e.g. after a role change or sign-out. */
@@ -889,11 +918,12 @@ export class CollabHub {
       pending = this.loadState(vault, file.path).then((saved) => {
         const live = new LiveDoc(vault, file.path, kind, file, saved, this.vaults, this.opts);
         this.docs.set(k, live);
-        void live.persist(); // saves the state if it was new
+        void live.persist().catch(() => undefined); // saves the state if it was new
         return live;
       });
       this.loading.set(k, pending);
-      void pending.finally(() => this.loading.delete(k));
+      const forget = () => this.loading.delete(k);
+      pending.then(forget, forget); // a document that fails to open must not also crash the process
     }
     return pending;
   }
@@ -912,7 +942,11 @@ export class CollabHub {
     clearTimeout(live.unloadTimer);
     live.unloadTimer = setTimeout(async () => {
       if (live.conns.size > 0 || live.heldForBatch) return;
-      await live.persist();
+      try {
+        await live.persist();
+      } catch {
+        return; // stays in memory; its own retry keeps trying
+      }
       if (live.conns.size > 0 || this.docs.get(key(live.vault, live.path)) !== live) return;
       this.docs.delete(key(live.vault, live.path));
       live.close(1000, "idle");

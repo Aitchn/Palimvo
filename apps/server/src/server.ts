@@ -147,10 +147,7 @@ export async function startServer({
     // Registered after the history hook, so it runs before it: live edits are written, then committed.
     hooks.push({
       name: "collab",
-      hook: async () => {
-        await collab.flushAll();
-        await collab.closeAll();
-      },
+      hook: () => collab.shutdown(),
     });
     backup.start();
     const app = createApp({

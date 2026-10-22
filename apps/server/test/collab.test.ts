@@ -235,6 +235,40 @@ describe("live collaboration", () => {
     expect(readCanvas(a.doc).nodes).toHaveLength(2);
   });
 
+  it("survives a canvas that cannot be opened live", async () => {
+    await put("bad.canvas", { content: "{broken json" });
+    const provider = provide(new Y.Doc(), "demo", "bad.canvas");
+    const code = await new Promise<number>((resolve) =>
+      provider.on("connection-close", (e: CloseEvent | null) => resolve(e?.code ?? 0)),
+    );
+    expect(code).not.toBe(0);
+    // Still serving, and the same file can be tried again.
+    expect((await server.fetch("/api/health")).status).toBe(200);
+    const again = provide(new Y.Doc(), "demo", "bad.canvas");
+    await new Promise<void>((resolve) => again.on("connection-close", () => resolve()));
+    expect((await server.fetch("/api/health")).status).toBe(200);
+  });
+
+  it("does not move a note whose unsaved text could not be written", async () => {
+    await put("old.md", { content: "text" });
+    const a = await connect("old.md");
+    a.text.insert(4, " edited");
+    await until(() => server.services.collab.size === 1);
+    const writeFileOriginal = server.services.vaults.writeFile.bind(server.services.vaults);
+    server.services.vaults.writeFile = async () => {
+      throw new Error("disk full");
+    };
+    try {
+      const res = await post("/api/vaults/demo/move", { from: "old.md", to: "new.md" });
+      expect(res.status).toBe(500);
+    } finally {
+      server.services.vaults.writeFile = writeFileOriginal;
+    }
+    expect(server.services.collab.size).toBe(1);
+    expect(a.provider.wsconnected).toBe(true);
+    expect((await get("old.md")).content).toBe("text edited");
+  });
+
   it("applies a batch to open documents and holds typing meanwhile", async () => {
     await put("a.md", { content: "A" });
     await put("b.md", { content: "B" });

@@ -18,12 +18,15 @@ function collabUrl(): string {
   return `${protocol}//${location.host}/api/collab`;
 }
 
-/** `Plan.md` -> `Plan (offline 2026-10-22 0130).md`: where text that cannot be merged is kept. */
+const RETRY_MS = 4000;
+
+/** `Plan.md` -> `Plan (offline 20261022 013000 k3f9).md`: where text that cannot be merged is kept. */
 function copyPath(path: string): string {
   const dot = path.lastIndexOf(".");
-  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ").replace(/[-:]/g, "");
+  const stamp = new Date().toISOString().slice(0, 19).replace("T", " ").replace(/[-:]/g, "");
+  const unique = Math.random().toString(36).slice(2, 6);
   const at = dot > path.lastIndexOf("/") ? dot : path.length;
-  return `${path.slice(0, at)} (offline ${stamp})${path.slice(at)}`;
+  return `${path.slice(0, at)} (offline ${stamp} ${unique})${path.slice(at)}`;
 }
 
 interface Live {
@@ -71,6 +74,7 @@ export function useCollabNote(vault: string, path: string): NoteSession {
     // Typed here since the server last confirmed the document.
     let pending = false;
     let restarted = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     setLive(null);
     setStatus("loading");
@@ -128,11 +132,21 @@ export function useCollabNote(vault: string, path: string): NoteSession {
           setNotice(copied ? "savedCopy" : "reloaded");
         };
         if (kept === null) finish(false);
-        else
-          void writeFile(vault, copyPath(path), kept, null).then(
-            () => finish(true),
-            () => finish(false),
-          );
+        else {
+          // This document is the only place the typed text exists: it stays (and the page keeps
+          // warning about leaving) until the separate note is saved, however many tries it takes.
+          setStatus("offline");
+          const save = () => {
+            if (stopped) return;
+            writeFile(vault, copyPath(path), kept, null).then(
+              () => finish(true),
+              () => {
+                retryTimer = setTimeout(save, RETRY_MS);
+              },
+            );
+          };
+          save();
+        }
       }
     });
     const onAwareness = () => setPeers(Math.max(1, provider.awareness.getStates().size));
@@ -146,6 +160,7 @@ export function useCollabNote(vault: string, path: string): NoteSession {
 
     return () => {
       stopped = true;
+      clearTimeout(retryTimer);
       window.removeEventListener("beforeunload", warn);
       provider.awareness.off("change", onAwareness);
       provider.destroy();
