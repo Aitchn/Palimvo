@@ -21,6 +21,7 @@ export const ERROR_CODES = {
   token_scope_denied: { status: 403, message: "This token does not cover that vault or folder." },
   propose_only: { status: 403, message: "This token can only propose changes." },
   setup_code_required: { status: 403, message: "The setup code is required." },
+  setup_required: { status: 403, message: "Finish the first-time setup first." },
   setup_complete: { status: 403, message: "Setup has already been completed." },
   plugin_not_approved: { status: 403, message: "This plugin version has not been approved." },
   not_found: { status: 404, message: "Not found." },

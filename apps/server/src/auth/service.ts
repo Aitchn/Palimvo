@@ -134,12 +134,13 @@ export class AuthService {
       throw new AppError("account_disabled");
     }
     this.byName.clear(nameKey);
-    const signed = this.startSession(account, ctx.userAgent);
+    const signed = this.openSession(account, ctx.userAgent);
     this.audit("auth.login", account, ctx);
     return signed;
   }
 
-  private startSession(account: Account, userAgent?: string): SignedIn {
+  /** Starts a browser session for an account that has just been proven (login, invite, setup). */
+  openSession(account: Account, userAgent?: string): SignedIn {
     const cookie = randomBytes(32).toString("base64url");
     const session = this.store.sessions.create({
       id: sha256(cookie),
@@ -275,7 +276,7 @@ export class AuthService {
       return created;
     });
     this.audit("auth.invite_accepted", account, ctx, { invite: invite.id });
-    return this.startSession(account, ctx.userAgent);
+    return this.openSession(account, ctx.userAgent);
   }
 
   private audit(

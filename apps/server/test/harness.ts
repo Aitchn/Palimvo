@@ -24,6 +24,8 @@ export async function startTestServer(
   const config: Config = {
     ...defaultConfig(),
     logLevel: "debug",
+    // Most tests exercise the API without the setup wizard; setup.test.ts turns this off.
+    devInsecure: true,
     ...overrides,
     dataDir,
     port: overrides.port ?? 0,

@@ -9,12 +9,13 @@ import { CSRF_HEADER, SESSION_COOKIE, SESSION_TTL_MS, type AuthService } from ".
 
 /**
  * Who a request comes from.
- * - `open`: no account exists yet (setup mode), so nothing is enforced; the server listens on
- *   loopback unless told otherwise.
+ * - `setup`: no account exists yet, so only the first-time setup endpoints answer.
+ * - `open`: `--dev-insecure` and no account yet: nothing is enforced (loopback-only, see config).
  * - `guest`: nobody is signed in; may read only what is made public.
  * - `account`: a signed-in person.
  */
 export type Principal =
+  | { kind: "setup" }
   | { kind: "open" }
   | { kind: "guest" }
   | { kind: "account"; account: Account; sessionId: string; csrf: string; cookie: string };
@@ -88,6 +89,8 @@ function expectedOrigin(c: Context, publicUrl: string | undefined): string {
 export interface PrincipalOptions {
   auth: AuthService;
   publicUrl?: string;
+  /** Leave the API open while no account exists (development only). */
+  devInsecure?: boolean;
 }
 
 /**
@@ -96,7 +99,11 @@ export interface PrincipalOptions {
  * `GET /api/auth/me` returned. Requests without a session cookie have no ambient credentials and
  * need neither.
  */
-export function principalMiddleware({ auth, publicUrl }: PrincipalOptions): MiddlewareHandler {
+export function principalMiddleware({
+  auth,
+  publicUrl,
+  devInsecure = false,
+}: PrincipalOptions): MiddlewareHandler {
   return async (c, next) => {
     const cookie = getCookie(c, SESSION_COOKIE);
     const resolved = auth.resolveSession(cookie);
@@ -116,7 +123,11 @@ export function principalMiddleware({ auth, publicUrl }: PrincipalOptions): Midd
           throw new AppError("csrf_invalid");
       }
     } else {
-      principal = auth.hasAccounts ? { kind: "guest" } : { kind: "open" };
+      principal = auth.hasAccounts
+        ? { kind: "guest" }
+        : devInsecure
+          ? { kind: "open" }
+          : { kind: "setup" };
     }
     principals.set(c.req.raw, principal);
     attachAccess(c, auth.access, principal);
@@ -148,7 +159,11 @@ export function accessGate(): MiddlewareHandler {
     const path = c.req.path;
     if (!path.startsWith("/api/") || path === "/api/health" || path.startsWith("/api/auth/"))
       return next();
+    // The setup routes decide for themselves: before setup they work, afterwards they say it is done.
+    if (path === "/api/setup" || path.startsWith("/api/setup/")) return next();
     const principal = principalOf(c);
+    if (principal.kind === "setup") throw new AppError("setup_required");
+    if (principal.kind === "open") return next();
     if (principal.kind === "guest") {
       const allowed = c.req.method === "GET" && GUEST_READS.some((re) => re.test(path));
       if (!allowed) throw new AppError("unauthenticated");

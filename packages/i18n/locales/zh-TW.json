@@ -186,6 +186,7 @@
     "token_scope_denied": "這個權杖不涵蓋該筆記庫或資料夾。",
     "propose_only": "這個權杖只能提出修改提案。",
     "setup_code_required": "需要設定代碼。",
+    "setup_required": "請先完成首次設定。",
     "setup_complete": "設定已經完成。",
     "plugin_not_approved": "這個插件版本尚未核准。",
     "not_found": "找不到該項目。",

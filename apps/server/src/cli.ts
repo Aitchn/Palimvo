@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import { CONFIG_FLAGS, loadConfig } from "./config/index.ts";
+import { BARE_CONFIG_FLAGS, CONFIG_FLAGS, loadConfig } from "./config/index.ts";
 import { AppError, errorFields } from "./errors.ts";
 import { createLogger } from "./log.ts";
 import { startServer, VERSION } from "./server.ts";
@@ -18,6 +18,9 @@ Options for serve (each also has a PALIMVO_* environment variable):
   --public-url <url>    PALIMVO_PUBLIC_URL    Public address, needed for OAuth
   --trust-proxy <bool>  PALIMVO_TRUST_PROXY   Trust X-Forwarded-* headers (default false)
   --log-level <level>   PALIMVO_LOG_LEVEL     debug, info, warn or error (default info)
+  --dev-insecure        PALIMVO_DEV_INSECURE  Leave the API open until the first account exists,
+                                              skipping the setup wizard. Development only; refused
+                                              unless the host is a loopback address.
 `;
 
 /** Runs the CLI and returns the process exit code. `serve` resolves only after shutdown. */
@@ -50,9 +53,19 @@ async function serve(args: string[], env: Record<string, string | undefined>): P
   try {
     const { values } = parseArgs({
       args,
-      options: Object.fromEntries(CONFIG_FLAGS.map((f) => [f, { type: "string" as const }])),
+      options: Object.fromEntries(
+        CONFIG_FLAGS.map((f) => [
+          f,
+          { type: BARE_CONFIG_FLAGS.includes(f) ? ("boolean" as const) : ("string" as const) },
+        ]),
+      ),
     });
-    const loaded = loadConfig(env, values);
+    const loaded = loadConfig(
+      env,
+      Object.fromEntries(
+        Object.entries(values).map(([k, v]) => [k, typeof v === "boolean" ? String(v) : v]),
+      ),
+    );
     const running = await startServer({
       loaded,
       logger: createLogger({ level: loaded.config.logLevel }),
