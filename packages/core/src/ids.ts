@@ -19,6 +19,8 @@ export const LEGACY_REASON_HEADER = "x-aivault-reason";
 /** Git trailers written into every commit message. */
 export const GIT_AUTHOR_TRAILER = "Palimvo-Author";
 export const GIT_REASON_TRAILER = "Palimvo-Reason";
+/** Who accepted a proposed change (the commit author is whoever proposed it). */
+export const GIT_APPROVER_TRAILER = "Palimvo-Approved-by";
 
 /** Domain of the synthetic e-mail addresses used for non-human git authors. */
 export const GIT_EMAIL_DOMAIN = "palimvo.local";

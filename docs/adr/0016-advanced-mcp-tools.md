@@ -13,7 +13,7 @@ tier with the tools whose services exist today and adds the flag.
 
 - **Tools now:** `create_folder`, `get_graph`, `create_checkpoint`, `restore_version`,
   `create_base`, `list_file_types`, `create_vault`, `remove_vault`. Tools that need services that
-  do not exist yet (plugins and the plugin library, components, edit proposals, chunked uploads,
+  do not exist yet (plugins and the plugin library, components, chunked uploads,
   upload links, vault settings) are added with those services, as the plan allows; each is one
   `mcpTool` plus a test.
 - **The flag is stored in the grant's `scope`** as the word `mcp:admin` next to `mcp:write`, so no

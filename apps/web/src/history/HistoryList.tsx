@@ -53,6 +53,13 @@ export function HistoryList({
                 {commit.tags.length > 0 && `: ${commit.tags.join(", ")}`}
               </span>
             )}
+            {commit.approvedBy.length > 0 && (
+              <p className="history-approved muted">
+                {t("history.approvedBy", {
+                  names: commit.approvedBy.map((a) => a.name).join(", "),
+                })}
+              </p>
+            )}
             {why.map((line, i) => (
               <p key={i} className="history-reason">
                 {line}

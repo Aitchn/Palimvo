@@ -7,6 +7,7 @@ import { principalOf } from "../auth/principal.ts";
 import { requestAuthor, requestNote } from "../routes/author.ts";
 import type { VaultHistory } from "../history/history.ts";
 import type { Logger } from "../log.ts";
+import type { ProposalService } from "../proposals/proposals.ts";
 import type { VaultIndexes } from "../search/index.ts";
 import type { Store } from "../store/index.ts";
 import type { VaultService } from "../vault/service.ts";
@@ -36,6 +37,7 @@ export interface McpDeps {
   trash: VaultTrash;
   /** Call after a change to who may do what (a new vault's administrator). */
   access: AccessControl;
+  proposals: ProposalService;
   /** Which plugins are enabled in a vault; `list_vaults` shows them. Absent until the plugin platform exists. */
   plugins?: PluginCatalog;
   [key: string]: unknown;

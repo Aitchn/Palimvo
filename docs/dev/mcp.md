@@ -42,7 +42,7 @@ history as a listed tool). They appear only when the caller may use them.
 | Admin     | `create_vault`, `remove_vault` (`/mcp` only, see below)                                                               |
 
 Still to come with the services they need: plugin management and the plugin library
-(`publish_library_plugin`, T32), components (`add_component`...), edit proposals (T25), chunked
+(`publish_library_plugin`, T32), components (`add_component`...), chunked
 uploads and upload links (T22), vault settings.
 
 ### Administration

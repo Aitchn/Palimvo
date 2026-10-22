@@ -63,7 +63,11 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const target = tree.status === "ready" && location ? findNode(nodes, location) : undefined;
   const activeFile = target?.type === "file" ? target : null;
   const activePath = activeFile?.path ?? null;
-  const can = useVaultPermissions(vault, folderOfPath(activePath));
+  const folderCan = useVaultPermissions(vault, folderOfPath(activePath));
+  // Whether the Proposals view exists depends on the vault, not on the open file's folder; the
+  // server checks each file's folder when a decision is made.
+  const vaultCan = useVaultPermissions(vault);
+  const can = { ...folderCan, propose: vaultCan.propose, review: vaultCan.review };
 
   const openFile = useCallback(
     (path: string) => navigate(fileHref(vault, path)),
