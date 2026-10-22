@@ -46,8 +46,7 @@ const HOME_WITH_WIDGET = {
 function routes(over: Record<string, () => Response> = {}) {
   return mockRoutes({
     "GET /api/vaults/sample/files": () => Response.json(FILES),
-    "GET /api/vaults/sample/files/data.log": () =>
-      Response.json({ path: "data.log", content: "raw text", mtime: 1, version: "v1" }),
+    "GET /api/vaults/sample/raw/data.log": () => new Response("raw text"),
     "GET /api/vaults/sample/home": () => Response.json(HOME_WITH_WIDGET),
     "GET /api/vaults/sample/plugin-runtime": () => Response.json({ plugins: [listing] }),
     "GET /api/vaults/sample/plugin-runtime/hello": () => Response.json(bundle),

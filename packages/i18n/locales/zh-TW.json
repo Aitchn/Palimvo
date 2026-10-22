@@ -88,7 +88,7 @@
     "deleteFolderBody": "資料夾和裡面的所有內容會從筆記庫移除，但仍保留在版本歷史中。",
     "deleted": "已刪除「{name}」",
     "imported": "已匯入 {count} 個檔案",
-    "importSkipped": "略過了 {count} 個檔案：目前只能匯入文字檔。",
+    "importSkipped": "略過了 {count} 個檔案：隱藏檔、太大，或這個筆記庫不接受的檔案類型。",
     "importFailed": "有 {count} 個檔案無法匯入。"
   },
   "quickOpen": {
@@ -685,6 +685,26 @@
     "unavailable": "服務暫時無法使用。",
     "public_url_required": "OAuth 需要伺服器的公開網址。請管理員設定 PALIMVO_PUBLIC_URL。",
     "proposal_stale": "提案之後有筆記被改動，這項修改無法套用。",
-    "proposal_changed": "這份提案已被更動或已決定過，請重新載入後再試。"
+    "proposal_changed": "這份提案已被更動或已決定過，請重新載入後再試。",
+    "upload_offset": "這一段的位置對不上，會從伺服器已收到的地方繼續。",
+    "upload_incomplete": "檔案還沒有全部傳完。",
+    "upload_limit": "未完成的上傳太多了，請先完成或取消一些。",
+    "storage_full": "伺服器的空間不足，放不下這個檔案。"
+  },
+  "viewers": {
+    "download": "下載",
+    "loadFailed": "無法載入這個檔案。",
+    "noViewer": "目前沒有內建的方式可以顯示 {type} 檔案，你可以把它下載下來。",
+    "tooBig": "這個檔案有 {size}，太大了無法在這裡顯示，請改用下載。",
+    "jsonInvalid": "不是有效的 JSON，所以改用文字顯示。",
+    "showText": "顯示原始文字",
+    "showMore": "再顯示 {count} 項",
+    "rowsLimited": "只顯示前 {count} 列，要看完整內容請下載檔案。"
+  },
+  "uploads": {
+    "title": "上傳",
+    "cancel": "取消上傳 {name}",
+    "progress": "{sent} / {total}",
+    "done": "已上傳"
   }
 }

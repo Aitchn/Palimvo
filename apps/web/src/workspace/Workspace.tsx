@@ -19,6 +19,7 @@ import { VaultHome } from "../home/VaultHome.tsx";
 import { BacklinksPanel } from "../search/BacklinksPanel.tsx";
 import { Icon, useToast } from "../ui/index.ts";
 import { fileHref, pathFromLocation, vaultHref } from "./deepLinks.ts";
+import { UploadTray } from "../uploads/UploadTray.tsx";
 import { FileView } from "./FileView.tsx";
 import { useVaultPermissions } from "./useVaultPermissions.ts";
 import { Sidebar, type SidebarView } from "./Sidebar.tsx";
@@ -425,6 +426,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
           />
         )}
       </Shell>
+      <UploadTray />
       <Palette
         open={quickOpen}
         onClose={() => setQuickOpen(false)}

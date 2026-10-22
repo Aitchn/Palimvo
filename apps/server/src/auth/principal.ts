@@ -155,6 +155,7 @@ export function checkOrigin(c: Context, publicUrl: string | undefined): void {
 const GUEST_READS = [
   /^\/api\/vaults$/,
   /^\/api\/vaults\/[^/]+\/files(\/.*)?$/,
+  /^\/api\/vaults\/[^/]+\/raw\/.+$/,
   /^\/api\/vaults\/[^/]+\/search$/,
   /^\/api\/vaults\/[^/]+\/home$/,
 ];

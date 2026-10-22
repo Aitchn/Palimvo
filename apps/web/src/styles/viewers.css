@@ -1,0 +1,190 @@
+/* File viewers and the upload panel. */
+
+.viewer {
+  max-width: 1100px;
+}
+.viewer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.viewer-title {
+  min-width: 0;
+}
+.viewer-title h1 {
+  overflow-wrap: anywhere;
+}
+.viewer-download {
+  flex: none;
+  text-decoration: none;
+  gap: var(--space-2);
+}
+.media-viewer {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.media-viewer img,
+.media-viewer video {
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
+  object-fit: contain;
+}
+.media-viewer audio {
+  width: min(560px, 100%);
+}
+.media-viewer img {
+  /* Transparent pictures stay readable on both themes. */
+  background: repeating-conic-gradient(var(--bg-hover) 0% 25%, transparent 0% 50%) 50% / 16px 16px;
+}
+.pdf-viewer {
+  width: 100%;
+  height: calc(100vh - 200px);
+  min-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+}
+
+.text-viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+.text-viewer-raw {
+  margin-left: auto;
+  cursor: pointer;
+}
+
+.json-tree {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  line-height: 1.6;
+  overflow: auto;
+}
+.json-branch > summary {
+  cursor: pointer;
+}
+.json-children {
+  margin-left: var(--space-4);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border);
+}
+.json-key {
+  color: var(--accent-text);
+}
+.json-count {
+  color: var(--fg-subtle);
+}
+.json-string {
+  color: var(--success-text);
+  overflow-wrap: anywhere;
+}
+.json-number {
+  color: var(--warning-text);
+}
+.json-bool,
+.json-null {
+  color: var(--info);
+}
+
+.csv-scroll {
+  max-height: calc(100vh - 260px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+}
+.csv-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92em;
+}
+.csv-table th,
+.csv-table td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.csv-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elev-2);
+  font-weight: 600;
+}
+.csv-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+.csv-note {
+  margin: var(--space-2) 0 0;
+}
+
+/* Upload panel */
+.upload-tray {
+  position: fixed;
+  z-index: 69;
+  left: calc(var(--rail-width) + var(--space-4));
+  bottom: var(--space-4);
+  width: min(340px, calc(100vw - 2 * var(--space-4)));
+  background: var(--bg-elev);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.upload-tray ul {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 40vh;
+  overflow: auto;
+}
+.upload-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.upload-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.upload-item progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--accent);
+}
+.upload-meta {
+  font-size: var(--text-sm);
+}
+.upload-error {
+  color: var(--danger-text);
+}
+.upload-done .ui-icon:first-child {
+  color: var(--success);
+}
+.upload-failed .ui-icon:first-child {
+  color: var(--danger);
+}
+@media (max-width: 900px) {
+  .upload-tray {
+    left: var(--space-4);
+    bottom: calc(var(--space-4) + 64px);
+  }
+}

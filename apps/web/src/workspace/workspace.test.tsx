@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as putBytes from "../api/putBytes.ts";
 import { POLL_MS } from "../files/useVaultTree.ts";
 import { initTheme } from "../theme/theme.ts";
 import { mockMatchMedia, mockRoutes, renderRoute, type RecordedCall } from "../test/render.tsx";
@@ -355,7 +356,12 @@ describe("file operations", () => {
     expect(api.calls.some((c) => c.url.endsWith("/move"))).toBe(false);
   });
 
-  it("imports dropped text files, numbers a taken name and skips binary files", async () => {
+  it("imports dropped text files, uploads other files, numbers a taken name and skips hidden files", async () => {
+    const sent: string[] = [];
+    vi.spyOn(putBytes, "putBytes").mockImplementation(async (url, body) => {
+      sent.push(url);
+      return { path: "Projects/pic.png", size: body.size, version: "v" };
+    });
     const api = server({
       "PUT /api/vaults/sample/files/Welcome 2.md": () =>
         Response.json({ path: "Welcome 2.md", version: "v", mtime: 1 }),
@@ -366,11 +372,13 @@ describe("file operations", () => {
     const folder = await treeitem("Projects");
     const text = new File(["hello"], "notes.txt", { type: "text/plain" });
     const binary = new File([new Uint8Array([0, 1, 2])], "pic.png", { type: "image/png" });
+    const hidden = new File(["x"], ".secret.txt");
     fireEvent.drop(folder, {
-      dataTransfer: { types: ["Files"], items: [], files: [text, binary] },
+      dataTransfer: { types: ["Files"], items: [], files: [text, binary, hidden] },
     });
-    expect(await screen.findByText("Imported 1 file")).toBeInTheDocument();
+    expect(await screen.findByText("Imported 2 files")).toBeInTheDocument();
     expect(screen.getByText(/1 file was skipped/)).toBeInTheDocument();
+    expect(sent).toEqual(["/api/vaults/sample/raw/Projects/pic.png?create=1"]);
     expect(api.calls.find((c) => c.method === "PUT")?.url).toBe(
       "/api/vaults/sample/files/Projects/notes.txt",
     );

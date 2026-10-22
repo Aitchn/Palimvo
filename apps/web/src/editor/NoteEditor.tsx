@@ -2,7 +2,7 @@ import { linkResolver } from "@palimvo/core";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeError } from "../api/errors.ts";
-import { readFile } from "../api/files.ts";
+import { rawUrl, readFile } from "../api/files.ts";
 import { Button, Skeleton } from "../ui/index.ts";
 import { EditorHeader } from "./EditorHeader.tsx";
 import { MarkdownSurface } from "./MarkdownSurface.tsx";
@@ -55,6 +55,7 @@ export function NoteEditor({
         if (found) onOpen(found);
         else onCreate(target.split("#")[0] ?? target);
       },
+      fileUrl: (file) => rawUrl(vault, file),
       readText: async (embedded) => (await readFile(vault, embedded)).content,
     };
   }, [frozen, path, vault, onOpen, onCreate]);

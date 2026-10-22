@@ -97,6 +97,14 @@ const VAULT_CASES: Case[] = [
   },
   { permission: "note.write", method: "POST", path: `${V}/checkpoints`, json: { message: "cp" } },
   { permission: "note.delete", method: "DELETE", path: `${V}/files/b.md` },
+  { permission: "file.upload", method: "PUT", path: `${V}/raw/up.png?create=1`, json: "x" },
+  {
+    permission: "file.upload",
+    method: "POST",
+    path: `${V}/uploads`,
+    json: { path: "u.png", size: 1 },
+  },
+  { permission: "file.upload", method: "POST", path: `${V}/upload-links`, json: { path: "l.png" } },
   { permission: "history.view", method: "GET", path: `${V}/history` },
   { permission: "history.view", method: "GET", path: `${V}/checkpoints` },
   {
@@ -765,5 +773,37 @@ describe("no way back to a right that was taken away", () => {
       permissions: maskOf(["users.manage"]),
     });
     expect((await mia.client.put(`/api/admin/users/${mia.id}/roles/${weak.id}`)).status).toBe(204);
+  });
+});
+
+describe("raw files", () => {
+  it("are served only to people who may read the vault", async () => {
+    const { root, mia } = await world();
+    const bytes = Buffer.from([1, 2, 3, 4]);
+    expect(
+      (await root.client.request(`${V}/raw/pic.png?create=1`, { method: "PUT", body: bytes }))
+        .status,
+    ).toBe(201);
+    const read = () => mia.client.get(`${V}/raw/pic.png`);
+    expect((await read()).status).toBe(200);
+    setOverride("v", { type: "account", id: mia.id }, [], ["note.read"]);
+    expect((await read()).status).toBe(403);
+
+    const outsider = await signIn("olga");
+    const res = await outsider.client.get(`${V}/raw/pic.png`);
+    expect(res.status).toBe(404);
+    expect(await json(res)).toMatchObject({ code: "vault_not_found" });
+    // A vault with nothing public looks like it does not exist to a guest.
+    expect((await new Client(server).get(`${V}/raw/pic.png`)).status).toBe(404);
+  });
+
+  it("let guests read only what is public", async () => {
+    const { root } = await world();
+    for (const name of ["pic.png", "open/shot.png"])
+      await root.client.request(`${V}/raw/${name}`, { method: "PUT", body: Buffer.from([9]) });
+    store().publicAccess.replace("v", ["open"]);
+    const guest = new Client(server);
+    expect((await guest.get(`${V}/raw/open/shot.png`)).status).toBe(200);
+    expect((await guest.get(`${V}/raw/pic.png`)).status).toBe(404);
   });
 });

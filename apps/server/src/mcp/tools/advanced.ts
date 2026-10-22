@@ -142,7 +142,7 @@ export const restoreVersion = mcpTool({
       throw invalid("Notes, canvases and databases cannot be swapped with other kinds of files.");
     if (binary) {
       ctx.access.requireTree("file.upload", ctx.vault, path);
-      if (!supportedFileType(path))
+      if (!supportedFileType(path, ctx.deps.transfers.policy.pluginTypes(ctx.vault)))
         throw new AppError(
           "unsupported_type",
           undefined,
@@ -245,19 +245,24 @@ export const listFileTypes = mcpTool({
   permission: [],
   input: z.object({}),
   description:
-    "The kinds of files this vault accepts with upload_file and their size limits: notes, canvases and databases (create_note), media, documents and anything a plugin adds. Example: {}.",
+    "The kinds of files this vault accepts with upload_file (or begin_upload / create_upload_link for big ones) and their size limits: notes, canvases and databases (create_note), media, documents and anything a plugin adds. Example: {}.",
   handler: async (_args, ctx) => {
     const byKind: Record<string, string[]> = { image: [], audio: [], video: [] };
     for (const [ext, m] of Object.entries(MEDIA_TYPES)) byKind[m.kind]?.push(ext);
-    // Plugin-declared types join here once the plugin platform supplies them.
-    const plugins = ctx.deps.plugins?.enabled(ctx.vault) ?? [];
+    const plugins = ctx.deps.transfers.policy.pluginTypes(ctx.vault);
     return {
       notes: ["md", "canvas", "base"],
       media: byKind,
       documents: Object.keys(DOCUMENT_TYPES),
       max_bytes: DEFAULT_MAX_FILE_BYTES,
       max_bytes_chunked: MAX_CHUNKED_FILE_BYTES,
-      plugins: plugins.map((p) => p.id),
+      plugin_types: plugins.map((t) => ({
+        extension: t.extension,
+        mime: t.mime,
+        max_bytes: t.maxBytes,
+        plugins: t.plugins,
+      })),
+      plugins: (ctx.deps.plugins?.enabled(ctx.vault) ?? []).map((p) => p.id),
     };
   },
 });

@@ -36,6 +36,13 @@ import {
   setPluginEnabled,
   uninstallPlugin,
 } from "./plugins.ts";
+import {
+  beginUpload,
+  cancelUpload,
+  createUploadLink,
+  finishUpload,
+  uploadPart,
+} from "./uploads.ts";
 import { listVaults } from "./vaults.ts";
 
 /**
@@ -72,6 +79,11 @@ export function coreTools(): AnyTool[] {
     restoreVersion,
     createBase,
     listFileTypes,
+    beginUpload,
+    uploadPart,
+    finishUpload,
+    cancelUpload,
+    createUploadLink,
     createVault,
     removeVault,
     listPlugins,

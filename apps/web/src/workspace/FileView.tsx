@@ -8,7 +8,8 @@ import { useAsync } from "../app/useAsync.ts";
 import { NoteEditor } from "../editor/NoteEditor.tsx";
 import { PluginFrame } from "../plugins/PluginFrame.tsx";
 import { usePluginRuntime } from "../plugins/PluginsProvider.tsx";
-import { Button, Icon, Skeleton } from "../ui/index.ts";
+import { Button, Skeleton } from "../ui/index.ts";
+import { FileViewer } from "../viewers/FileViewer.tsx";
 
 interface Props {
   vault: string;
@@ -24,10 +25,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-/** Extensions that are plain text even though the app has no dedicated view for them. */
-const TEXT = /\.(txt|json|ya?ml|csv|log|toml|ini|js|ts|css|html?)$/i;
-
-/** The main area for an open file: notes are edited; other text files are shown read-only for now. */
+/** The main area for an open file: notes are edited; other files get a viewer for their type. */
 export function FileView({ vault, path, kind, paths, onOpen, onCreate, readOnly = false }: Props) {
   if (kind === "markdown") {
     return (
@@ -46,13 +44,19 @@ export function FileView({ vault, path, kind, paths, onOpen, onCreate, readOnly 
   return <OtherFile vault={vault} path={path} kind={kind} />;
 }
 
-/** A file without its own editor: drawn by a plugin viewer when one is enabled, else as text. */
+/** A file without its own editor: drawn by a plugin viewer when one is enabled, else by the built-in viewer. */
 function OtherFile({ vault, path, kind }: Pick<Props, "vault" | "path" | "kind">) {
   const { t, i18n } = useTranslation();
   const viewers = usePluginRuntime()?.registry.viewersFor(path) ?? [];
   // "pluginId/viewerId", or "text" to see the raw text instead.
   const [choice, setChoice] = useState<string | null>(null);
-  if (viewers.length === 0) return <TextPreview vault={vault} path={path} kind={kind} />;
+  const builtIn =
+    kind === "other" ? (
+      <FileViewer vault={vault} path={path} />
+    ) : (
+      <TextPreview vault={vault} path={path} />
+    );
+  if (viewers.length === 0) return builtIn;
   const chosen =
     choice === "text"
       ? null
@@ -87,19 +91,15 @@ function OtherFile({ vault, path, kind }: Pick<Props, "vault" | "path" | "kind">
           context={{ path }}
         />
       ) : (
-        <TextPreview vault={vault} path={path} kind={kind} />
+        builtIn
       )}
     </article>
   );
 }
 
-function TextPreview({ vault, path, kind }: Pick<Props, "vault" | "path" | "kind">) {
+function TextPreview({ vault, path }: Pick<Props, "vault" | "path">) {
   const { t } = useTranslation();
-  const previewable = kind !== "other" || TEXT.test(path);
-  const file = useAsync(
-    (signal) => (previewable ? readFile(vault, path, { signal }) : Promise.resolve(null)),
-    `file:${vault}:${path}`,
-  );
+  const file = useAsync((signal) => readFile(vault, path, { signal }), `file:${vault}:${path}`);
   return (
     <article className="file-view" aria-label={basename(path)}>
       <header className="file-view-head">
@@ -114,12 +114,7 @@ function TextPreview({ vault, path, kind }: Pick<Props, "vault" | "path" | "kind
         </div>
       )}
       {file.status === "ready" &&
-        (file.data === null ? (
-          <div className="state">
-            <Icon name="info" />
-            <p className="muted">{t("workspace.noPreview")}</p>
-          </div>
-        ) : file.data.content === "" ? (
+        (file.data.content === "" ? (
           <p className="muted">{t("workspace.emptyFile")}</p>
         ) : (
           <pre className="file-preview" tabIndex={0} aria-label={t("workspace.readOnly")}>

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { lstat, mkdir, readdir, realpath, rm, rmdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -459,6 +460,60 @@ export class VaultService {
         return result;
       }),
     );
+  }
+
+  /**
+   * Moves a fully received upload (a file in this vault's `.palimvo/uploads/`) into place, so a
+   * large file never has to be held in memory. Same version rules as `writeBytes`: with `create`
+   * the file must not exist yet.
+   */
+  async placeUpload(
+    vaultId: string,
+    filePath: string,
+    source: string,
+    options: { create?: boolean; onWritten?: (result: WriteResult) => void } = {},
+  ): Promise<WriteResult> {
+    const { abs, rel, lock } = await this.resolve(vaultId, filePath);
+    return this.queueFileWrite(vaultId, lock, () =>
+      this.afterwards(vaultId, [rel, lock], async () => {
+        if (await isDirectory(abs)) throw new AppError("already_exists", undefined, { path: rel });
+        if (options.create && (await exists(abs)))
+          throw new AppError("already_exists", undefined, { path: rel });
+        try {
+          await mkdir(path.dirname(abs), { recursive: true });
+          await renameRetrying(source, abs);
+        } catch (err) {
+          throw mapFsError(err, rel);
+        }
+        const info = await stat(abs);
+        const result = {
+          path: rel,
+          size: info.size,
+          mtime: info.mtimeMs,
+          version: await fileVersion(abs, info),
+        };
+        options.onWritten?.(result);
+        this.emit({ vault: vaultId, type: "changed", path: rel });
+        return result;
+      }),
+    );
+  }
+
+  /** A folder of the vault's own data (`.palimvo/<name>`), created if missing, for data streamed to disk. */
+  async internalDir(vaultId: string, name: string): Promise<string> {
+    const dir = await this.vaultDir(vaultId);
+    const abs = path.join(dir, VAULT_META_DIR, ...checkInternalName(name).split("/"));
+    const info = await lstat(path.join(dir, VAULT_META_DIR)).catch(() => null);
+    if (info?.isSymbolicLink()) {
+      throw new AppError(
+        "invalid_path",
+        undefined,
+        { path: VAULT_META_DIR },
+        { message: "The vault settings folder cannot be a link." },
+      );
+    }
+    await mkdir(abs, { recursive: true });
+    return abs;
   }
 
   /**
@@ -1014,6 +1069,24 @@ export class VaultService {
       }
     }
   }
+}
+
+/**
+ * The version of a file already on disk, the same value `writeBytes` would give for its bytes.
+ * Files over the text limit get their size and time instead of a hash of gigabytes.
+ */
+async function fileVersion(abs: string, info: { size: number; mtimeMs: number }): Promise<string> {
+  if (info.size > MAX_TEXT_BYTES)
+    return `${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}`;
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(abs)) hash.update(chunk as Buffer);
+  return hash.digest("hex").slice(0, 16);
+}
+
+function checkInternalName(name: string): string {
+  if (!/^[a-z0-9_-][a-z0-9_.-]*(\/[a-z0-9_.-]+)*$/i.test(name) || name.split("/").includes(".."))
+    throw new Error(`Invalid vault internal folder "${name}"`);
+  return name;
 }
 
 function vaultNotFound(vaultId: string): AppError {
