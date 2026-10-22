@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { MANIFEST_LIMITS } from "@palimvo/plugin-sdk";
-import { asRequestFiles, samplePackage } from "../src/plugins/testing.ts";
+import { asRequestFiles, file, samplePackage } from "../src/plugins/testing.ts";
 import { Client, PASSWORD, json } from "./client.ts";
 import { startTestServer, type TestServer } from "./harness.ts";
 
@@ -188,6 +188,52 @@ describe("installing and approving in a vault", () => {
     const detail = await installed(root.client, "board");
     expect(detail.approvals).toHaveLength(1);
     expect(detail.approvals[0].approvedBy).toBe(root.id);
+  });
+
+  it("serves the running plugins and their text to the web host", async () => {
+    const { root, mia } = await world();
+    const pub = await publish(
+      root.client,
+      samplePackage("board", "1.0.0", {
+        locales: { "zh-TW": "zh-TW.json" },
+        contributes: {
+          views: [{ id: "main", name: { en: "Main" } }],
+          theme: { name: "Dark", css: "theme.css" },
+        },
+      }).concat([
+        file("zh-TW.json", '{"a":"b"}'),
+        file("theme.css", ":root{}"),
+        file("other.txt", "x"),
+      ]),
+    );
+    expect(pub.status).toBe(201);
+    const first = await json<Json>(
+      await root.client.post("/api/vaults/a/plugins", { library: { id: "board" } }),
+    );
+    // Nothing runs until it is on and approved.
+    expect(
+      (await json<Json>(await mia.client.get("/api/vaults/a/plugin-runtime"))).plugins,
+    ).toEqual([]);
+    await root.client.patch("/api/vaults/a/plugins/board", { enabled: true });
+    expect((await mia.client.get("/api/vaults/a/plugin-runtime/board")).status).toBe(403);
+    await root.client.post("/api/vaults/a/plugins/board/approve", { sha256: first.sha256 });
+
+    const list = await json<Json>(await mia.client.get("/api/vaults/a/plugin-runtime"));
+    expect(list.plugins).toHaveLength(1);
+    expect(list.plugins[0]).toMatchObject({ id: "board", version: "1.0.0", hash: first.sha256 });
+    expect(list.plugins[0].manifest.id).toBe("board");
+
+    const bundle = await json<Json>(await mia.client.get("/api/vaults/a/plugin-runtime/board"));
+    expect(bundle).toMatchObject({ id: "board", hash: first.sha256 });
+    expect(Object.keys(bundle.files).sort()).toEqual(["main.js", "theme.css", "zh-TW.json"]);
+    expect(bundle.files["main.js"]).toBe("export default () => {};");
+
+    // Switching off takes it out of both.
+    await root.client.patch("/api/vaults/a/plugins/board", { enabled: false });
+    expect(
+      (await json<Json>(await mia.client.get("/api/vaults/a/plugin-runtime"))).plugins,
+    ).toEqual([]);
+    expect((await mia.client.get("/api/vaults/a/plugin-runtime/board")).status).toBe(403);
   });
 
   it("needs approval again after a single changed byte, and remembers hashes", async () => {

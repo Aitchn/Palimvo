@@ -207,5 +207,43 @@ export function pluginRoutes(plugins: PluginManager, vaults: VaultService): Hono
     });
   });
 
+  // ---- runtime (what the web host loads) -------------------------------------------------
+
+  /** The plugins the web host should start: switched on, approved at their current hash, runnable. */
+  app.get("/api/vaults/:vault/plugin-runtime", async (c) => {
+    const vault = await vaultOf(c);
+    const running = (await plugins.list(vault)).filter((p) => p.state === "running");
+    return c.json({
+      plugins: running.map((p) => ({
+        id: p.id,
+        version: p.version,
+        hash: p.sha256,
+        manifest: p.manifest,
+      })),
+    });
+  });
+
+  /**
+   * The text the host needs to start one running plugin: `main`, the locale files and the theme
+   * stylesheet. The files are re-hashed first, so edited files never reach the browser.
+   */
+  app.get("/api/vaults/:vault/plugin-runtime/:id", async (c) => {
+    const vault = await vaultOf(c);
+    const { plugin, files } = await plugins.load(vault, c.req.param("id")!);
+    const { manifest } = plugin;
+    const wanted = [
+      manifest.main,
+      ...Object.values(manifest.locales ?? {}),
+      ...(manifest.contributes.theme ? [manifest.contributes.theme.css] : []),
+    ];
+    const decoder = new TextDecoder();
+    const text: Record<string, string> = {};
+    for (const path of wanted) {
+      const file = files.find((f) => f.path === path);
+      if (file) text[path] = decoder.decode(file.bytes);
+    }
+    return c.json({ id: plugin.id, hash: plugin.sha256, files: text });
+  });
+
   return app;
 }
