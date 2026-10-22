@@ -23,8 +23,7 @@ const manifest = {
     viewers: [{ id: "log", name: { en: "ZZZ viewer" }, extensions: ["log"] }],
   },
 };
-const listing = { id: "hello", version: "1.0.0", hash: HASH, manifest };
-const bundle = { id: "hello", hash: HASH, files: { "main.js": "export default () => {};" } };
+const listing = { id: "hello", version: "1.0.0", sha256: HASH, state: "running", manifest };
 
 const FILES = {
   tree: [
@@ -49,8 +48,9 @@ function routes(over: Record<string, () => Response> = {}) {
     "GET /api/vaults/sample/files/data.log": () =>
       Response.json({ path: "data.log", content: "raw text", mtime: 1, version: "v1" }),
     "GET /api/vaults/sample/home": () => Response.json(HOME_WITH_WIDGET),
-    "GET /api/vaults/sample/plugin-runtime": () => Response.json({ plugins: [listing] }),
-    "GET /api/vaults/sample/plugin-runtime/hello": () => Response.json(bundle),
+    "GET /api/vaults/sample/plugins": () => Response.json({ plugins: [listing] }),
+    "GET /api/vaults/sample/plugins/hello/files/main.js": () =>
+      new Response("export default () => {};"),
     ...over,
   });
 }
@@ -70,7 +70,7 @@ describe("plugins in the workspace", () => {
   });
 
   it("says so when the plugin behind a widget does not run in this vault", async () => {
-    routes({ "GET /api/vaults/sample/plugin-runtime": () => Response.json({ plugins: [] }) });
+    routes({ "GET /api/vaults/sample/plugins": () => Response.json({ plugins: [] }) });
     await renderRoute("/v/sample");
     expect(
       await screen.findByText(/The widget greeting of the plugin hello is not available/),
@@ -78,10 +78,22 @@ describe("plugins in the workspace", () => {
     expect(document.querySelector("iframe")).toBeNull();
   });
 
-  it("does not run a plugin whose bundle is not the approved one", async () => {
+  it("does not run a plugin whose files are no longer the approved ones", async () => {
     routes({
-      "GET /api/vaults/sample/plugin-runtime/hello": () =>
-        Response.json({ ...bundle, hash: "d".repeat(64) }),
+      "GET /api/vaults/sample/plugins/hello/files/main.js": () =>
+        Response.json({ code: "plugin_not_approved", message: "x" }, { status: 409 }),
+    });
+    await renderRoute("/v/sample");
+    expect(
+      await screen.findByText(/The widget greeting of the plugin hello is not available/),
+    ).toBeInTheDocument();
+    expect(document.querySelector("iframe")).toBeNull();
+  });
+
+  it("does not run a plugin that is installed but not approved", async () => {
+    routes({
+      "GET /api/vaults/sample/plugins": () =>
+        Response.json({ plugins: [{ ...listing, state: "needs_approval" }] }),
     });
     await renderRoute("/v/sample");
     expect(
@@ -93,8 +105,7 @@ describe("plugins in the workspace", () => {
   it("stops everything when the server stops listing the plugin", async () => {
     let listed = true;
     routes({
-      "GET /api/vaults/sample/plugin-runtime": () =>
-        Response.json({ plugins: listed ? [listing] : [] }),
+      "GET /api/vaults/sample/plugins": () => Response.json({ plugins: listed ? [listing] : [] }),
     });
     await renderRoute("/v/sample");
     await screen.findByRole("region", { name: "Greeting" });
@@ -107,7 +118,7 @@ describe("plugins in the workspace", () => {
   it("keeps running when a refresh fails for a moment", async () => {
     let fail = false;
     routes({
-      "GET /api/vaults/sample/plugin-runtime": () =>
+      "GET /api/vaults/sample/plugins": () =>
         fail
           ? Response.json({ code: "unavailable", message: "x" }, { status: 503 })
           : Response.json({ plugins: [listing] }),
@@ -123,7 +134,7 @@ describe("plugins in the workspace", () => {
   it("stops everything when access is withdrawn", async () => {
     let denied = false;
     routes({
-      "GET /api/vaults/sample/plugin-runtime": () =>
+      "GET /api/vaults/sample/plugins": () =>
         denied
           ? Response.json({ code: "forbidden", message: "x" }, { status: 403 })
           : Response.json({ plugins: [listing] }),
@@ -166,7 +177,7 @@ describe("plugins in the workspace", () => {
   });
 
   it("shows plain text for that file when no plugin offers a viewer", async () => {
-    routes({ "GET /api/vaults/sample/plugin-runtime": () => Response.json({ plugins: [] }) });
+    routes({ "GET /api/vaults/sample/plugins": () => Response.json({ plugins: [] }) });
     await renderRoute("/v/sample/data.log");
     expect(await screen.findByText("raw text")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Viewer" })).toBeNull();

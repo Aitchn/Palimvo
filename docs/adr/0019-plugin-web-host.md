@@ -1,4 +1,4 @@
-# 0018. Plugin web host
+# 0019. Plugin web host
 
 - Status: accepted
 - Date: 2026-10-22
@@ -44,13 +44,14 @@ frame's page and policy were hard to test.
   twice. Writes carry `X-Palimvo-Reason: Plugin <id>: …`; the history credits the person. A real
   plugin author kind ("plugin X on behalf of Y") needs a server endpoint and belongs to T32.
   `propose` writes a one-hunk proposal replacing the file, so a reviewer sees before and after.
-- **Server contract for T32.** The host reads two routes, defined here so T32 can build to them:
-  `GET /api/vaults/:vault/plugin-runtime` returns `{ plugins: [{ id, version, hash, manifest }] }`
-  for plugins that are enabled, approved at exactly that hash and whose dependencies can run;
-  `GET /api/vaults/:vault/plugin-runtime/:id` returns `{ id, hash, files }` with the text of
-  `manifest.main`, the `locales` files and a theme stylesheet. The browser re-validates the
-  manifest, requires the bundle's hash to be the listed one, and refuses otherwise. A 401/403/404
-  on the list stops every plugin; a network error keeps what runs.
+- **Loading rides on the installer's routes (ADR 0018, T32).** The host lists
+  `GET /api/vaults/:vault/plugins`, keeps entries whose `state` is `running` (enabled, approved
+  at the current hash, dependencies met) and uses `sha256` as the hash. It then fetches
+  `manifest.main`, the `locales` files and a theme stylesheet from
+  `GET /api/vaults/:vault/plugins/:id/files/<path>`; the server re-hashes the package before it
+  serves a file, so a plugin that changed meanwhile fails to load instead of running mixed. The
+  browser re-validates the manifest. A 401/403/404 on the list stops every plugin; a network
+  error keeps what runs.
 - **Extension points run in hidden frames**, one per contributor, started on first use. A
   contributor runs with its own permissions, never the provider's; each answers within 10 s and a
   failing or slow one does not fail the rest; data in both directions is plain JSON up to 1 MB.

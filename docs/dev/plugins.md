@@ -4,8 +4,9 @@ A plugin is a folder (or ZIP) with a `manifest.json` and the files it names. Pal
 browser code in a sandboxed iframe and its server code (MCP tools) in a QuickJS sandbox. A person
 approves each exact version before anything runs. Design reasons:
 [ADR 0017](../adr/0017-plugin-manifest-v2.md) (manifest) and
-[ADR 0018](../adr/0018-plugin-web-host.md) (browser host). This page is a first draft; the
-installer (T32), UI layers (T33) and server tools (T34) land in later changes.
+[ADR 0019](../adr/0019-plugin-web-host.md) (browser host). This page is a first draft; the UI
+layers (T33) and server tools (T34) land in later changes. The installer and the library are
+described under [Installing, approving and the library](#installing-approving-and-the-library).
 
 ```
 my-plugin/
@@ -133,14 +134,12 @@ frame grows with the content (widgets, code blocks) or fills its box (pages, vie
 The app's colors are available as CSS variables (`--bg`, `--fg`, `--accent`, `--border`, ...) and
 the frame follows light and dark.
 
-## Server routes the host reads (for T32)
+## How the browser loads a plugin
 
-| Route                                       | Answer                                                                                                          |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `GET /api/vaults/:vault/plugin-runtime`     | `{ plugins: [{ id, version, hash, manifest }] }`: enabled, approved at exactly that hash, dependencies runnable |
-| `GET /api/vaults/:vault/plugin-runtime/:id` | `{ id, hash, files }`: text of `manifest.main`, the `locales` files and a theme stylesheet                      |
-
-The browser validates the manifest again and refuses a bundle whose hash is not the listed one.
+The browser lists `GET /api/vaults/:vault/plugins`, runs the entries whose `state` is `running`
+(enabled, approved at exactly the current hash, dependencies met) and reads `manifest.main`, the
+`locales` files and a theme stylesheet from `GET /api/vaults/:vault/plugins/:id/files/<path>`. The
+server re-hashes the package before it serves a file. The browser validates the manifest again.
 
 ## server.js (MCP tools)
 
@@ -165,6 +164,40 @@ plugin is enabled. Arguments are validated against `inputSchema` before your cod
 A plugin runs only after a person approves its hash: SHA-256 over every file in the package
 (`computePluginHash` in the SDK; the rule is documented in `hash.ts`). Changing any byte, in any
 file, requires approval again.
+
+## Installing, approving and the library
+
+Design: [ADR 0018](../adr/0018-plugin-installation-and-library.md).
+
+- **Package checks.** Before anything is stored the server checks the file list (at most
+  `MANIFEST_LIMITS.packageFiles` = 200 files and `packageBytes` = 8 MiB in total; paths of letters,
+  digits, `_`, `-` and `.`, no hidden files, no two paths that differ only by case), the manifest
+  (the SDK validator, including `minPalimvo`), that **every file the manifest names exists**
+  (`main`, `server`, theme CSS, locales) and that locale files are JSON objects. A package that
+  fails is refused with `plugin_invalid` and the list of problems.
+- **In a vault.** `POST /api/vaults/:vault/plugins` (needs `plugin.install`) installs a package
+  into `.palimvo/plugins/<id>/`, from the library (`{ "library": { "id", "version"? } }`) or from
+  files (`{ "files": [{ "path", "text" | "base64" }] }`). It starts switched off. The files are in
+  the vault, so they are in its history and backups.
+- **Approval.** `POST .../plugins/:id/approve` with the hash shown on the review screen
+  (`GET .../plugins/:id` and `.../package`). Only a signed-in **person** with `plugin.approve`
+  can do it; tokens and AI cannot. The approval is for that exact hash in that vault and is kept
+  in the server database (`plugin_approvals`), so a vault copied to another server starts
+  unapproved. One changed byte is a new hash and needs a new approval; putting back bytes that
+  were approved before is approved again.
+- **Running.** A plugin runs when it is switched on, its hash is approved, and every plugin it
+  `dependencies` on (right id, version in range) runs too; a cycle runs nothing. The state
+  (`running`, `disabled`, `needs_approval`, `blocked` with reasons) is in every list response.
+  `PluginManager.load` re-reads and re-hashes the files each time the host or sandbox asks for
+  them, so files edited on disk after approval never run (`plugin_not_approved`).
+- **Rights while running.** The manifest declares the most a plugin may ask for; at run time a
+  call is allowed only if the manifest covers the path **and** the person using it holds the
+  permission there (`pluginMayAccess`).
+- **Library.** The server keeps published packages in `<data>/library/plugins/<id>/<version>/`
+  (index in `library_plugins`). `POST /api/plugin-library` (needs `library.publish`) adds a
+  version; versions are immutable. The official plugins in the repository's `plugins/` folder are
+  added at start-up when their files pass the checks (a folder whose files are not there yet is
+  skipped with a warning) and cannot be removed.
 
 ## Moving a version 1 plugin
 

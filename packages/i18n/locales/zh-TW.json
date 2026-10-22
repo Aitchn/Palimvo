@@ -653,6 +653,7 @@
     "setup_code_required": "需要設定代碼。",
     "setup_required": "請先完成首次設定。",
     "setup_complete": "設定已經完成。",
+    "plugin_invalid": "這個插件套件不正確。",
     "plugin_not_approved": "這個插件版本尚未核准。",
     "not_found": "找不到該項目。",
     "vault_not_found": "這個筆記庫不存在。",
