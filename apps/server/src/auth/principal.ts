@@ -4,6 +4,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { AppError } from "@palimvo/core";
 import type { Account } from "../store/index.ts";
 import { attachAccess } from "./access.ts";
+import type { BearerIdentity } from "./tokens.ts";
 import { PublicPolicy } from "./publicPolicy.ts";
 import { CSRF_HEADER, SESSION_COOKIE, SESSION_TTL_MS, type AuthService } from "./service.ts";
 
@@ -13,17 +14,26 @@ import { CSRF_HEADER, SESSION_COOKIE, SESSION_TTL_MS, type AuthService } from ".
  * - `open`: `--dev-insecure` and no account yet: nothing is enforced (loopback-only, see config).
  * - `guest`: nobody is signed in; may read only what is made public.
  * - `account`: a signed-in person.
+ * - `token`: an AI calling `/mcp` with an API token or an OAuth access token; it acts as the
+ *   person who made it, never with more than that person holds.
  */
 export type Principal =
   | { kind: "setup" }
   | { kind: "open" }
   | { kind: "guest" }
-  | { kind: "account"; account: Account; sessionId: string; csrf: string; cookie: string };
+  | { kind: "account"; account: Account; sessionId: string; csrf: string; cookie: string }
+  | { kind: "token"; account: Account; bearer: BearerIdentity };
 
 const principals = new WeakMap<Request, Principal>();
 
 export function principalOf(c: Context): Principal {
   return principals.get(c.req.raw) ?? { kind: "guest" };
+}
+
+/** Sets who the current request is from; the middleware of each entry point calls this once. */
+export function bindPrincipal(c: Context, auth: AuthService, principal: Principal): void {
+  principals.set(c.req.raw, principal);
+  attachAccess(c, auth.access, principal);
 }
 
 export function requireAccount(c: Context): Extract<Principal, { kind: "account" }> {
@@ -129,8 +139,7 @@ export function principalMiddleware({
           ? { kind: "open" }
           : { kind: "setup" };
     }
-    principals.set(c.req.raw, principal);
-    attachAccess(c, auth.access, principal);
+    bindPrincipal(c, auth, principal);
     if (resolved?.renewed && cookie)
       setSessionCookie(c, cookie, { secure: publicUrl?.startsWith("https://") ?? false });
     await next();

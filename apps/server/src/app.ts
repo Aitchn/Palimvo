@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { bearerMiddleware } from "./auth/bearer.ts";
 import { accessGate, principalMiddleware } from "./auth/principal.ts";
 import type { AuthService } from "./auth/service.ts";
 import type { BackupService } from "./history/backup.ts";
@@ -11,6 +12,8 @@ import type { SetupService } from "./auth/setup.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { archiveRoutes } from "./routes/archive.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { oauthRoutes } from "./routes/oauth.ts";
+import { tokenRoutes } from "./routes/tokens.ts";
 import { memberRoutes } from "./routes/members.ts";
 import { roleRoutes } from "./routes/roles.ts";
 import { fileRoutes } from "./routes/files.ts";
@@ -109,6 +112,7 @@ export function createApp(deps: AppDeps): Hono {
   );
   app.route("/", adminRoutes({ auth: deps.auth, vaults: deps.vaults, publicUrl: deps.publicUrl }));
   app.route("/", roleRoutes(deps.auth));
+  app.route("/", tokenRoutes({ auth: deps.auth, tokens: deps.auth.tokens, vaults: deps.vaults }));
   app.route("/", memberRoutes(deps.auth, deps.vaults));
   app.route("/", publicRoutes(deps.auth, deps.vaults));
   app.route("/", vaultRoutes(deps));
@@ -116,6 +120,30 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", historyRoutes(deps));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
+  app.route(
+    "/",
+    oauthRoutes({
+      auth: deps.auth,
+      oauth: deps.auth.oauth,
+      vaults: deps.vaults,
+      publicUrl: deps.publicUrl,
+      trustProxy: deps.trustProxy ?? false,
+    }),
+  );
+  // AI calls: bearer secrets only, never the browser session. The MCP server itself (T27) mounts here.
+  const mcpGate = bearerMiddleware({
+    auth: deps.auth,
+    tokens: deps.auth.tokens,
+    publicUrl: deps.publicUrl,
+  });
+  app.use("/mcp", mcpGate);
+  app.use("/mcp/*", mcpGate);
+  app.all("/mcp/*", () => {
+    throw new AppError("not_implemented", 501, "The MCP server is not available yet.");
+  });
+  app.all("/mcp", () => {
+    throw new AppError("not_implemented", 501, "The MCP server is not available yet.");
+  });
   // Last: anything the API did not claim is a file of the web app or one of its routes.
   if (deps.webDir) app.route("/", webRoutes(deps.webDir));
 

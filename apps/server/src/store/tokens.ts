@@ -102,6 +102,10 @@ export class TokensRepo {
       .map(toToken);
   }
 
+  listAll(): ApiToken[] {
+    return this.db.all("select * from api_tokens order by created_at desc").map(toToken);
+  }
+
   markUsed(id: string): void {
     this.db.run("update api_tokens set last_used_at = ? where id = ?", this.now(), id);
   }

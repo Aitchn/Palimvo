@@ -170,6 +170,29 @@
       "reloaded": "已更新為最新版本"
     }
   },
+  "oauth": {
+    "pageTitle": "連接 AI 應用程式",
+    "signInIntro": "請登入 Palimvo，決定是否讓 {client} 連接。",
+    "username": "名稱",
+    "password": "密碼",
+    "signIn": "登入",
+    "signedInAs": "目前登入：{name}",
+    "clientWants": "{client} 想連接你的 Palimvo 帳號。",
+    "unverified": "Palimvo 無法驗證這個應用程式。只有在這個連線是你自己發起的情況下才繼續。",
+    "redirectsTo": "你決定後會被送回 {host}。",
+    "canDo": "它會以你的身分，在每一個你可以連接 AI 的筆記庫中操作。它能做的事不會超過你，你的權限一降低它也立刻跟著降低。",
+    "accessLabel": "它可以做什麼？",
+    "accessRead": "僅讀取",
+    "accessPropose": "讀取並提出修改提案",
+    "accessWrite": "讀取與寫入",
+    "allow": "允許",
+    "deny": "拒絕",
+    "revokeHint": "你隨時可以在「AI 連線」中中斷它。",
+    "errorTitle": "無法開始這個連線",
+    "errorClient": "把你帶到這裡的應用程式尚未註冊，或它的返回位址不符。",
+    "errorRequest": "連線請求不完整，或使用了 Palimvo 不支援的內容。",
+    "errorNoVaults": "你沒有權限把 AI 連接到任何筆記庫。"
+  },
   "errors": {
     "unknown": "發生未知的錯誤。",
     "network": "無法連線到伺服器。",
@@ -203,6 +226,7 @@
     "invalid_tag": "這不是可用的檢查點名稱。",
     "internal": "伺服器發生未預期的錯誤。",
     "not_implemented": "目前尚不支援。",
-    "unavailable": "服務暫時無法使用。"
+    "unavailable": "服務暫時無法使用。",
+    "public_url_required": "OAuth 需要伺服器的公開網址。請管理員設定 PALIMVO_PUBLIC_URL。"
   }
 }
