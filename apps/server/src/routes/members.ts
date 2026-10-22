@@ -152,8 +152,6 @@ export function memberRoutes(auth: AuthService, vaults: VaultService): Hono {
     const allow = names(body.allow, "allow");
     const deny = names(body.deny, "deny");
     const scope = folder === undefined ? vaultScope(vault) : folderScope(vault, folder);
-    // Nobody can hand out more than they hold themselves here.
-    if (!accessOf(c).holdsAll(allow, scope)) throw new AppError("forbidden");
     if (body.subjectType === "role") store.roles.require(body.subjectId);
     else store.accounts.require(body.subjectId);
     const target = {
@@ -163,6 +161,9 @@ export function memberRoutes(auth: AuthService, vaults: VaultService): Hono {
       subjectType: body.subjectType,
       subjectId: body.subjectId,
     } as const;
+    // Nobody can hand out, or lift a denial of, more than they hold themselves here.
+    const before = store.roles.getOverride(target) ?? { allow: 0, deny: 0 };
+    if (!accessOf(c).mayChange(before, { allow, deny }, scope)) throw new AppError("forbidden");
     if (allow === 0 && deny === 0) store.roles.deleteOverride(target);
     else store.roles.setOverride(target, { allow, deny });
     auth.access.invalidate();
@@ -181,6 +182,17 @@ export function memberRoutes(auth: AuthService, vaults: VaultService): Hono {
     const subjectId = c.req.query("subjectId");
     if (!subjectType.success || !subjectId) throw new AppError("invalid_request");
     const folder = folderOf(c.req.query("folder") || undefined);
+    const target = {
+      scope: folder === undefined ? "vault" : "folder",
+      vaultId: vault,
+      ...(folder === undefined ? {} : { folder }),
+      subjectType: subjectType.data,
+      subjectId,
+    } as const;
+    const before = store.roles.getOverride(target);
+    const scope = folder === undefined ? vaultScope(vault) : folderScope(vault, folder);
+    if (before && !accessOf(c).mayChange(before, { allow: 0, deny: 0 }, scope))
+      throw new AppError("forbidden");
     const found = store.roles.deleteOverride({
       scope: folder === undefined ? "vault" : "folder",
       vaultId: vault,

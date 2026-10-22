@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { Hono, type Context } from "hono";
-import { AppError, canManageRole } from "@palimvo/core";
+import { AppError, canManageRole, serverScope } from "@palimvo/core";
 import { z } from "zod";
 import { accessOf } from "../auth/access.ts";
 import { requireAccount } from "../auth/principal.ts";
@@ -176,7 +176,12 @@ export function adminRoutes({ auth, vaults, publicUrl }: AdminRouteDeps): Hono {
     }
     for (const id of body.roleIds ?? []) {
       const role = store.roles.require(id);
-      if (!canManageRole(access.asSubject(), role, access.dataFor()))
+      // Outrank the role and hold everything it grants, or invites would hand out more than the inviter has.
+      if (
+        !access.isServerAdmin &&
+        (!canManageRole(access.asSubject(), role, access.dataFor()) ||
+          (role.permissions & ~access.mask(serverScope)) !== 0)
+      )
         throw new AppError("forbidden");
     }
     const { invite, token } = auth.createInvite({

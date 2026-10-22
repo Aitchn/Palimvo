@@ -226,6 +226,20 @@ export class RequestAccess {
     return (wanted & ~this.mask(scope)) === 0;
   }
 
+  /**
+   * Whether the caller may replace an override with another: everything the change newly allows
+   * or stops denying must be something they hold now, so lifting a deny cannot give a right back.
+   */
+  mayChange(
+    before: { allow: PermissionMask; deny: PermissionMask },
+    after: { allow: PermissionMask; deny: PermissionMask },
+    scope: PermissionScope,
+  ): boolean {
+    if (this.isServerAdmin) return true;
+    const gained = (after.allow & ~before.allow) | (before.deny & ~after.deny);
+    return this.holdsAll(gained, scope);
+  }
+
   /** Vault ids the caller can see (open mode: all of `allVaultIds`). */
   visibleVaults(allVaultIds: readonly string[]): string[] {
     return allVaultIds.filter((id) => this.can("vault.view", vaultScope(id)));

@@ -93,6 +93,15 @@ export function roleRoutes(auth: AuthService): Hono {
     return access.isServerAdmin || canManageRole(access.asSubject(), role, access.dataFor());
   };
 
+  /** Whether the caller may give the role to someone: it outranks it and holds all of its permissions. */
+  const mayGive = (c: Context, role: Role): boolean => {
+    const access = accessOf(c);
+    return (
+      access.isServerAdmin ||
+      (rankOk(c, role) && (role.permissions & ~access.mask(serverScope)) === 0)
+    );
+  };
+
   const changed = () => auth.access.invalidate();
 
   app.get("/api/admin/roles", (c) => {
@@ -186,7 +195,7 @@ export function roleRoutes(auth: AuthService): Hono {
     const role = store.roles.require(c.req.param("roleId"));
     if (role.isEveryone)
       throw new AppError("invalid_request", undefined, { reason: "everyone has this role" });
-    if (!rankOk(c, role)) throw new AppError("forbidden");
+    if (!mayGive(c, role)) throw new AppError("forbidden");
     const id = store.accounts.require(c.req.param("id")).id;
     store.grantRole(role.id, id);
     changed();
@@ -227,13 +236,13 @@ export function roleRoutes(auth: AuthService): Hono {
       const role = store.roles.require(body.subjectId);
       if (!rankOk(c, role)) throw new AppError("forbidden");
     } else store.accounts.require(body.subjectId);
-    if (!access.isServerAdmin && (allow & ~access.mask(serverScope)) !== 0)
-      throw new AppError("forbidden");
     const target = {
       scope: "server",
       subjectType: body.subjectType,
       subjectId: body.subjectId,
     } as const;
+    const before = store.roles.getOverride(target) ?? { allow: 0, deny: 0 };
+    if (!access.mayChange(before, { allow, deny }, serverScope)) throw new AppError("forbidden");
     if (allow === 0 && deny === 0) store.roles.deleteOverride(target);
     else store.roles.setOverride(target, { allow, deny });
     changed();
@@ -251,6 +260,14 @@ export function roleRoutes(auth: AuthService): Hono {
     const subjectId = c.req.query("subjectId");
     if (!subjectType.success || !subjectId) throw new AppError("invalid_request");
     if (subjectType.data === "role" && !rankOk(c, store.roles.require(subjectId)))
+      throw new AppError("forbidden");
+    const target = {
+      scope: "server",
+      subjectType: subjectType.data,
+      subjectId,
+    } as const;
+    const before = store.roles.getOverride(target);
+    if (before && !accessOf(c).mayChange(before, { allow: 0, deny: 0 }, serverScope))
       throw new AppError("forbidden");
     const found = store.roles.deleteOverride({
       scope: "server",

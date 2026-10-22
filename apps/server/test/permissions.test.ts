@@ -682,3 +682,80 @@ describe("vault permission overrides", () => {
     expect(admin.server).toContain("server.manage");
   });
 });
+
+describe("no way back to a right that was taken away", () => {
+  it("does not let someone lift their own denial by replacing or deleting the override", async () => {
+    const { mia } = await world();
+    setOverride("v", { type: "account", id: mia.id }, ["permissions.manage"], ["note.delete"]);
+    const own = { subjectType: "account", subjectId: mia.id };
+    expect(
+      (await mia.client.put(`${V}/permissions`, { ...own, allow: ["permissions.manage"] })).status,
+    ).toBe(403);
+    expect(
+      (await mia.client.del(`${V}/permissions?subjectType=account&subjectId=${mia.id}`)).status,
+    ).toBe(403);
+    expect((await mia.client.del(`${V}/files/b.md`)).status).toBe(403);
+    // Tightening further is fine.
+    expect(
+      (
+        await mia.client.put(`${V}/permissions`, {
+          ...own,
+          allow: ["permissions.manage"],
+          deny: ["note.delete", "note.write"],
+        })
+      ).status,
+    ).toBe(200);
+  });
+
+  it("does the same for server-level overrides", async () => {
+    const { root, mia } = await world();
+    const role = store().roles.create({
+      name: "RM",
+      position: 5,
+      permissions: maskOf(["roles.manage", "server.manage"]),
+    });
+    store().grantRole(role.id, mia.id);
+    setOverride(null, { type: "account", id: mia.id }, [], ["server.manage"]);
+    expect((await mia.client.get("/api/removed-vaults")).status).toBe(403);
+    expect(
+      (
+        await mia.client.put("/api/admin/permissions", {
+          subjectType: "account",
+          subjectId: mia.id,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await mia.client.del(`/api/admin/permissions?subjectType=account&subjectId=${mia.id}`))
+        .status,
+    ).toBe(403);
+    expect((await root.client.get("/api/removed-vaults")).status).toBe(200);
+  });
+
+  it("does not let a manager hand out a role holding permissions they lack", async () => {
+    const { mia } = await world();
+    const mod = store().roles.create({
+      name: "Mod",
+      position: 5,
+      permissions: maskOf(["roles.manage", "users.manage"]),
+    });
+    const strong = store().roles.create({
+      name: "Strong",
+      position: 2,
+      permissions: maskOf(["server.manage"]),
+    });
+    store().grantRole(mod.id, mia.id);
+    expect((await mia.client.put(`/api/admin/users/${mia.id}/roles/${strong.id}`)).status).toBe(
+      403,
+    );
+    expect((await mia.client.post("/api/admin/invites", { roleIds: [strong.id] })).status).toBe(
+      403,
+    );
+    const weak = store().roles.create({
+      name: "Weak",
+      position: 2,
+      permissions: maskOf(["users.manage"]),
+    });
+    expect((await mia.client.put(`/api/admin/users/${mia.id}/roles/${weak.id}`)).status).toBe(204);
+  });
+});
