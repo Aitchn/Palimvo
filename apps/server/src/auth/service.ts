@@ -8,6 +8,8 @@ import {
   verifyPassword,
 } from "./password.ts";
 import { AccessControl } from "./access.ts";
+import { OAuthService } from "./oauth.ts";
+import { TokenService } from "./tokens.ts";
 import { FailureLimiter } from "./rateLimit.ts";
 
 export const SESSION_COOKIE = "palimvo_session";
@@ -95,6 +97,10 @@ export class AuthService {
   private readonly byIp: FailureLimiter;
   /** Permission answers for requests; call `access.invalidate()` after changing roles or members. */
   readonly access: AccessControl;
+  /** AI API tokens and the bearer secrets that `/mcp` accepts. */
+  readonly tokens: TokenService;
+  /** The OAuth authorization server for MCP clients. */
+  readonly oauth: OAuthService;
 
   constructor(
     readonly store: Store,
@@ -102,6 +108,8 @@ export class AuthService {
   ) {
     this.now = options.now ?? (() => Date.now());
     this.access = new AccessControl(store);
+    this.tokens = new TokenService(store, { now: this.now });
+    this.oauth = new OAuthService(store, { now: this.now });
     this.byName = new FailureLimiter(LOGIN_MAX_PER_NAME, LOGIN_WINDOW_MS, this.now);
     this.byIp = new FailureLimiter(LOGIN_MAX_PER_IP, LOGIN_WINDOW_MS, this.now);
   }

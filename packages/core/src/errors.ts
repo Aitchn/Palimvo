@@ -37,6 +37,10 @@ export const ERROR_CODES = {
   internal: { status: 500, message: "Something went wrong on the server." },
   not_implemented: { status: 501, message: "This is not supported yet." },
   unavailable: { status: 503, message: "The service is temporarily unavailable." },
+  public_url_required: {
+    status: 503,
+    message: "OAuth needs the server's public address. Set PALIMVO_PUBLIC_URL.",
+  },
   git_unavailable: { status: 503, message: "git is not installed on the server." },
 } as const;
 

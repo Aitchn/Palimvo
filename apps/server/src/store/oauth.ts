@@ -192,6 +192,29 @@ export class OAuthRepo {
     );
   }
 
+  /** Any token of this kind with this hash, even a spent or revoked one (to spot reuse). */
+  findToken(kind: OAuthTokenKind, tokenHash: string): OAuthToken | undefined {
+    const r = this.db.get(
+      "select * from oauth_tokens where kind = ? and token_hash = ?",
+      kind,
+      tokenHash,
+    );
+    return r && toToken(r);
+  }
+
+  /** Removes clients nobody ever authorized, so open registration cannot fill the database. */
+  purgeUnusedClients(olderThan: number): number {
+    return this.db.run(
+      `delete from oauth_clients where created_at < ?
+         and not exists (select 1 from oauth_grants g where g.client_id = oauth_clients.client_id)`,
+      olderThan,
+    ).changes;
+  }
+
+  clientCount(): number {
+    return Number(this.db.get("select count(*) as n from oauth_clients")?.n ?? 0);
+  }
+
   requireGrant(id: string): OAuthGrant {
     const g = this.getGrant(id);
     if (!g) throw new AppError("not_found", 404, "The grant does not exist.");
