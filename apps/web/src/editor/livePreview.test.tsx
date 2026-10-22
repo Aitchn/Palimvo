@@ -7,17 +7,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownSurface } from "./MarkdownSurface.tsx";
 import { noteSection } from "./embed.ts";
 import { calloutKind } from "./livePreview.ts";
-import { imageSize, mediaSrc, vaultTarget } from "./render.ts";
+import { imageSize, mediaSrc, mediaTarget, vaultTarget } from "./render.ts";
 import { inlineParser } from "./syntax.ts";
 
 const links = {
-  paths: () => ["Other.md", "img/cat.png"],
+  paths: () => ["Other.md", "img/cat.png", "clips/a.mp4", "clips/a.mp3"],
   resolve: (t: string) =>
     t.toLowerCase().startsWith("other")
       ? "Other.md"
       : t.endsWith("cat.png")
         ? "img/cat.png"
-        : undefined,
+        : t.endsWith("a.mp4")
+          ? "clips/a.mp4"
+          : t.endsWith("a.mp3")
+            ? "clips/a.mp3"
+            : undefined,
   open: vi.fn(),
   fileUrl: (p: string) => `/raw/${p}`,
 };
@@ -138,6 +142,17 @@ describe("rendered markdown", () => {
     expect(imgs[0]!.width).toBe(120);
   });
 
+  it("plays sound and video written as ![](file) and ![[file]]", () => {
+    show("![](clips/a.mp4)\n\n![clip](clips/a.mp3)\n\n![[a.mp4]]");
+    const players = [...host.querySelectorAll<HTMLMediaElement>(".cm-embed-media")];
+    expect(players.map((p) => [p.tagName, p.getAttribute("src")])).toEqual([
+      ["VIDEO", "/raw/clips/a.mp4"],
+      ["AUDIO", "/raw/clips/a.mp3"],
+      ["VIDEO", "/raw/clips/a.mp4"],
+    ]);
+    expect(players.every((p) => p.controls)).toBe(true);
+  });
+
   it("hides %%comments%% and renders footnotes, tags and highlights", () => {
     show("Text[^1] #tag ==hi== %%secret%%\n\n[^1]: note");
     const text = q(".cm-content")!.textContent!;
@@ -160,9 +175,27 @@ describe("helpers", () => {
     expect(vaultTarget("./My%20note.md#part")).toBe("My note.md");
     expect(mediaSrc(links, "javascript:alert(1)")).toBeNull();
     expect(mediaSrc(links, "img/cat.png")).toBe("/raw/img/cat.png");
+    expect(mediaTarget(links, "clips/a.mp4")).toEqual({ src: "/raw/clips/a.mp4", kind: "video" });
+    expect(mediaTarget(links, "Other.md")).toBeNull();
+    expect(mediaTarget(links, "https://example.com/a.mp4?x=1")).toEqual({
+      src: "https://example.com/a.mp4?x=1",
+      kind: "video",
+    });
+    expect(mediaTarget(links, "https://example.com/a.png")?.kind).toBe("image");
     expect(imageSize("alt|300x200")).toEqual({ alt: "alt", width: 300, height: 200 });
     expect(calloutKind("FAQ")).toBe("question");
     expect(calloutKind("custom")).toBe("note");
+  });
+  it("keeps ./ so media resolve beside the note, not anywhere with that name", () => {
+    const seen: string[] = [];
+    const spy = {
+      ...links,
+      resolve: (t: string) => (seen.push(t), "img/cat.png"),
+    };
+    mediaSrc(spy, "./cat.png");
+    mediaTarget(spy, "./cat.png");
+    mediaSrc(spy, "cat.png");
+    expect(seen).toEqual(["./cat.png", "./cat.png", "cat.png"]);
   });
   it("cuts a note section for ![[note#heading]]", () => {
     expect(noteSection("# A\na\n## B\nb\n### C\nc\n## D\nd", "B")).toBe("## B\nb\n### C\nc");

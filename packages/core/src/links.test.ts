@@ -126,3 +126,24 @@ describe("code spans and unicode", () => {
     expect(resolveWikiLink("café", ["café.md"])).toBe("café.md");
   });
 });
+
+describe("relative paths", () => {
+  const paths = ["notes/a.md", "notes/img/cat.png", "img/cat.png", "root.png", "other/b.md"];
+  const at = (target: string, from?: string) => resolveWikiLink(target, paths, from);
+
+  it("follows ./ and ../ from the note's folder", () => {
+    expect(at("./img/cat.png", "notes/a.md")).toBe("notes/img/cat.png");
+    expect(at("../img/cat.png", "notes/a.md")).toBe("img/cat.png");
+    expect(at("../root.png", "notes/a.md")).toBe("root.png");
+    expect(at("../notes/./img/cat.png", "other/b.md")).toBe("notes/img/cat.png");
+    expect(at("./root.png", "root.md")).toBe("root.png");
+    expect(at("../other/b", "notes/a.md")).toBe("other/b.md");
+  });
+
+  it("does not guess when a relative path leads nowhere", () => {
+    expect(at("../cat.png", "notes/a.md")).toBeUndefined();
+    expect(at("../../x.png", "notes/a.md")).toBeUndefined();
+    expect(at("../root.png", "root.md")).toBeUndefined();
+    expect(at("./cat.png", "other/b.md")).toBeUndefined();
+  });
+});
