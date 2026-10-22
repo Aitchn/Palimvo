@@ -14,15 +14,82 @@
     "itemCount": "{count, plural, one {# item} other {# items}}",
     "greeting": "Hello, {name}"
   },
+  "nav": {
+    "main": "Main navigation",
+    "vaults": "Vaults",
+    "files": "Files",
+    "views": "Views",
+    "history": "History",
+    "search": "Search",
+    "settings": "Settings",
+    "account": "Account",
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "collapseSidebar": "Hide sidebar",
+    "expandSidebar": "Show sidebar",
+    "showInspector": "Show details panel",
+    "hideInspector": "Hide details panel"
+  },
+  "shell": {
+    "sidebarTitle": "Files",
+    "inspectorTitle": "Details",
+    "inspectorEmpty": "Nothing is selected.",
+    "tabs": "Open files",
+    "noFileTitle": "No file open",
+    "noFileBody": "Pick a file from the sidebar to start.",
+    "vaultsTitle": "Your vaults",
+    "vaultsEmpty": "There are no vaults yet.",
+    "vaultsLoadFailed": "The vault list could not be loaded.",
+    "openVault": "Open {name}",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This address does not lead anywhere.",
+    "backHome": "Back to your vaults"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Interface language"
+  },
+  "toast": {
+    "dismiss": "Dismiss",
+    "region": "Notifications"
+  },
+  "pwa": {
+    "offline": "You are offline. Saved parts of the app still work."
+  },
   "errors": {
     "unknown": "Something went wrong.",
-    "badRequest": "The request is invalid.",
-    "unauthorized": "You need to sign in first.",
-    "forbidden": "You do not have permission to do that.",
-    "notFound": "That item could not be found.",
-    "conflict": "This item was changed by someone else. Reload and try again.",
-    "payloadTooLarge": "The file is larger than the {limit} limit.",
-    "rateLimited": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
-    "internal": "The server ran into an unexpected error."
+    "network": "The server could not be reached.",
+    "invalid_request": "The request is not valid.",
+    "invalid_path": "That path is not allowed.",
+    "schema_invalid": "The stored data has an invalid format.",
+    "unauthenticated": "Sign in to continue.",
+    "invalid_credentials": "The name or password is wrong.",
+    "forbidden": "You do not have permission to do this.",
+    "token_scope_denied": "This token does not cover that vault or folder.",
+    "propose_only": "This token can only propose changes.",
+    "setup_code_required": "The setup code is required.",
+    "setup_complete": "Setup has already been completed.",
+    "plugin_not_approved": "This plugin version has not been approved.",
+    "not_found": "That item could not be found.",
+    "vault_not_found": "The vault does not exist.",
+    "already_exists": "Something with that name already exists.",
+    "version_conflict": "Someone else changed this file. Reload and try again.",
+    "schema_too_new": "The data was written by a newer version of Palimvo.",
+    "vault_busy": "The vault is busy with another operation. Try again in a moment.",
+    "payload_too_large": "The content is too large.",
+    "unsupported_type": "That file type is not accepted.",
+    "rate_limited": "Too many requests. Try again later.",
+    "git_unavailable": "Git is not available on the server.",
+    "invalid_backup_remote": "That backup location is not valid.",
+    "invalid_tag": "That is not a usable checkpoint name.",
+    "internal": "Something went wrong on the server.",
+    "not_implemented": "This is not supported yet.",
+    "unavailable": "The service is temporarily unavailable."
   }
 }

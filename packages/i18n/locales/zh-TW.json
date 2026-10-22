@@ -14,15 +14,82 @@
     "itemCount": "{count, plural, other {# 個項目}}",
     "greeting": "你好，{name}"
   },
+  "nav": {
+    "main": "主導覽",
+    "vaults": "筆記庫",
+    "files": "檔案",
+    "views": "檢視",
+    "history": "歷史",
+    "search": "搜尋",
+    "settings": "設定",
+    "account": "帳號",
+    "skipToContent": "跳到內容",
+    "openMenu": "開啟選單",
+    "closeMenu": "關閉選單",
+    "collapseSidebar": "隱藏側邊欄",
+    "expandSidebar": "顯示側邊欄",
+    "showInspector": "顯示詳細資料面板",
+    "hideInspector": "隱藏詳細資料面板"
+  },
+  "shell": {
+    "sidebarTitle": "檔案",
+    "inspectorTitle": "詳細資料",
+    "inspectorEmpty": "尚未選取任何項目。",
+    "tabs": "已開啟的檔案",
+    "noFileTitle": "沒有開啟的檔案",
+    "noFileBody": "從側邊欄選一個檔案開始。",
+    "vaultsTitle": "你的筆記庫",
+    "vaultsEmpty": "還沒有任何筆記庫。",
+    "vaultsLoadFailed": "無法載入筆記庫清單。",
+    "openVault": "開啟 {name}",
+    "notFoundTitle": "找不到頁面",
+    "notFoundBody": "這個網址沒有對應的頁面。",
+    "backHome": "回到筆記庫清單"
+  },
+  "theme": {
+    "label": "主題",
+    "system": "跟隨系統",
+    "light": "淺色",
+    "dark": "深色"
+  },
+  "language": {
+    "label": "介面語言"
+  },
+  "toast": {
+    "dismiss": "關閉通知",
+    "region": "通知"
+  },
+  "pwa": {
+    "offline": "目前離線，已儲存的部分仍可使用。"
+  },
   "errors": {
     "unknown": "發生未知的錯誤。",
-    "badRequest": "請求內容無效。",
-    "unauthorized": "請先登入。",
+    "network": "無法連線到伺服器。",
+    "invalid_request": "請求內容無效。",
+    "invalid_path": "不允許使用這個路徑。",
+    "schema_invalid": "儲存的資料格式無效。",
+    "unauthenticated": "請先登入。",
+    "invalid_credentials": "名稱或密碼錯誤。",
     "forbidden": "你沒有執行此操作的權限。",
-    "notFound": "找不到該項目。",
-    "conflict": "此項目已被其他人修改，請重新載入後再試。",
-    "payloadTooLarge": "檔案超過 {limit} 的上限。",
-    "rateLimited": "請求過於頻繁，請在 {seconds, plural, other {# 秒}}後再試。",
-    "internal": "伺服器發生未預期的錯誤。"
+    "token_scope_denied": "這個權杖不涵蓋該筆記庫或資料夾。",
+    "propose_only": "這個權杖只能提出修改提案。",
+    "setup_code_required": "需要設定代碼。",
+    "setup_complete": "設定已經完成。",
+    "plugin_not_approved": "這個插件版本尚未核准。",
+    "not_found": "找不到該項目。",
+    "vault_not_found": "這個筆記庫不存在。",
+    "already_exists": "已經有相同名稱的項目。",
+    "version_conflict": "此檔案已被其他人修改，請重新載入後再試。",
+    "schema_too_new": "資料是由較新版本的 Palimvo 寫入的。",
+    "vault_busy": "筆記庫正忙於其他操作，請稍後再試。",
+    "payload_too_large": "內容太大。",
+    "unsupported_type": "不接受這種檔案類型。",
+    "rate_limited": "請求過於頻繁，請稍後再試。",
+    "git_unavailable": "伺服器上找不到 Git。",
+    "invalid_backup_remote": "這個備份位置無效。",
+    "invalid_tag": "這不是可用的檢查點名稱。",
+    "internal": "伺服器發生未預期的錯誤。",
+    "not_implemented": "目前尚不支援。",
+    "unavailable": "服務暫時無法使用。"
   }
 }
