@@ -24,6 +24,8 @@ const CSS = `
 const OPEN_DEPTH = 2;
 /** Arrays and objects with more entries show the first ones and a count. */
 const MAX_CHILDREN = 500;
+/** The host reports only created and deleted files, so the open file is re-read this often. */
+const REFRESH_MS = 5000;
 
 function h(tag, className, text) {
   const node = document.createElement(tag);
@@ -94,10 +96,15 @@ export default function activate(palimvo) {
 
     let data;
     let query = "";
+    let shown = null;
     const draw = () => tree.replaceChildren(render(t, undefined, data, 0, query));
     const load = async () => {
       try {
-        data = JSON.parse(await ctx.readText());
+        const text = await ctx.readText();
+        // Unchanged text: keep what is drawn, including what the person folded open.
+        if (text === shown) return;
+        shown = text;
+        data = JSON.parse(text);
         count.textContent = ctx.path.slice(ctx.path.lastIndexOf("/") + 1);
         draw();
       } catch (err) {
@@ -114,7 +121,12 @@ export default function activate(palimvo) {
     const off = palimvo.events.on("file:changed", (change) => {
       if (change.path === ctx.path) void load();
     });
+    // A failed re-read (offline) leaves the last drawing alone.
+    const timer = setInterval(() => void load().catch(() => {}), REFRESH_MS);
     await load();
-    return off;
+    return () => {
+      clearInterval(timer);
+      off();
+    };
   });
 }

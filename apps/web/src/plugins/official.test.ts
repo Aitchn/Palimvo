@@ -282,6 +282,32 @@ describe("json-tree", () => {
     expect(el.textContent).not.toContain("apple");
   });
 
+  it("redraws when the file changes without the host saying so, and stops when removed", async () => {
+    vi.useFakeTimers();
+    try {
+      const mod = await load("json-tree");
+      const { palimvo, registered } = fakePalimvo("json-tree");
+      mod.default(palimvo);
+      const el = document.createElement("div");
+      let text = '{"v":1}';
+      const cleanup = (await registered.get("viewer:tree")!({
+        el,
+        path: "a.json",
+        readText: async () => text,
+      })) as () => void;
+      expect(el.textContent).toContain("1");
+      text = '{"v":2}';
+      await vi.advanceTimersByTimeAsync(5100);
+      expect(el.textContent).toContain("v: 2");
+      cleanup();
+      text = '{"v":3}';
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(el.textContent).toContain("v: 2");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows the parser's message for invalid JSON and caps long arrays", async () => {
     expect((await open("{oops")).querySelector(".jt-error")?.textContent).toMatch(
       /^Cannot read this JSON/,
