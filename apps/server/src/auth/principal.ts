@@ -159,9 +159,13 @@ const GUEST_READS = [
   /^\/api\/vaults\/[^/]+\/home$/,
 ];
 
+/** Running a database only reads (the query is the body), so guests may POST it; the route filters rows. */
+const GUEST_READ_POSTS = [/^\/api\/vaults\/[^/]+\/bases\/query$/];
+
 /**
  * Applies the first access rules to every `/api` call: guests may only read the vault list, tree,
- * files, search and home page (the routes filter what they return); everything else needs a sign-in. Which
+ * files, search, home page and database queries (the routes filter what they return); everything else
+ * needs a sign-in. Which
  * signed-in person may do what is decided per route with `accessOf(c).require(...)`.
  */
 export function accessGate(): MiddlewareHandler {
@@ -175,7 +179,9 @@ export function accessGate(): MiddlewareHandler {
     if (principal.kind === "setup") throw new AppError("setup_required");
     if (principal.kind === "open") return next();
     if (principal.kind === "guest") {
-      const allowed = c.req.method === "GET" && GUEST_READS.some((re) => re.test(path));
+      const allowed =
+        (c.req.method === "GET" && GUEST_READS.some((re) => re.test(path))) ||
+        (c.req.method === "POST" && GUEST_READ_POSTS.some((re) => re.test(path)));
       if (!allowed) throw new AppError("unauthenticated");
     }
     return next();

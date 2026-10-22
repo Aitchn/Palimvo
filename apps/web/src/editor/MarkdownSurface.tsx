@@ -21,6 +21,7 @@ import { useEffect, useRef } from "react";
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
 import type { Awareness } from "y-protocols/awareness";
 import * as Y from "yjs";
+import { baseEmbeds, setBaseEmbeds, type BaseEmbedHost } from "./baseEmbeds.tsx";
 import { embedDepth, setEmbedRenderer } from "./embed.ts";
 import { frontmatterState, initialBodySelection } from "./frontmatter.ts";
 import { DEFAULT_LABELS, editorLabels, type EditorLabels } from "./labels.ts";
@@ -57,6 +58,8 @@ interface Props {
   links: WikiLinkHost;
   /** Changes whenever the vault's file list changes; used to re-resolve links. */
   paths?: readonly string[];
+  /** Databases shown in the text (`![[name.base]]`, ```base blocks); leave out where they make no sense (embedded notes). */
+  bases?: BaseEmbedHost;
   /** False shows the rendered note: links still open, nothing can be typed. */
   editable: boolean;
   /** Translated text for the parts the editor draws itself. */
@@ -76,6 +79,7 @@ export function MarkdownSurface({
   source,
   links,
   paths,
+  bases,
   editable,
   labels = DEFAULT_LABELS,
   autoFocus,
@@ -96,8 +100,8 @@ export function MarkdownSurface({
     focused: boolean;
   } | null>(null);
   // The editor is created once per shared text; callbacks read the latest props through this ref.
-  const latest = useRef({ links, source, labels, onBlur, onView });
-  latest.current = { links, source, labels, onBlur, onView };
+  const latest = useRef({ links, source, labels, bases, onBlur, onView });
+  latest.current = { links, source, labels, bases, onBlur, onView };
 
   const sharedText = source.kind === "collab" ? source.text : null;
   const awareness = source.kind === "collab" ? source.awareness : null;
@@ -164,10 +168,13 @@ export function MarkdownSurface({
               latest.current.onBlur?.();
             },
           }),
+          // Embedded notes are read-only copies; only the editor itself shows databases.
+          baseEmbeds,
           sync,
         ],
       }),
     });
+    if (latest.current.bases) view.dispatch({ effects: setBaseEmbeds.of(latest.current.bases) });
     // Only for the same text: another note (or a changed one) starts at the top as usual.
     const carried = carriedSelection.current?.text === initial ? carriedSelection.current : null;
     carriedSelection.current = null;
@@ -239,6 +246,10 @@ export function MarkdownSurface({
   useEffect(() => {
     viewRef.current?.dispatch({ effects: refreshWikiLinks.of(null) });
   }, [paths]);
+
+  useEffect(() => {
+    if (bases) viewRef.current?.dispatch({ effects: setBaseEmbeds.of(bases) });
+  }, [bases]);
 
   // Switching language redraws the widgets that carry text.
   useEffect(() => {

@@ -10,6 +10,7 @@ import { ancestorsOf, findNode } from "./model.ts";
 export type Prompt =
   | { kind: "note"; folder: string }
   | { kind: "folder"; folder: string }
+  | { kind: "base"; folder: string }
   | { kind: "rename"; node: TreeNode };
 
 interface Options {
@@ -71,6 +72,17 @@ export function useFileOperations({
     await writeFile(vault, path, "", null);
     reveal(ancestorsOf(path));
     await refresh();
+    openFile(path);
+  };
+
+  /** A database (.base) with the settings the wizard made. */
+  const createBase = async (folder: string, name: string, content: string) => {
+    const path = joinPath(folder, name);
+    if (taken(path)) throw new ApiError("already_exists", 409, "exists");
+    await writeFile(vault, path, content, null);
+    reveal(ancestorsOf(path));
+    await refresh();
+    setPrompt(null);
     openFile(path);
   };
 
@@ -174,7 +186,7 @@ export function useFileOperations({
     if (!prompt) return;
     if (prompt.kind === "note") await createNote(prompt.folder, name);
     else if (prompt.kind === "folder") await makeFolder(prompt.folder, name);
-    else await rename(prompt.node, name);
+    else if (prompt.kind === "rename") await rename(prompt.node, name);
     setPrompt(null);
   };
 
@@ -192,6 +204,7 @@ export function useFileOperations({
       setConfirmDelete(null);
     },
     move,
+    createBase,
     createLinked,
     dropFiles,
     pickFiles,

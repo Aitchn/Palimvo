@@ -27,6 +27,7 @@ import { HomeService } from "./home/home.ts";
 import { proposalRoutes } from "./routes/proposals.ts";
 import { ProposalService } from "./proposals/proposals.ts";
 import { publicRoutes } from "./routes/public.ts";
+import { baseRoutes } from "./routes/bases.ts";
 import { searchRoutes } from "./routes/search.ts";
 import type { VaultIndexes } from "./search/index.ts";
 import { vaultRoutes } from "./routes/vaults.ts";
@@ -136,6 +137,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", proposalRoutes(deps.vaults, proposals, deps.auth));
   app.route("/", homeRoutes(deps.vaults, new HomeService(deps.vaults, deps.history), deps.auth));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
+  app.route("/", baseRoutes(deps.vaults, deps.history, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
   app.route(
     "/",

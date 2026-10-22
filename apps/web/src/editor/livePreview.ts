@@ -459,6 +459,8 @@ function build(state: EditorState): DecorationSet {
           const text = node.getChild("CodeText");
           const code = text ? state.sliceDoc(text.from, text.to) : "";
           const editing = isActive(first.from, last.to);
+          // ```base blocks are drawn as the database itself by baseEmbeds.tsx.
+          if (lang === "base" && closed) return false;
           if (lang === "mermaid" && closed && code.trim()) {
             const widget = new MermaidWidget(code);
             decos.push(
