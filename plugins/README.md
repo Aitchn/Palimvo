@@ -3,16 +3,16 @@
 Plugins shipped with the server (in the plugin library from the start; nothing is installed in a vault until a person chooses to) live here, one folder per plugin with a
 `manifest.json` ([manifest v2](../docs/dev/plugins.md)).
 
-| Folder       | Does                                          | Code lands in |
-| ------------ | --------------------------------------------- | ------------- |
-| `decisions`  | decision notes, status, timeline, 4 MCP tools | T36           |
-| `kanban`     | board view and `kanban` code block            | ready         |
-| `kanban-due` | due-date badges for the board                 | ready         |
-| `graph`      | link graph page and a local graph panel       | ready         |
+| Folder       | Does                                    | Code lands in |
+| ------------ | --------------------------------------- | ------------- |
+| `decisions`  | decision notes, status, 4 MCP tools     | ready         |
+| `kanban`     | board view and `kanban` code block      | ready         |
+| `kanban-due` | due-date badges for the board           | ready         |
+| `graph`      | link graph page and a local graph panel | ready         |
 
 Each plugin folder has its own `README.md`, `main.js` and `locales/{en,zh-TW,zh-CN}.json`. The
-`decisions` folder still holds only its manifest; the loader skips a folder whose `main` file is
-missing until the code arrives (T36). `kanban` + `kanban-due` also show an extension point.
+`decisions` has its tools (`server.js`) but no page yet: the timeline arrives with T37.
+`kanban` + `kanban-due` also show an extension point.
 
 ## Examples
 

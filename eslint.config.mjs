@@ -103,6 +103,14 @@ export default tseslint.config(
     },
   },
   {
+    // Plugin server entries run in the QuickJS sandbox: a plain script that sees `vault` and `console`.
+    files: ["plugins/*/server.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: { vault: "readonly", console: "readonly" },
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-unused-vars": [
