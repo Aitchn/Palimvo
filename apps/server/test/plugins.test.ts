@@ -142,10 +142,16 @@ describe("the official plugins of this repository", () => {
       "kanban-due@1.0.0",
       "kanban@1.0.0",
     ]);
+    // In the library, but not installed anywhere until a person picks one.
+    const before = await json<{ plugins: Json[] }>(await root.client.get("/api/vaults/a/plugins"));
+    expect(before.plugins).toEqual([]);
     const res = await root.client.post("/api/vaults/a/plugins", {
       library: { id: "kanban-due" },
     });
     expect(res.status).toBe(201);
+    const after = await json<{ plugins: Json[] }>(await root.client.get("/api/vaults/a/plugins"));
+    // Installed switched off: a person still has to approve and enable it.
+    expect(after.plugins.map((p) => [p.id, p.enabled])).toEqual([["kanban-due", false]]);
   });
 });
 

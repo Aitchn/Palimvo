@@ -1,6 +1,6 @@
 # Official plugins
 
-Plugins shipped with the server (disabled by default) live here, one folder per plugin with a
+Plugins shipped with the server (in the plugin library from the start; nothing is installed in a vault until a person chooses to) live here, one folder per plugin with a
 `manifest.json` ([manifest v2](../docs/dev/plugins.md)).
 
 | Folder       | Does                                          | Code lands in |
