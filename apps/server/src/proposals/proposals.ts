@@ -266,8 +266,9 @@ export class ProposalService {
 
   /** Newest first. `open` leaves out proposals with nothing left to decide. */
   async list(vault: string, options: { open?: boolean } = {}): Promise<ProposalSummary[]> {
-    const names = (await this.vaults.listMeta(vault, FOLDER))
-      .filter((n) => /^[a-f0-9-]{36}\.json$/.test(n));
+    const names = (await this.vaults.listMeta(vault, FOLDER)).filter((n) =>
+      /^[a-f0-9-]{36}\.json$/.test(n),
+    );
     const out: ProposalSummary[] = [];
     for (const name of names) {
       const id = name.slice(0, -".json".length);
