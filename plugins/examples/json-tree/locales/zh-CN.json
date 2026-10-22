@@ -1,0 +1,5 @@
+{
+  "search": "搜索键或值",
+  "invalid": "无法解析 JSON：{message}",
+  "more": "…还有 {count} 项"
+}

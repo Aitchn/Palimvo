@@ -1,0 +1,8 @@
+{
+  "radar.name": "雷达图",
+  "radar.empty": "雷达图至少需要三个轴和一组数列。",
+  "treemap.name": "树状图",
+  "treemap.empty": "树状图需要数值大于 0 的项目。",
+  "sparkline.name": "迷你趋势图",
+  "sparkline.empty": "迷你趋势图需要在 values 里放一串数字。"
+}

@@ -247,13 +247,24 @@ Design: [ADR 0018](../adr/0018-plugin-installation-and-library.md).
   (index in `library_plugins`). `POST /api/plugin-library` (needs `library.publish`) adds a
   version; versions are immutable. The official plugins in the repository's `plugins/` folder are
   added at start-up when their files pass the checks (a folder whose files are not there yet is
-  skipped with a warning) and cannot be removed.
+  skipped with a warning; `plugins/examples/` is never added) and cannot be removed. They are only
+  in the library: nothing is installed in a vault until a person chooses it. A development build that still reports version `0.0.0` accepts every `minPalimvo`, so the official plugins work from a checkout.
 
 - **Web host endpoints.** `GET /api/vaults/:vault/plugin-runtime` (needs `vault.view`) lists the
   running plugins as `{ plugins: [{ id, version, hash, manifest }] }`. `GET .../plugin-runtime/:id`
   returns `{ id, hash, files }`, the text of `main`, the locale files and the theme stylesheet,
   after the files are re-hashed (`plugin_not_approved` otherwise). The host checks that `hash`
   matches the list.
+
+## Official plugins to learn from
+
+[`plugins/`](../../plugins/README.md) holds the plugins that ship in the library (`kanban`, with a
+page, a code block and an extension point, and `kanban-due`, a contributor to it) and, under
+`plugins/examples/`, small plugins that are never added to the library: `json-tree` (a viewer),
+`chart-pack` (component types) and the UI-layer demos. All have tests. Note how they keep to the sandbox:
+no storage (state lives in memory), styles in an inline `<style>` that use the app's CSS
+variables, strings through `palimvo.i18n.t`, and every render function returning a cleanup when
+it listens to events.
 
 ## Moving a version 1 plugin
 

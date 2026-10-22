@@ -1,0 +1,7 @@
+{
+  "overdue": "Overdue by {days} d",
+  "today": "Due today",
+  "tomorrow": "Due tomorrow",
+  "inDays": "Due in {days} d",
+  "dueOn": "Due {date}"
+}

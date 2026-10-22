@@ -1,0 +1,11 @@
+{
+  "field": "Property",
+  "folder": "Folder",
+  "allFolders": "All folders",
+  "newCard": "+ New card (Enter)",
+  "moveTo": "Move to column",
+  "empty": "No note has a \"{field}\" property yet. Add it to a note's properties, or type a folder above.",
+  "column.todo": "To do",
+  "column.doing": "Doing",
+  "column.done": "Done"
+}
