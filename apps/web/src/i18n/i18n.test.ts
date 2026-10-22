@@ -43,6 +43,15 @@ describe("switching language", () => {
     expect(document.documentElement.lang).toBe("zh-TW");
   });
 
+  it("keeps the latest choice when an earlier download finishes last", async () => {
+    const i18n = await createI18n("en");
+    const first = setLocale("zh-TW", i18n);
+    const second = setLocale("zh-CN", i18n);
+    await Promise.all([second, first]);
+    expect(i18n.language).toBe("zh-CN");
+    expect(document.documentElement.lang).toBe("zh-CN");
+  });
+
   it("remembers the choice", async () => {
     await chooseLocale("zh-CN", await createI18n("en"));
     expect(localStorage.getItem("palimvo.locale")).toBe("zh-CN");

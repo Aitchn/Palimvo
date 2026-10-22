@@ -36,12 +36,25 @@ function serviceWorker(): Plugin {
       Object.values(bundle).forEach((file) => {
         if (file.type === "chunk" && file.isEntry) visit(file.fileName);
       });
-      const files = [...entry, ...publicFiles(path.resolve(here, "public"))]
-        .map((name) => `/${name}`)
-        .sort();
+      // The app awaits its locale files before it starts, so they are part of the first load.
+      Object.values(bundle).forEach((file) => {
+        if (
+          file.type === "chunk" &&
+          /[\\/]locales[\\/][\w-]+\.json$/.test(file.facadeModuleId ?? "")
+        ) {
+          visit(file.fileName);
+        }
+      });
+      const publicDir = path.resolve(here, "public");
+      const publics = publicFiles(publicDir);
+      const files = [...entry, ...publics].map((name) => `/${name}`).sort();
+      // Names alone would miss a changed manifest or icon; hash the public files' bytes too.
       const version = createHash("sha256")
         .update(Object.keys(bundle).sort().join("\n"))
         .update(files.join("\n"))
+        .update(
+          Buffer.concat(publics.sort().map((name) => readFileSync(path.join(publicDir, name)))),
+        )
         .digest("hex")
         .slice(0, 12);
       const source = readFileSync(path.resolve(here, "sw-template.js"), "utf8")

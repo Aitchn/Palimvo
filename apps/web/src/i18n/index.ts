@@ -26,6 +26,8 @@ async function ensureBundle(instance: I18n, locale: Locale): Promise<void> {
   instance.addResourceBundle(locale, "translation", await loadLocale(locale), true, true);
 }
 
+const latest = new WeakMap<I18n, number>();
+
 function announce(locale: Locale): void {
   if (typeof document !== "undefined") document.documentElement.lang = locale;
 }
@@ -35,9 +37,13 @@ function announce(locale: Locale): void {
  * downloaded; the other files stay on the server until someone switches to them.
  */
 export async function setLocale(locale: Locale, instance: I18n = i18next): Promise<void> {
+  const mine = (latest.get(instance) ?? 0) + 1;
+  latest.set(instance, mine);
   await Promise.all([ensureBundle(instance, locale), ensureBundle(instance, DEFAULT_LOCALE)]);
+  // A newer choice made while this one was downloading wins, whichever finishes first.
+  if (latest.get(instance) !== mine) return;
   await instance.changeLanguage(locale);
-  announce(locale);
+  if (latest.get(instance) === mine) announce(locale);
 }
 
 /** Remembers the choice across visits, then applies it. */
