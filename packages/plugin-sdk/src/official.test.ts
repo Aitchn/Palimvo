@@ -72,6 +72,7 @@ describe("official plugin files", () => {
     expect(withCode.sort()).toEqual([
       "examples/chart-pack",
       "examples/json-tree",
+      "graph",
       "kanban",
       "kanban-due",
     ]);

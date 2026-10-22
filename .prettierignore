@@ -7,3 +7,5 @@ LICENSE
 .changeset/*.md
 CHANGELOG.md
 tests/fixtures/
+tests/e2e/results
+tests/e2e/report

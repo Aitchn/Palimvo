@@ -130,6 +130,7 @@ The app draws the frame; the plugin supplies what happens. Register each entry w
 | `command-palette` | a command in the palette (Ctrl+Shift+P)     | `run(context)`                   |
 | `status-bar`      | an item in the bar under the main area      | `run(context)`                   |
 | `settings`        | a section titled with the entry's title     | `render({ el })`, drawn in frame |
+| `inspector`       | a section in the details panel, per file    | `render({ el, path })`, in frame |
 
 - `title` is shown by the app (localised); `icon` is used when it names one of the app's own
   icons, otherwise toolbar entries show the title and the other slots show no icon.
@@ -138,6 +139,10 @@ The app draws the frame; the plugin supplies what happens. Register each entry w
   hidden. `run` has 30 seconds.
 - `context.path` is the open or clicked file. It is left out when the plugin's `permissions.read`
   does not cover it, so a slot never tells a plugin about files it may not read.
+- `inspector` sections sit in the right-hand details panel under the open file's name. The frame
+  stays while the person moves between files and is told the new `path` (left out when the plugin
+  may not read that file), so draw from `context.path` each time `render` runs. There is no
+  `visible` question for this slot: draw nothing when there is nothing to show.
 - Entries run in the plugin's hidden frame, with the plugin's own permissions. Nothing a plugin
   sends is put into the page: there is no way to supply HTML for the frame.
 
@@ -160,7 +165,7 @@ export default definePlugin((palimvo) => {
 });
 ```
 
-`palimvo.vault` (`read`, `readBinary`, `list`, `search`, `queryBase`, `write`, `propose`),
+`palimvo.vault` (`read`, `readBinary`, `list`, `search`, `queryBase`, `graph`, `write`, `propose`),
 `palimvo.ui`, `palimvo.events` (`file:changed`, `file:opened`, `theme:changed`, `locale:changed`),
 `palimvo.i18n` and `palimvo.extensions` are typed in `packages/plugin-sdk/src/api.ts`. Calls
 reject with an error whose `code` is `permission_denied`, `not_found`, `version_conflict`,
