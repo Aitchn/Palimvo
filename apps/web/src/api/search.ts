@@ -1,4 +1,4 @@
-import type { Backlink, OutLink, SearchPage } from "@palimvo/core";
+import type { Backlink, GraphData, OutLink, SearchPage } from "@palimvo/core";
 import { request, type RequestOptions } from "./client.ts";
 
 type Signal = Pick<RequestOptions, "signal">;
@@ -34,4 +34,19 @@ export async function linksOf(
 ): Promise<OutLink[]> {
   const params = new URLSearchParams({ path });
   return (await request<{ links: OutLink[] }>(`${base(vault)}/links?${params}`, options)).links;
+}
+
+/** The link graph of a vault, or the part within `depth` links of one file. */
+export function graphOf(
+  vault: string,
+  options: Signal & { around?: string; depth?: number; tags?: boolean } = {},
+): Promise<GraphData> {
+  const params = new URLSearchParams();
+  if (options.tags) params.set("tags", "1");
+  if (options.around) {
+    params.set("around", options.around);
+    if (options.depth) params.set("depth", String(options.depth));
+  }
+  const query = params.size > 0 ? `?${params}` : "";
+  return request<GraphData>(`${base(vault)}/graph${query}`, { signal: options.signal });
 }

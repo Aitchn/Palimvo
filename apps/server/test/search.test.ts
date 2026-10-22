@@ -88,3 +88,45 @@ describe("search API", () => {
     expect((await get("/api/vaults/demo/links?path=missing.md")).status).toBe(404);
   });
 });
+
+describe("graph API options", () => {
+  beforeEach(async () => {
+    await put("a.md", "---\ntags: [plan]\n---\nsee [[b]] #idea");
+    await put("b.md", "to [[c]]");
+    await put("c.md", "to [[d]]");
+    await put("d.md", "end");
+    await put("lonely.md", "nobody links here");
+  });
+
+  const paths = (body: Body) => (body.nodes as { path: string }[]).map((n) => n.path).sort();
+
+  it("adds tags to the notes only when asked", async () => {
+    const plain = (await get("/api/vaults/demo/graph")).body;
+    expect((plain.nodes as { tags?: string[] }[]).some((n) => n.tags !== undefined)).toBe(false);
+    const tagged = (await get("/api/vaults/demo/graph?tags=1")).body;
+    const nodes = tagged.nodes as { path: string; tags?: string[] }[];
+    expect(nodes.find((n) => n.path === "a.md")?.tags).toEqual(["plan", "idea"]);
+    expect(nodes.find((n) => n.path === "b.md")?.tags).toBeUndefined();
+  });
+
+  it("returns only the files within some links of one file, in both directions", async () => {
+    const one = (await get("/api/vaults/demo/graph?around=b.md")).body;
+    expect(paths(one)).toEqual(["a.md", "b.md", "c.md"]);
+    expect(one.edges).toEqual([
+      { from: "a.md", to: "b.md", embed: false },
+      { from: "b.md", to: "c.md", embed: false },
+    ]);
+    const two = (await get("/api/vaults/demo/graph?around=b.md&depth=2")).body;
+    expect(paths(two)).toEqual(["a.md", "b.md", "c.md", "d.md"]);
+    const alone = (await get("/api/vaults/demo/graph?around=lonely.md&depth=3")).body;
+    expect(paths(alone)).toEqual(["lonely.md"]);
+    expect(paths((await get("/api/vaults/demo/graph?around=missing.md")).body)).toEqual([]);
+  });
+
+  it("rejects bad graph parameters", async () => {
+    expect((await get("/api/vaults/demo/graph?depth=0&around=a.md")).status).toBe(400);
+    expect((await get("/api/vaults/demo/graph?depth=99&around=a.md")).status).toBe(400);
+    expect((await get("/api/vaults/demo/graph?around=..")).body.code).toBe("invalid_path");
+    expect((await get("/api/vaults/demo/graph?tags=maybe")).status).toBe(400);
+  });
+});

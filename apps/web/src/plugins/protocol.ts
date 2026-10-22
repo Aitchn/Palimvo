@@ -27,6 +27,7 @@ export const RPC_METHODS = [
   "vault.list",
   "vault.search",
   "vault.queryBase",
+  "vault.graph",
   "vault.write",
   "vault.propose",
   "ui.openFile",
@@ -46,6 +47,8 @@ export const MAX_WRITE_CHARS = 5_000_000;
 /** What an extension call may carry each way, as JSON. */
 export const MAX_EXTENSION_BYTES = 1024 * 1024;
 export const EXTENSION_TIMEOUT_MS = 10_000;
+/** Furthest `vault.graph` may reach around a file. */
+export const MAX_GRAPH_DEPTH = 6;
 export const MAX_FRAME_HEIGHT = 200_000;
 
 export interface RpcRequest {
@@ -60,6 +63,7 @@ const PARAM_FIELDS: Record<RpcMethod, readonly string[]> = {
   "vault.list": ["dir", "recursive"],
   "vault.search": ["query", "limit", "folder"],
   "vault.queryBase": ["path", "view"],
+  "vault.graph": ["around", "depth", "tags"],
   "vault.write": ["path", "content", "reason"],
   "vault.propose": ["path", "content", "title", "reason"],
   "ui.openFile": ["path"],
@@ -70,6 +74,7 @@ const PARAM_FIELDS: Record<RpcMethod, readonly string[]> = {
 
 const STRING_FIELDS = [
   "path",
+  "around",
   "dir",
   "query",
   "folder",
@@ -110,6 +115,18 @@ export function parseRpc(value: unknown): RpcRequest {
   }
   if (params.recursive !== undefined && typeof params.recursive !== "boolean")
     throw new Error("recursive must be true or false");
+  if (params.tags !== undefined && typeof params.tags !== "boolean")
+    throw new Error("tags must be true or false");
+  if (params.depth !== undefined) {
+    const { depth } = params;
+    if (
+      typeof depth !== "number" ||
+      !Number.isInteger(depth) ||
+      depth < 1 ||
+      depth > MAX_GRAPH_DEPTH
+    )
+      throw new Error(`depth must be an integer from 1 to ${MAX_GRAPH_DEPTH}`);
+  }
   if (params.limit !== undefined) {
     const { limit } = params;
     if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 100)

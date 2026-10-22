@@ -8,6 +8,7 @@ Plugins shipped with the server (in the plugin library from the start; nothing i
 | `decisions`  | decision notes, status, timeline, 4 MCP tools | T36           |
 | `kanban`     | board view and `kanban` code block            | ready         |
 | `kanban-due` | due-date badges for the board                 | ready         |
+| `graph`      | link graph page and a local graph panel       | ready         |
 
 Each plugin folder has its own `README.md`, `main.js` and `locales/{en,zh-TW,zh-CN}.json`. The
 `decisions` folder still holds only its manifest; the loader skips a folder whose `main` file is

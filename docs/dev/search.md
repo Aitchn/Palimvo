@@ -8,12 +8,12 @@ thousands of files.
 
 All routes are under `/api/vaults/:vault` and read-only.
 
-| Route                                 | Answer                                                                                                                                                                                   |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /search?q=&limit=&offset=&path=` | `SearchPage`: `total` matches, one page of `hits` (path, `titleMatch`, up to 3 matching lines). `limit` is 1–200 (default 50); `path` restricts the search to a folder.                  |
-| `GET /backlinks?path=`                | `{ backlinks }`: files that link to or embed `path`, with the linking lines (none for canvases).                                                                                         |
-| `GET /links?path=`                    | `{ links }`: what `path` links to, each target once; `path: null` for a link whose target does not exist.                                                                                |
-| `GET /graph`                          | `{ nodes, edges, unresolved }` for every note, canvas and base. Edges are deduplicated per pair of files; an embed edge becomes a plain edge when the same two files also link normally. |
+| Route                                 | Answer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /search?q=&limit=&offset=&path=` | `SearchPage`: `total` matches, one page of `hits` (path, `titleMatch`, up to 3 matching lines). `limit` is 1–200 (default 50); `path` restricts the search to a folder.                                                                                                                                                                                                                                                                                                                 |
+| `GET /backlinks?path=`                | `{ backlinks }`: files that link to or embed `path`, with the linking lines (none for canvases).                                                                                                                                                                                                                                                                                                                                                                                        |
+| `GET /links?path=`                    | `{ links }`: what `path` links to, each target once; `path: null` for a link whose target does not exist.                                                                                                                                                                                                                                                                                                                                                                               |
+| `GET /graph?tags=&around=&depth=`     | `{ nodes, edges, unresolved }` for every note, canvas and base. Edges are deduplicated per pair of files; an embed edge becomes a plain edge when the same two files also link normally. `tags=1` puts each note's tags (its `tags` property and inline `#tags`) on its node. `around=<path>` returns only the files within `depth` links (1–6, default 1) of that file, in either direction, and the links among them; a path that is not a note, canvas or base gives an empty graph. |
 
 The shared types (`SearchPage`, `Backlink`, `OutLink`, `GraphData`) live in `@palimvo/core`
 (`packages/core/src/search.ts`).
@@ -41,6 +41,9 @@ term), then path.
   that are the most common queries. `SearchIndex.supports(query)` says whether an index can answer
   and `withFallback(primary, fallback)` sends the other queries to the in-memory index, so the
   switch needs no change to the routes.
+- The graph is built from the same cached link data, so the first call after start costs about as
+  much as the first search; `tags` is read per file version on first use and only when asked for,
+  so the plain graph (and the MCP `get_graph` tool) is unchanged.
 - `LinkIndex` reads the links of a file once per version (wikilinks and embeds outside code
   fences and inline code, for canvases also the files of its file nodes) and resolves them once per
   file list, the way Obsidian does (`resolveWikiLink` in `@palimvo/core`).

@@ -1,0 +1,37 @@
+{
+  "manifestVersion": 2,
+  "id": "graph",
+  "version": "1.0.0",
+  "name": { "en": "Graph view", "zh-TW": "關係圖", "zh-CN": "关系图" },
+  "description": {
+    "en": "See how notes link to each other, on a page for the whole vault and in a side panel around the open note.",
+    "zh-TW": "把筆記之間的連結畫成關係圖：整個筆記庫一頁看完，側欄還有目前筆記附近的區域圖。",
+    "zh-CN": "把笔记之间的链接画成关系图：整个笔记库一页看完，侧栏还有当前笔记附近的区域图。"
+  },
+  "author": "Palimvo",
+  "license": "Apache-2.0",
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"], "write": [], "network": false },
+  "contributes": {
+    "views": [
+      {
+        "id": "links",
+        "name": { "en": "Graph", "zh-TW": "關係圖", "zh-CN": "关系图" },
+        "icon": "graph"
+      }
+    ],
+    "slots": [
+      {
+        "slot": "inspector",
+        "id": "local",
+        "title": { "en": "Local graph", "zh-TW": "區域圖", "zh-CN": "区域图" }
+      }
+    ]
+  },
+  "main": "main.js",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-TW": "locales/zh-TW.json",
+    "zh-CN": "locales/zh-CN.json"
+  }
+}

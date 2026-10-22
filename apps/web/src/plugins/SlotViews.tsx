@@ -5,7 +5,7 @@ import { registerCommands } from "../commands/registry.ts";
 import { Button, Icon, isIconName } from "../ui/index.ts";
 import { PluginFrame } from "./PluginFrame.tsx";
 import { usePluginRuntime } from "./PluginsProvider.tsx";
-import { useSlotItems, type SlotItem } from "./slots.ts";
+import { scopeSlotContext, useSlotItems, type SlotItem } from "./slots.ts";
 
 /** A plugin entry as a button of the top bar: its icon when the app has one, else its title. */
 export function SlotToolbar({ path }: { path: string | null }) {
@@ -109,6 +109,43 @@ export function PluginSettingsSections() {
                 autoHeight
               />
             )}
+          </section>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * One section per `inspector` entry, under the details of the open file: the host draws the
+ * heading, the plugin draws inside it. The frame stays while the person moves between files and
+ * is told the new path, so there is no `visible` question to ask each time.
+ */
+export function PluginInspectorSections({ path }: { path: string | null }) {
+  const { i18n } = useTranslation();
+  const runtime = usePluginRuntime();
+  const entries = runtime?.registry.slotEntries("inspector") ?? [];
+  if (!runtime || !path || entries.length === 0) return null;
+  return (
+    <>
+      {entries.map((entry) => {
+        const hosted = runtime.host.get(entry.pluginId);
+        if (!hosted?.session.active) return null;
+        const headingId = `plugin-inspector-${entry.pluginId}-${entry.id}`;
+        return (
+          <section
+            key={`${entry.pluginId}/${entry.id}`}
+            className="plugin-settings"
+            aria-labelledby={headingId}
+          >
+            <h3 id={headingId}>{resolveLocalized(entry.title, i18n.language)}</h3>
+            <PluginFrame
+              pluginId={entry.pluginId}
+              mode="slot"
+              target={`inspector/${entry.id}`}
+              context={scopeSlotContext(hosted.session.binding, { path })}
+              autoHeight
+            />
           </section>
         );
       })}
