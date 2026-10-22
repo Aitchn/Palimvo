@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { AppError, InvalidPathError, normalizeVaultPath } from "@palimvo/core";
 import { z } from "zod";
+import { guestPolicy } from "../auth/principal.ts";
+import type { AuthService } from "../auth/service.ts";
 import type { VaultIndexes } from "../search/index.ts";
 import type { VaultService } from "../vault/service.ts";
 
@@ -47,9 +49,9 @@ function pathParam(raw: string | undefined): string {
 
 /**
  * Search, backlinks, outgoing links and the link graph of a vault: `/api/vaults/:vault/…`.
- * Access control arrives with accounts (T10); readers will see only what they may read.
+ * Guests search only the public part of the vault; backlinks, links and the graph need a sign-in.
  */
-export function searchRoutes(vaults: VaultService, indexes: VaultIndexes): Hono {
+export function searchRoutes(vaults: VaultService, indexes: VaultIndexes, auth: AuthService): Hono {
   const app = new Hono();
 
   app.get("/api/vaults/:vault/search", async (c) => {
@@ -57,6 +59,20 @@ export function searchRoutes(vaults: VaultService, indexes: VaultIndexes): Hono 
     await vaults.assertVault(vault);
     const { q, limit, offset, path } = parse(searchQuery, c.req.query());
     const folder = path === undefined || path.trim() === "" ? undefined : normalize(path);
+    const policy = guestPolicy(auth, c, vault);
+    if (policy && !policy.any) throw new AppError("vault_not_found");
+    if (policy) {
+      // Filter first, then page, so counts and pages never include what guests may not see.
+      const all = await indexes.search.search(vault, q, { limit: 100_000, offset: 0, folder });
+      const hits = all.hits.filter((h) => policy.covers(h.path));
+      return c.json({
+        ...all,
+        total: hits.length,
+        offset,
+        limit,
+        hits: hits.slice(offset, offset + limit),
+      });
+    }
     return c.json(await indexes.search.search(vault, q, { limit, offset, folder }));
   });
 

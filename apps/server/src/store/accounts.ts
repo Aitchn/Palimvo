@@ -194,6 +194,7 @@ export class AccountsRepo {
       this.db.run("delete from vault_members where vault_id = ?", vaultId);
       this.db.run("delete from permission_overrides where vault_id = ?", vaultId);
       this.db.run("delete from api_tokens where vault_id = ?", vaultId);
+      this.db.run("delete from public_access where vault_id = ?", vaultId);
     });
   }
 }

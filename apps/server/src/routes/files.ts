@@ -5,6 +5,8 @@ import { z } from "zod";
 import type { VaultHistory } from "../history/history.ts";
 import { MAX_TEXT_BYTES } from "../vault/fsutil.ts";
 import { MAX_BATCH_BYTES, type VaultService } from "../vault/service.ts";
+import { guestPolicy } from "../auth/principal.ts";
+import type { AuthService } from "../auth/service.ts";
 import { requestAuthor, requestNote } from "./author.ts";
 import { readJson } from "./util.ts";
 
@@ -49,11 +51,19 @@ function notModified(c: Context, tag: string): boolean {
  * Every change is recorded with `history` (who made it and why) while the vault's write queue
  * is still held, so a commit never separates a change from its author.
  */
-export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
+export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: AuthService): Hono {
   const app = new Hono();
 
   app.get("/api/vaults/:vault/files", async (c) => {
     const vault = c.req.param("vault");
+    const policy = guestPolicy(auth, c, vault);
+    if (policy) {
+      // Guests get a filtered tree; no ETag, since the public set can change without the tree changing.
+      // A vault without public content looks the same as one that does not exist.
+      if (!policy.any) throw new AppError("vault_not_found");
+      c.header("Cache-Control", "no-store");
+      return c.json({ tree: policy.filterTree(await vaults.tree(vault)) });
+    }
     const tag = `"${await vaults.treeTag(vault)}"`;
     c.header("ETag", tag);
     c.header("Cache-Control", "no-cache");
@@ -62,7 +72,12 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
   });
 
   app.get("/api/vaults/:vault/files/*", async (c) => {
-    const file = await vaults.readFile(c.req.param("vault"), filePathOf(c));
+    const vault = c.req.param("vault");
+    const target = filePathOf(c);
+    const policy = guestPolicy(auth, c, vault);
+    if (policy && !policy.covers(target)) throw new AppError("not_found");
+    const file = await vaults.readFile(vault, target);
+    if (policy) c.header("Cache-Control", "no-store");
     const tag = `"${file.version}"`;
     c.header("ETag", tag);
     c.header("Cache-Control", "no-cache");
