@@ -3,6 +3,7 @@ import { basename } from "@palimvo/core";
 import { describeError } from "../api/errors.ts";
 import { readFile } from "../api/files.ts";
 import { useAsync } from "../app/useAsync.ts";
+import { NoteEditor } from "../editor/NoteEditor.tsx";
 import { Button, Icon, Skeleton } from "../ui/index.ts";
 
 interface Props {
@@ -10,13 +11,29 @@ interface Props {
   path: string;
   /** The file kind from the tree; only text-based kinds have a preview. */
   kind: "markdown" | "canvas" | "base" | "other";
+  /** Every file path in the vault, for links. */
+  paths: readonly string[];
+  onOpen: (path: string) => void;
+  /** A link to a note that does not exist yet. */
+  onCreate: (target: string) => void;
 }
 
 /** Extensions that are plain text even though the app has no dedicated view for them. */
 const TEXT = /\.(txt|json|ya?ml|csv|log|toml|ini|js|ts|css|html?)$/i;
 
-/** The main area for an open file. Until the editor arrives it shows the file's text, read-only. */
-export function FileView({ vault, path, kind }: Props) {
+/** The main area for an open file: notes are edited; other text files are shown read-only for now. */
+export function FileView({ vault, path, kind, paths, onOpen, onCreate }: Props) {
+  if (kind === "markdown") {
+    return (
+      <article className="file-view note-view" aria-label={basename(path)}>
+        <NoteEditor vault={vault} path={path} paths={paths} onOpen={onOpen} onCreate={onCreate} />
+      </article>
+    );
+  }
+  return <TextPreview vault={vault} path={path} kind={kind} />;
+}
+
+function TextPreview({ vault, path, kind }: Pick<Props, "vault" | "path" | "kind">) {
   const { t } = useTranslation();
   const previewable = kind !== "other" || TEXT.test(path);
   const file = useAsync(

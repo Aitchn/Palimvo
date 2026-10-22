@@ -253,6 +253,9 @@ function VaultWorkspace({ vault }: { vault: string }) {
             vault={vault}
             path={activeFile.path}
             kind={activeFile.kind ?? "other"}
+            paths={files}
+            onOpen={openFile}
+            onCreate={(target) => void operations.createLinked(target)}
           />
         ) : (
           <div className="state">
