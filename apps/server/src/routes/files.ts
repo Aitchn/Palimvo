@@ -152,7 +152,7 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
       const { writes } = await readJson(c, batchBody);
       const vault = c.req.param("vault");
       const access = accessOf(c);
-      access.requireVault("note.write", vault);
+      access.requireVault("vault.view", vault);
       for (const w of writes) access.requireTree("note.write", vault, treePath(w.path));
       const author = requestAuthor(c);
       const note = requestNote(c);

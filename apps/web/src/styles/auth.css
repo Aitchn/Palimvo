@@ -276,3 +276,222 @@
     align-items: stretch;
   }
 }
+
+/* ---- roles and permissions ------------------------------------------------------------ */
+.author-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.roles-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .roles-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.role-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.role-item {
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.role-item[draggable="true"] {
+  cursor: grab;
+}
+.role-item[data-selected] {
+  background: var(--accent-soft);
+  border-color: var(--border-strong);
+}
+.role-item[data-dragging] {
+  opacity: 0.5;
+}
+.role-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.role-move {
+  display: flex;
+}
+.role-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.role-detail h3,
+.role-detail h4 {
+  margin: 0;
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.swatch[aria-checked="true"] {
+  border-color: var(--fg);
+}
+.perm-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.perm-group h4,
+.perm-group legend {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.switch-row,
+.tri-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+.tri-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tri-label {
+  color: var(--fg);
+}
+.tri {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.tri-option {
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  background: var(--bg-input);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.tri-option + .tri-option {
+  border-inline-start: 1px solid var(--border-strong);
+}
+.tri-option[aria-checked="true"] {
+  color: var(--fg);
+  font-weight: 600;
+  background: var(--bg-elev);
+}
+.tri-option[aria-checked="true"][data-mode="allow"] {
+  background: var(--success-soft, color-mix(in srgb, #3fa964 25%, transparent));
+}
+.tri-option[aria-checked="true"][data-mode="deny"] {
+  background: var(--danger-soft, color-mix(in srgb, #e05252 25%, transparent));
+}
+.tri-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+@media (max-width: 600px) {
+  .tri-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tri {
+    align-self: flex-start;
+  }
+}
+.override {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.override summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+.override-who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.view-as h3 {
+  margin: 0;
+}
+.effective {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-1) var(--space-4);
+}
+.effective li {
+  display: flex;
+  gap: var(--space-2);
+  color: var(--fg-muted);
+}
+.effective li[data-allowed] {
+  color: var(--fg);
+}
+.person-picker {
+  position: relative;
+}
+.picker-hits {
+  margin: 0;
+}
+.picker-hit {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.picker-hit:hover,
+.picker-hit:focus-visible {
+  background: var(--accent-soft);
+}

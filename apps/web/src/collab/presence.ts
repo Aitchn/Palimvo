@@ -6,6 +6,8 @@ export interface PresenceUser {
   color: string;
   colorLight: string;
   kind: Author["kind"];
+  /** The role label shown next to the name, when the person has one. */
+  role?: { name: string; color?: string };
 }
 
 const KEY = "palimvo.collab.user";
@@ -24,9 +26,19 @@ function light(color: string): string {
 }
 
 /** Cursor identity for an author: AIs show their client's name, so everyone sees who is editing. */
-export function presenceFor(author: Pick<Author, "kind" | "id" | "name">): PresenceUser {
-  const color = presenceColor(`${author.kind}:${author.id}`);
-  return { name: author.name, kind: author.kind, color, colorLight: light(color) };
+export function presenceFor(
+  author: Pick<Author, "kind" | "id" | "name">,
+  role?: { name: string; color?: string },
+): PresenceUser {
+  // A role's colour wins, so a cursor looks like the badge next to the same person's changes.
+  const color = role?.color ?? presenceColor(`${author.kind}:${author.id}`);
+  return {
+    name: author.name,
+    kind: author.kind,
+    color,
+    colorLight: light(color),
+    ...(role ? { role } : {}),
+  };
 }
 
 /** A stable per-browser identity for someone who is not signed in (accounts replace it later). */
