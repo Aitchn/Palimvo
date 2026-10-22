@@ -1,6 +1,7 @@
 import { Outlet, type RouteObject } from "react-router";
 import { ToastProvider } from "../ui/index.ts";
-import { HomePage, NotFoundPage, VaultPage } from "./pages.tsx";
+import { VaultPage } from "../workspace/Workspace.tsx";
+import { HomePage, NotFoundPage } from "./pages.tsx";
 
 function Root() {
   return (

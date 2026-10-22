@@ -11,6 +11,7 @@ import "./styles/motion.css";
 import "./styles/base.css";
 import "./styles/ui.css";
 import "./styles/shell.css";
+import "./styles/files.css";
 import "./pwa/standalone.css";
 
 initTheme();

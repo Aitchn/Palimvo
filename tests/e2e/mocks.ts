@@ -25,6 +25,12 @@ export async function mockApi(page: Page): Promise<void> {
       },
     }),
   );
+  await page.route("**/api/vaults/sample/files/**", (route) => {
+    const path = decodeURIComponent(new URL(route.request().url()).pathname).split("/files/")[1];
+    return route.fulfill({
+      json: { path, content: `# ${path}\n\nText of ${path}.`, mtime: 1, version: "v1" },
+    });
+  });
 }
 
 /** Where a screenshot goes: tests/e2e/screenshots/<name>.png (CI uploads the folder). */

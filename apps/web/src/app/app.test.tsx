@@ -78,7 +78,8 @@ describe("workspace on a wide screen", () => {
     await renderRoute("/v/sample");
     const sidebar = await screen.findByRole("complementary", { name: "Files" });
     expect(await within(sidebar).findByText("Welcome.md")).toBeInTheDocument();
-    expect(within(sidebar).getByText("Plan.md")).toBeInTheDocument();
+    // Folders start closed.
+    expect(within(sidebar).queryByText("Plan.md")).toBeNull();
     expect(screen.getByRole("navigation", { name: "Main navigation" })).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveTextContent("No file open");
     expect(screen.queryByRole("complementary", { name: "Details" })).toBeNull();

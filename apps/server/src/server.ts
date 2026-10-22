@@ -10,6 +10,7 @@ import { describeConfig, type LoadedConfig } from "./config/index.ts";
 import { errorFields } from "./errors.ts";
 import { acquireLock } from "./lock.ts";
 import { createLogger, type Logger } from "./log.ts";
+import { findWebDir } from "./web.ts";
 import { VaultService, type VaultHooks } from "./vault/service.ts";
 import { VaultTrash } from "./vault/trash.ts";
 
@@ -67,6 +68,11 @@ export async function startServer({
       ...describeConfig(loaded),
     });
 
+    const webDir = await findWebDir(config.webDir, import.meta.dirname);
+    log.info(webDir ? "serving web app" : "no built web app found; serving the API only", {
+      ...(webDir ? { dir: webDir } : {}),
+    });
+
     let closing = false;
     const hooks: { name: string; hook: ShutdownHook }[] = [];
     // History needs the vault service's write queue, and the service needs a hook into history.
@@ -115,6 +121,7 @@ export async function startServer({
     });
     backup.start();
     const app = createApp({
+      webDir,
       logger: log,
       version: VERSION,
       ready: () => !closing,

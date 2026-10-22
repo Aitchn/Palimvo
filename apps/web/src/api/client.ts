@@ -14,16 +14,11 @@ export function encodePath(path: string): string {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-/**
- * The one place that talks to the server. Every domain module (`vaults.ts`, `files.ts`, …) calls
- * this, so errors always arrive as {@link ApiError} with a code the interface can translate.
- */
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function send(path: string, options: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
-  let response: Response;
   try {
-    response = await fetch(path, {
+    return await fetch(path, {
       method: options.method ?? "GET",
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -34,7 +29,33 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     if (cause instanceof DOMException && cause.name === "AbortError") throw cause;
     throw new ApiError("network", 0, "The server could not be reached.");
   }
+}
+
+/**
+ * The one place that talks to the server. Every domain module (`vaults.ts`, `files.ts`, …) calls
+ * this, so errors always arrive as {@link ApiError} with a code the interface can translate.
+ */
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await send(path, options);
   if (!response.ok) throw await errorFromResponse(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/**
+ * A GET that sends `If-None-Match`. Resolves to `null` when the server answers 304 (nothing
+ * changed), else the body and its new `ETag`.
+ */
+export async function requestIfChanged<T>(
+  path: string,
+  etag: string | null,
+  options: Pick<RequestOptions, "signal"> = {},
+): Promise<{ data: T; etag: string | null } | null> {
+  const response = await send(path, {
+    ...options,
+    headers: etag ? { "If-None-Match": etag } : undefined,
+  });
+  if (response.status === 304) return null;
+  if (!response.ok) throw await errorFromResponse(response);
+  return { data: (await response.json()) as T, etag: response.headers.get("ETag") };
 }

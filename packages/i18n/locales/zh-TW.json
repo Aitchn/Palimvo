@@ -29,7 +29,9 @@
     "collapseSidebar": "隱藏側邊欄",
     "expandSidebar": "顯示側邊欄",
     "showInspector": "顯示詳細資料面板",
-    "hideInspector": "隱藏詳細資料面板"
+    "hideInspector": "隱藏詳細資料面板",
+    "toggleSidebar": "切換側邊欄",
+    "toggleInspector": "切換詳細資料面板"
   },
   "shell": {
     "sidebarTitle": "檔案",
@@ -61,6 +63,57 @@
   },
   "pwa": {
     "offline": "目前離線，已儲存的部分仍可使用。"
+  },
+  "files": {
+    "tree": "檔案樹",
+    "toolbar": "檔案操作",
+    "newNote": "新增筆記",
+    "newFolder": "新增資料夾",
+    "import": "匯入檔案",
+    "create": "建立",
+    "untitled": "未命名",
+    "rename": "重新命名",
+    "open": "開啟",
+    "downloadZip": "下載為 ZIP",
+    "downloadVaultZip": "將筆記庫下載為 ZIP",
+    "actions": "{name} 的操作",
+    "empty": "這個筆記庫還沒有檔案。",
+    "emptyHint": "新增一則筆記，或把檔案拖到這裡。",
+    "nameLabel": "名稱",
+    "location": "位置：{folder}",
+    "nameEmpty": "請輸入名稱。",
+    "nameInvalid": "這個名稱不能使用。請避免 / \\ : * ? \" < > |，名稱也不能以句點或空白結尾。",
+    "deleteTitle": "刪除「{name}」？",
+    "deleteFileBody": "檔案會從筆記庫移除，但仍保留在版本歷史中。",
+    "deleteFolderBody": "資料夾和裡面的所有內容會從筆記庫移除，但仍保留在版本歷史中。",
+    "deleted": "已刪除「{name}」",
+    "imported": "已匯入 {count} 個檔案",
+    "importSkipped": "略過了 {count} 個檔案：目前只能匯入文字檔。",
+    "importFailed": "有 {count} 個檔案無法匯入。"
+  },
+  "quickOpen": {
+    "title": "快速開啟",
+    "open": "快速開啟",
+    "placeholder": "輸入以尋找檔案…",
+    "empty": "沒有符合的檔案。"
+  },
+  "commands": {
+    "title": "命令面板",
+    "open": "命令",
+    "placeholder": "輸入命令…",
+    "empty": "沒有符合的命令。"
+  },
+  "workspace": {
+    "switchVault": "切換筆記庫",
+    "allVaults": "所有筆記庫",
+    "closeTab": "關閉分頁",
+    "notFoundTitle": "找不到檔案",
+    "notFoundBody": "{path} 沒有檔案。",
+    "noPreview": "這種檔案還不能預覽。",
+    "emptyFile": "這個檔案是空的。",
+    "readOnly": "唯讀預覽",
+    "detailsName": "名稱",
+    "detailsPath": "路徑"
   },
   "errors": {
     "unknown": "發生未知的錯誤。",

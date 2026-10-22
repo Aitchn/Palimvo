@@ -29,7 +29,9 @@
     "collapseSidebar": "Hide sidebar",
     "expandSidebar": "Show sidebar",
     "showInspector": "Show details panel",
-    "hideInspector": "Hide details panel"
+    "hideInspector": "Hide details panel",
+    "toggleSidebar": "Toggle sidebar",
+    "toggleInspector": "Toggle details panel"
   },
   "shell": {
     "sidebarTitle": "Files",
@@ -61,6 +63,57 @@
   },
   "pwa": {
     "offline": "You are offline. Saved parts of the app still work."
+  },
+  "files": {
+    "tree": "File tree",
+    "toolbar": "File actions",
+    "newNote": "New note",
+    "newFolder": "New folder",
+    "import": "Import files",
+    "create": "Create",
+    "untitled": "Untitled",
+    "rename": "Rename",
+    "open": "Open",
+    "downloadZip": "Download as ZIP",
+    "downloadVaultZip": "Download vault as ZIP",
+    "actions": "Actions for {name}",
+    "empty": "This vault has no files yet.",
+    "emptyHint": "Create a note, or drop files here.",
+    "nameLabel": "Name",
+    "location": "Location: {folder}",
+    "nameEmpty": "Enter a name.",
+    "nameInvalid": "That name cannot be used. Avoid / \\ : * ? \" < > | and names that end with a dot or a space.",
+    "deleteTitle": "Delete {name}?",
+    "deleteFileBody": "The file is removed from the vault. It stays in the version history.",
+    "deleteFolderBody": "The folder and everything inside it are removed from the vault. They stay in the version history.",
+    "deleted": "Deleted {name}",
+    "imported": "{count, plural, one {Imported # file} other {Imported # files}}",
+    "importSkipped": "{count, plural, one {# file was skipped} other {# files were skipped}}: only text files can be imported for now.",
+    "importFailed": "{count, plural, one {# file could not be imported} other {# files could not be imported}}."
+  },
+  "quickOpen": {
+    "title": "Quick open",
+    "open": "Quick open",
+    "placeholder": "Type to find a file…",
+    "empty": "No file matches."
+  },
+  "commands": {
+    "title": "Command palette",
+    "open": "Commands",
+    "placeholder": "Type a command…",
+    "empty": "No command matches."
+  },
+  "workspace": {
+    "switchVault": "Switch vault",
+    "allVaults": "All vaults",
+    "closeTab": "Close tab",
+    "notFoundTitle": "File not found",
+    "notFoundBody": "There is no file at {path}.",
+    "noPreview": "There is no preview for this kind of file yet.",
+    "emptyFile": "This file is empty.",
+    "readOnly": "Read-only preview",
+    "detailsName": "Name",
+    "detailsPath": "Path"
   },
   "errors": {
     "unknown": "Something went wrong.",

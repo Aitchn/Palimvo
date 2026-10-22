@@ -1,5 +1,5 @@
 import type { FileContent, TreeNode } from "@palimvo/core";
-import { encodePath, request, type RequestOptions } from "./client.ts";
+import { encodePath, request, requestIfChanged, type RequestOptions } from "./client.ts";
 
 type Signal = Pick<RequestOptions, "signal">;
 
@@ -13,6 +13,28 @@ export interface WriteResult {
 
 export async function fileTree(vault: string, options: Signal = {}): Promise<TreeNode[]> {
   return (await request<{ tree: TreeNode[] }>(`${base(vault)}/files`, options)).tree;
+}
+
+/**
+ * The tree again, but only if it changed since `etag` was returned (then `null`). Polling this
+ * costs the server a hash comparison, not a tree walk.
+ */
+export async function fileTreeIfChanged(
+  vault: string,
+  etag: string | null,
+  options: Signal = {},
+): Promise<{ tree: TreeNode[]; etag: string | null } | null> {
+  const result = await requestIfChanged<{ tree: TreeNode[] }>(
+    `${base(vault)}/files`,
+    etag,
+    options,
+  );
+  return result && { tree: result.data.tree, etag: result.etag };
+}
+
+/** Address of the ZIP of a folder (`""`: the whole vault). The browser downloads it directly. */
+export function archiveUrl(vault: string, folder: string): string {
+  return `${base(vault)}/archive${folder ? `?path=${encodeURIComponent(folder)}` : ""}`;
 }
 
 export function readFile(vault: string, path: string, options: Signal = {}): Promise<FileContent> {

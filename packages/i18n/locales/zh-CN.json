@@ -96,7 +96,9 @@
     "collapseSidebar": "隐藏侧边栏",
     "expandSidebar": "显示侧边栏",
     "showInspector": "显示详细信息面板",
-    "hideInspector": "隐藏详细信息面板"
+    "hideInspector": "隐藏详细信息面板",
+    "toggleSidebar": "切换侧边栏",
+    "toggleInspector": "切换详细信息面板"
   },
   "shell": {
     "sidebarTitle": "文件",
@@ -128,6 +130,57 @@
   },
   "pwa": {
     "offline": "当前离线，已保存的部分仍可使用。"
+  },
+  "files": {
+    "tree": "文件树",
+    "toolbar": "文件操作",
+    "newNote": "新建笔记",
+    "newFolder": "新建文件夹",
+    "import": "导入文件",
+    "create": "创建",
+    "untitled": "未命名",
+    "rename": "重命名",
+    "open": "打开",
+    "downloadZip": "下载为 ZIP",
+    "downloadVaultZip": "将笔记库下载为 ZIP",
+    "actions": "{name} 的操作",
+    "empty": "这个笔记库还没有文件。",
+    "emptyHint": "新建一则笔记，或把文件拖到这里。",
+    "nameLabel": "名称",
+    "location": "位置：{folder}",
+    "nameEmpty": "请输入名称。",
+    "nameInvalid": "这个名称不能使用。请避免 / \\ : * ? \" < > |，名称也不能以句点或空格结尾。",
+    "deleteTitle": "删除“{name}”？",
+    "deleteFileBody": "文件会从笔记库移除，但仍保留在版本历史中。",
+    "deleteFolderBody": "文件夹和里面的所有内容会从笔记库移除，但仍保留在版本历史中。",
+    "deleted": "已删除“{name}”",
+    "imported": "已导入 {count} 个文件",
+    "importSkipped": "跳过了 {count} 个文件：目前只能导入文本文件。",
+    "importFailed": "有 {count} 个文件无法导入。"
+  },
+  "quickOpen": {
+    "title": "快速打开",
+    "open": "快速打开",
+    "placeholder": "输入以查找文件…",
+    "empty": "没有匹配的文件。"
+  },
+  "commands": {
+    "title": "命令面板",
+    "open": "命令",
+    "placeholder": "输入命令…",
+    "empty": "没有匹配的命令。"
+  },
+  "workspace": {
+    "switchVault": "切换笔记库",
+    "allVaults": "所有笔记库",
+    "closeTab": "关闭标签页",
+    "notFoundTitle": "找不到文件",
+    "notFoundBody": "{path} 没有文件。",
+    "noPreview": "这种文件还不能预览。",
+    "emptyFile": "这个文件是空的。",
+    "readOnly": "只读预览",
+    "detailsName": "名称",
+    "detailsPath": "路径"
   },
   "errors": {
     "unknown": "发生未知的错误。",

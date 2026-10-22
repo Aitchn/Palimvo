@@ -351,6 +351,15 @@ export class VaultService {
     }
   }
 
+  /**
+   * Where a file's bytes are on disk, for streaming (archives). The path is checked like every
+   * other read: it must stay inside the vault once symlinks are followed.
+   */
+  async locateFile(vaultId: string, filePath: string): Promise<{ abs: string; rel: string }> {
+    const { abs, rel } = await this.resolve(vaultId, filePath);
+    return { abs, rel };
+  }
+
   /** The file if it is in memory and unchanged, without touching the disk (undefined otherwise). */
   cachedFile(vaultId: string, filePath: string): FileContent | undefined {
     const cache = this.cached(vaultId);
