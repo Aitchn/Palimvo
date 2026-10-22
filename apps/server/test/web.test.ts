@@ -44,11 +44,15 @@ describe("built web app", () => {
   });
 
   it("does not turn API misses or missing files into the app", async () => {
-    for (const p of ["/api/nope", "/mcp", "/oauth/x", "/assets/missing.js", "/missing.png"]) {
+    for (const p of ["/api/nope", "/oauth/x", "/assets/missing.js", "/missing.png"]) {
       const res = await server.fetch(p);
       expect(res.status, p).toBe(404);
       expect(res.headers.get("content-type")).toContain("application/json");
     }
+    // The MCP endpoint answers for itself: AI clients must sign in with a bearer secret.
+    const mcp = await server.fetch("/mcp");
+    expect(mcp.status).toBe(401);
+    expect(mcp.headers.get("content-type")).toContain("application/json");
   });
 
   it("stays inside the folder", async () => {

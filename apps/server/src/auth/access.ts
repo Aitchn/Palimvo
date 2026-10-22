@@ -5,6 +5,7 @@ import {
   dirname,
   folderScope,
   hasPermission,
+  intersect,
   isInside,
   maskOf,
   namesOf,
@@ -21,6 +22,10 @@ import {
 } from "@palimvo/core";
 import type { Store } from "../store/index.ts";
 import type { Principal } from "./principal.ts";
+import type { BearerIdentity } from "./tokens.ts";
+
+/** What a token that may only propose changes is refused with `propose_only` instead of a plain no. */
+const WRITE_TYPE = maskOf(["note.write", "note.delete", "file.upload"]);
 
 /** What guests get in a vault that has public content; the paths are narrowed by `PublicPolicy`. */
 const PUBLIC_MASK = maskOf(["vault.view", "note.read"]);
@@ -85,15 +90,23 @@ export class RequestAccess {
     return this.principal.kind === "open";
   }
 
+  /** The AI token or OAuth grant behind this request, if it comes from one. */
+  get bearer(): BearerIdentity | undefined {
+    return this.principal.kind === "token" ? this.principal.bearer : undefined;
+  }
+
   get isGuest(): boolean {
     return this.principal.kind === "guest";
   }
 
   /** The signed-in account's id, if any. */
   get accountId(): string | undefined {
-    return this.principal.kind === "account" ? this.principal.account.id : undefined;
+    return this.principal.kind === "account" || this.principal.kind === "token"
+      ? this.principal.account.id
+      : undefined;
   }
 
+  /** Tokens never count as administrators, whatever their owner is: they are cut down on every call. */
   get isServerAdmin(): boolean {
     return this.isOpen || (this.principal.kind === "account" && this.principal.account.serverAdmin);
   }
@@ -111,7 +124,7 @@ export class RequestAccess {
   /** The person as the permission calculation sees them; null for guests. */
   asSubject(): PermissionSubject | null {
     this.fresh();
-    if (this.principal.kind !== "account") return null;
+    if (this.principal.kind !== "account" && this.principal.kind !== "token") return null;
     if (this.subject === undefined) {
       const { store } = this.control;
       const { account } = this.principal;
@@ -157,14 +170,28 @@ export class RequestAccess {
     return { roles: this.roles, overrides, publicPermissions };
   }
 
-  /** Every permission the caller holds in `scope`. */
-  mask(scope: PermissionScope): PermissionMask {
-    if (this.isOpen) return ALL_MASK;
+  /** What the person behind the request holds in `scope`, before any token limit. */
+  private personMask(scope: PermissionScope): PermissionMask {
     return resolvePermissions(
       this.asSubject(),
       scope,
       this.dataFor(scope.kind === "server" ? undefined : scope.vaultId),
     );
+  }
+
+  /**
+   * Every permission the caller holds in `scope`. For an AI token that is what its owner holds
+   * right now, limited to the token's access level, vault and folders; the owner must also still
+   * be allowed to connect AI (`mcp.connect`) there. Nothing is remembered from when the token
+   * was made, so a demoted owner's tokens shrink with them.
+   */
+  mask(scope: PermissionScope): PermissionMask {
+    if (this.isOpen) return ALL_MASK;
+    const person = this.personMask(scope);
+    const { bearer } = this;
+    if (!bearer) return person;
+    if (!hasPermission(person, "mcp.connect")) return 0;
+    return intersect(person, { token: bearer.scope, scope });
   }
 
   can(name: PermissionName, scope: PermissionScope): boolean {
@@ -181,7 +208,7 @@ export class RequestAccess {
    */
   require(name: PermissionName, scope: PermissionScope): void {
     if (this.can(name, scope)) return;
-    throw this.denial(scope);
+    throw this.denial(name, scope);
   }
 
   /** Several permissions at once in one scope. */
@@ -189,7 +216,22 @@ export class RequestAccess {
     for (const name of names) this.require(name, scope);
   }
 
-  private denial(scope: PermissionScope): AppError {
+  private denial(name: PermissionName, scope: PermissionScope): AppError {
+    const { bearer } = this;
+    if (bearer && !this.isOpen && scope.kind !== "server") {
+      const person = this.personMask(scope);
+      // Their owner may no longer connect AI here: the token is dead in this vault.
+      if (hasPermission(person, "vault.view") && !hasPermission(person, "mcp.connect"))
+        return new AppError("forbidden");
+    }
+    if (bearer && !this.isOpen && hasPermission(this.personMask(scope), name)) {
+      // The person could do this; the token is what stops it.
+      return new AppError(
+        bearer.scope.access === "propose" && hasPermission(WRITE_TYPE, name)
+          ? "propose_only"
+          : "token_scope_denied",
+      );
+    }
     if (scope.kind !== "server" && !this.can("vault.view", scope))
       return new AppError("vault_not_found");
     return new AppError(this.isGuest ? "unauthenticated" : "forbidden");
