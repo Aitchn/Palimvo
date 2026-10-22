@@ -15,7 +15,10 @@ export function isStrictVersion(value: string): boolean {
 /** Compares "1.2.10" with "1.2.9" part by part; a pre-release ("1.0.0-beta") sorts before its release. */
 export function compareVersions(a: string, b: string): number {
   const split = (v: string) => {
-    const [core = "", pre] = v.trim().replace(/^v/i, "").split("-", 2);
+    const clean = v.trim().replace(/^v/i, "");
+    const dash = clean.indexOf("-");
+    const core = dash < 0 ? clean : clean.slice(0, dash);
+    const pre = dash < 0 ? undefined : clean.slice(dash + 1);
     return { parts: core.split(".").map((x) => Number.parseInt(x, 10) || 0), pre };
   };
   const x = split(a);

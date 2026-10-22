@@ -6,6 +6,8 @@ describe("versions", () => {
     expect(compareVersions("1.2.10", "1.2.9")).toBe(1);
     expect(compareVersions("1.0.0-beta", "1.0.0")).toBe(-1);
     expect(compareVersions("2.0.0", "2.0.0")).toBe(0);
+    expect(compareVersions("1.0.0-alpha-one", "1.0.0-alpha-two")).toBe(-1);
+    expect(satisfiesVersion("1.0.0-alpha-two", "1.0.0-alpha-one")).toBe(false);
   });
 
   it("recognizes strict plugin versions", () => {

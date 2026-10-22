@@ -295,6 +295,22 @@ describe("validateManifest", () => {
     });
   });
 
+  it("handles inherited names, null entries and multibyte schemas", () => {
+    const ext = { extensions: [{ plugin: "constructor", point: "x" }] };
+    expect(codes({ ...base, contributes: ext })).toContain(
+      "contributes.extensions[0].plugin:missing_dependency",
+    );
+    expect(() => validateManifest({ ...base, contributes: { extensions: [null] } })).not.toThrow();
+    expect(codes({ ...base, contributes: { extensions: [null] } })).toContain(
+      "contributes.extensions[0]:invalid_type",
+    );
+    const big = { type: "object", description: "字".repeat(6000) };
+    const tool = { name: "go", description: "Go", inputSchema: big };
+    expect(codes({ ...base, server: "server.js", contributes: { tools: [tool] } })).toContain(
+      "contributes.tools[0].inputSchema:too_long",
+    );
+  });
+
   it("refuses entry files that escape the package", () => {
     expect(codes({ ...base, main: "../main.js" })).toContain("main:invalid_format");
     expect(codes({ ...base, main: "/main.js" })).toContain("main:invalid_format");

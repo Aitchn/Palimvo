@@ -221,7 +221,7 @@ function checkJsonSchema(
     c.issue(path, "invalid_schema", "must be plain JSON.");
     return undefined;
   }
-  if (text.length > L.inputSchemaBytes) {
+  if (new TextEncoder().encode(text).length > L.inputSchemaBytes) {
     c.issue(path, "too_long", `must be at most ${L.inputSchemaBytes} bytes.`);
     return undefined;
   }
@@ -287,6 +287,7 @@ function eachItem(
 ): unknown[] {
   const items = c.list(value, path, max);
   const seen = new Set<string>();
+  const valid: unknown[] = [];
   items.forEach((raw, i) => {
     const itemPath = `${path}[${i}]`;
     const item = c.object(raw, itemPath);
@@ -295,8 +296,10 @@ function eachItem(
     if (key === undefined) return;
     if (seen.has(key)) c.issue(itemPath, "duplicate", `${uniqueLabel} "${key}" is declared twice.`);
     seen.add(key);
+    valid.push(raw);
   });
-  return items;
+  // Entries that were not objects or had no usable key are already reported as issues.
+  return valid;
 }
 
 function checkContributes(
@@ -640,7 +643,7 @@ export function validateManifest(input: unknown, options: ValidateOptions = {}):
 
   const contributes = checkContributes(c, m.contributes, permissions);
   for (const [i, use] of contributes.extensions.entries()) {
-    if (!(use.plugin in dependencies)) {
+    if (!Object.hasOwn(dependencies, use.plugin)) {
       c.issue(
         `contributes.extensions[${i}].plugin`,
         "missing_dependency",
