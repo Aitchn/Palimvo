@@ -57,22 +57,22 @@ export async function renameRetrying(from: string, to: string): Promise<void> {
       await rename(from, to);
       return;
     } catch (err) {
-      if (attempt >= 8 || !(await isTransient(err, from))) throw err;
+      if (attempt >= 8 || !(await isTransient(err, from, to))) throw err;
       await new Promise((resolve) => setTimeout(resolve, 100 * 2 ** Math.min(attempt, 4)));
     }
   }
 }
 
-async function isTransient(err: unknown, from: string): Promise<boolean> {
+async function isTransient(err: unknown, from: string, to: string): Promise<boolean> {
   const code = errnoCode(err);
   if (code === "EPERM" || code === "EBUSY" || code === "EACCES") return true;
-  // A real "not found" means the source is gone; if it is still there, the report was spurious.
-  return (
-    process.platform === "win32" &&
-    code === "ENOENT" &&
-    (await stat(from).then(
+  if (process.platform !== "win32" || code !== "ENOENT") return false;
+  // A real "not found" means the source or the destination folder is gone; if both are there,
+  // the report was spurious.
+  const there = (p: string) =>
+    stat(p).then(
       () => true,
       () => false,
-    ))
-  );
+    );
+  return (await there(from)) && (await there(path.dirname(to)));
 }
