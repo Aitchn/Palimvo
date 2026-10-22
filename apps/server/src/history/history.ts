@@ -843,7 +843,8 @@ function unignorePattern(line: string): string {
 
 /** An ignore rule matching exactly this one path. */
 function ignorePattern(rel: string): string {
-  return (
-    "/" + rel.replace(/[\\*?[\]]/g, "\\$&").replace(/ +$/, (spaces) => spaces.replace(/ /g, "\\ "))
-  );
+  const escaped = rel.replace(/[\\*?[\]]/g, "\\$&");
+  // Trailing spaces would be dropped by git unless each one is escaped.
+  const body = escaped.replace(/ +$/, "");
+  return `/${body}${"\\ ".repeat(escaped.length - body.length)}`;
 }
