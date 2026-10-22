@@ -56,4 +56,31 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
-  # The e2e job (Playwright against the built app) is added together with the web shell.
+  e2e:
+    name: e2e (Playwright, ubuntu, Node 24)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-screenshots
+          path: tests/e2e/screenshots/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            tests/e2e/report/
+            tests/e2e/results/
+          if-no-files-found: ignore
