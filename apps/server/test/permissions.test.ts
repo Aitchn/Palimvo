@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { maskOf, type PermissionName } from "@palimvo/core";
+import { defaultHomeConfig, maskOf, type PermissionName } from "@palimvo/core";
 import { Client, PASSWORD, json } from "./client.ts";
 import { startTestServer, type TestServer } from "./harness.ts";
 
@@ -107,7 +107,14 @@ const VAULT_CASES: Case[] = [
     also: ["note.write"],
   },
   { permission: "proposal.create", method: "GET", path: `${V}/proposals` },
+  { permission: "history.view", method: "GET", path: `${V}/home/activity` },
   { permission: "vault.settings", method: "GET", path: `${V}/backup` },
+  {
+    permission: "vault.settings",
+    method: "PUT",
+    path: `${V}/home`,
+    json: { config: defaultHomeConfig(), baseVersion: null },
+  },
   { permission: "members.manage", method: "GET", path: `${V}/members` },
   { permission: "permissions.manage", method: "GET", path: `${V}/permissions` },
   { permission: "public.manage", method: "GET", path: `${V}/public` },

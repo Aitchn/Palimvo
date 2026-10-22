@@ -7,8 +7,8 @@ const SIZES = {
 } as const;
 
 const TEXT = {
-  en: { home: "Your vaults", empty: "No file open", menu: "Open menu" },
-  "zh-TW": { home: "你的筆記庫", empty: "沒有開啟的檔案", menu: "開啟選單" },
+  en: { home: "Your vaults", empty: "Home", menu: "Open menu" },
+  "zh-TW": { home: "你的筆記庫", empty: "首頁", menu: "開啟選單" },
 } as const;
 
 // Each case is also written to tests/e2e/screenshots/ and uploaded by CI as an artifact.
@@ -65,7 +65,7 @@ test.describe("language and theme switches", () => {
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("lang", "zh-TW");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(page.getByRole("main")).toContainText("沒有開啟的檔案");
+    await expect(page.getByRole("main")).toContainText("首頁");
   });
 
   test("download only the language in use", async ({ page }) => {

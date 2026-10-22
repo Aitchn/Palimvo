@@ -205,7 +205,7 @@ describe("deep links and tabs", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/v/sample/Board.canvas"));
     await user.click(screen.getByRole("button", { name: "Close: Board.canvas" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/v/sample"));
-    expect(screen.getByRole("main")).toHaveTextContent("No file open");
+    expect(screen.getByRole("main")).toHaveTextContent("Home");
   });
 
   it("brings the tabs back after a reload", async () => {

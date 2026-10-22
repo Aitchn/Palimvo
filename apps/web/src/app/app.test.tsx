@@ -81,7 +81,7 @@ describe("workspace on a wide screen", () => {
     // Folders start closed.
     expect(within(sidebar).queryByText("Plan.md")).toBeNull();
     expect(screen.getByRole("navigation", { name: "Main navigation" })).toBeInTheDocument();
-    expect(screen.getByRole("main")).toHaveTextContent("No file open");
+    expect(screen.getByRole("main")).toHaveTextContent("Home");
     expect(screen.queryByRole("complementary", { name: "Details" })).toBeNull();
   });
 

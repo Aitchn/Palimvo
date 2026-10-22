@@ -1,4 +1,15 @@
 # Official plugins
 
-Plugins shipped with the server (disabled by default) will live here. See the build plan for the
-planned set: `decisions`, `kanban`, `chart-pack`, `json-tree`.
+Plugins shipped with the server (disabled by default) live here, one folder per plugin with a
+`manifest.json` ([manifest v2](../docs/dev/plugins.md)).
+
+| Folder       | Does                                          | Code lands in |
+| ------------ | --------------------------------------------- | ------------- |
+| `decisions`  | decision notes, status, timeline, 4 MCP tools | T36           |
+| `kanban`     | board view and `kanban` code block            | T35           |
+| `kanban-due` | due-date badges for the board                 | T35           |
+| `chart-pack` | radar, treemap and sparkline components       | T35           |
+| `json-tree`  | collapsible viewer for `.json`                | T35           |
+
+For now these folders hold only the manifests (validated by the plugin SDK tests); the loader must
+skip a folder whose `main` file is missing until the code arrives.
