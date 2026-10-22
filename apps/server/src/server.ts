@@ -108,6 +108,8 @@ export async function startServer({
       name: "history",
       hook: async () => {
         backup.stop();
+        // Let writes that are already running finish (and record their author) before the last commit.
+        await vaults.idle();
         await history.flushAll();
       },
     });

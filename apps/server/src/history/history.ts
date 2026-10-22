@@ -94,6 +94,10 @@ const EXCLUDES = [
   ".*.tmp-????????",
 ];
 const EXCLUDE_HEADER = "# palimvo";
+/** The folders in `EXCLUDES`, as vault-relative prefixes: git never sees them, so they need no size check. */
+const UNVERSIONED_FOLDERS = EXCLUDES.filter((e) => e.startsWith("/") && e.endsWith("/")).map((e) =>
+  e.slice(1),
+);
 
 /**
  * Files bigger than this stay out of the history and off-site backups: git copies every version
@@ -223,21 +227,26 @@ export class VaultHistory implements ChangeRecorder {
     return this.git.run(vault, async () => {
       const p = this.pendingFor(vault);
       clearTimeout(p.timer);
-      const { authors, reasons, summaries } = p;
-      p.authors = new Map();
-      p.reasons = new Map();
-      p.summaries = new Map();
-      p.firstAt = undefined;
+      let taken: Pick<Pending, "authors" | "reasons" | "summaries"> | undefined;
       try {
-        return await this.writeLock(vault, () =>
-          this.commitLocked(vault, { authors, reasons, summaries }, request),
-        );
+        return await this.writeLock(vault, () => {
+          // Take the notes only once no write is running: a write that finished before this point
+          // has recorded its author, and one that starts later is not in this snapshot.
+          taken = { authors: p.authors, reasons: p.reasons, summaries: p.summaries };
+          p.authors = new Map();
+          p.reasons = new Map();
+          p.summaries = new Map();
+          p.firstAt = undefined;
+          return this.commitLocked(vault, taken, request);
+        });
       } catch (err) {
         // Keep the notes so the next commit still attributes these changes, and try again later
         // (e.g. another git process briefly held the index lock).
-        restore(p.authors, authors);
-        restore(p.reasons, reasons);
-        restore(p.summaries, summaries);
+        if (taken) {
+          restore(p.authors, taken.authors);
+          restore(p.reasons, taken.reasons);
+          restore(p.summaries, taken.summaries);
+        }
         if (!(err instanceof AppError)) {
           this.log.error("commit failed", { vault, ...errorFields(err) });
           this.schedule(vault);
@@ -821,8 +830,7 @@ async function largeAmong(
   const candidates = paths.filter(
     (p) =>
       !p.startsWith(".git/") &&
-      !p.startsWith(".palimvo/") &&
-      !p.startsWith(".aivault/") &&
+      !UNVERSIONED_FOLDERS.some((folder) => p.startsWith(folder)) &&
       !/[\r\n]/.test(p),
   );
   for (let i = 0; i < candidates.length; i += 64) {
