@@ -6,6 +6,8 @@ import type { Logger } from "./log.ts";
 import { archiveRoutes } from "./routes/archive.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { historyRoutes } from "./routes/history.ts";
+import { searchRoutes } from "./routes/search.ts";
+import type { VaultIndexes } from "./search/index.ts";
 import { vaultRoutes } from "./routes/vaults.ts";
 import { webRoutes } from "./web.ts";
 import type { VaultService } from "./vault/service.ts";
@@ -20,6 +22,7 @@ export interface AppDeps {
   vaults: VaultService;
   trash: VaultTrash;
   history: VaultHistory;
+  indexes: VaultIndexes;
   backup: BackupService;
   /** Folder with the built web app; leave out to serve the API only. */
   webDir?: string;
@@ -60,6 +63,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", vaultRoutes(deps));
   app.route("/", fileRoutes(deps.vaults, deps.history));
   app.route("/", historyRoutes(deps));
+  app.route("/", searchRoutes(deps.vaults, deps.indexes));
   app.route("/", archiveRoutes(deps.vaults));
   // Last: anything the API did not claim is a file of the web app or one of its routes.
   if (deps.webDir) app.route("/", webRoutes(deps.webDir));

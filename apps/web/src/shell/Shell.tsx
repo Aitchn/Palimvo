@@ -14,6 +14,8 @@ interface Props {
   inspector: ReactNode;
   /** The tab strip shown in the top bar; leave out for the page title only. */
   tabs?: ReactNode;
+  /** Increase to make sure the sidebar is showing (e.g. when search was asked for). */
+  sidebarRequest?: number;
   children: ReactNode;
 }
 
@@ -21,7 +23,7 @@ interface Props {
  * Layout v2: icon rail, collapsible sidebar, top bar with tabs, main area, details panel.
  * Up to 900px the sidebar and details panel become drawers and the top bar gets menu buttons.
  */
-export function Shell({ sidebar, inspector, tabs, children }: Props) {
+export function Shell({ sidebar, inspector, tabs, sidebarRequest = 0, children }: Props) {
   const { t } = useTranslation();
   const layout = useLayout();
   const online = useOnline();
@@ -56,6 +58,10 @@ export function Shell({ sidebar, inspector, tabs, children }: Props) {
       ]),
     [t],
   );
+
+  useEffect(() => {
+    if (sidebarRequest > 0 && !latest.current.sidebarOpen) latest.current.toggleSidebar();
+  }, [sidebarRequest]);
 
   useEffect(() => {
     if (isMobile) closeDrawer();
