@@ -16,6 +16,9 @@ import { createLogger, type Logger } from "./log.ts";
 import { Store } from "./store/index.ts";
 import { createVaultIndexes } from "./search/index.ts";
 import { PluginManager } from "./plugins/manager.ts";
+import { SandboxPool, type PoolOptions } from "./plugins/sandbox/index.ts";
+import { PluginToolProvider } from "./plugins/serverTools.ts";
+import { PluginToolSettingsStore } from "./plugins/toolSettings.ts";
 import { findWebDir } from "./web.ts";
 import { VaultService, type VaultHooks } from "./vault/service.ts";
 import { VaultTrash } from "./vault/trash.ts";
@@ -66,6 +69,8 @@ export interface StartOptions {
   /** Folder with the official plugins; default: look for `plugins/` next to the server (see `findPluginsDir`). */
   pluginsDir?: string;
   mcp?: { tools?: AnyTool[]; providers?: ToolProvider[]; plugins?: PluginCatalog };
+  /** Plugin tool sandbox limits and recycling (tests make them short). `size` comes from the config. */
+  sandbox?: Omit<PoolOptions, "size">;
 }
 
 export async function startServer({
@@ -76,6 +81,7 @@ export async function startServer({
   history: historyOptions,
   backup: backupOptions,
   mcp: mcpOptions,
+  sandbox: sandboxOptions,
   pluginsDir,
 }: StartOptions): Promise<RunningServer> {
   const { config } = loaded;
@@ -135,6 +141,19 @@ export async function startServer({
       const added = await plugins.seedBuiltins(officialDir);
       if (added.length > 0) log.info("official plugins added to the library", { plugins: added });
     }
+    // Plugin MCP tools run in QuickJS workers. Started now so the first call does not wait for a worker.
+    const sandbox = new SandboxPool({ ...sandboxOptions, size: config.pluginWorkers });
+    const toolSettings = new PluginToolSettingsStore(vaults, history);
+    const pluginTools = new PluginToolProvider({
+      manager: plugins,
+      pool: sandbox,
+      settings: toolSettings,
+      logger: log,
+    });
+    void sandbox.warm().then(
+      () => log.info("plugin sandbox ready", { workers: sandbox.stats().workers }),
+      (err: unknown) => log.error("plugin sandbox failed to start", errorFields(err)),
+    );
     const backup = new BackupService(vaults, history, { logger: log, ...backupOptions });
     vaults.onChange((change) => {
       if (change.type === "removed") history.forget(change.vault);
@@ -159,6 +178,7 @@ export async function startServer({
         await history.flushAll();
       },
     });
+    hooks.push({ name: "plugin sandbox", hook: () => sandbox.close() });
     backup.start();
     const auth = new AuthService(openStore);
     const setup = new SetupService(openStore, config.dataDir, {
@@ -192,7 +212,8 @@ export async function startServer({
       indexes: createVaultIndexes(vaults),
       backup,
       ...(mcpOptions?.tools ? { mcpTools: mcpOptions.tools } : {}),
-      ...(mcpOptions?.providers ? { toolProviders: mcpOptions.providers } : {}),
+      toolProviders: [pluginTools, ...(mcpOptions?.providers ?? [])],
+      pluginToolSettings: toolSettings,
       pluginManager: plugins,
       ...(mcpOptions?.plugins ? { plugins: mcpOptions.plugins } : {}),
     });

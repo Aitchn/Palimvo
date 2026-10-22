@@ -18,6 +18,7 @@ Options for serve (each also has a PALIMVO_* environment variable):
   --public-url <url>    PALIMVO_PUBLIC_URL    Public address, needed for OAuth
   --trust-proxy <bool>  PALIMVO_TRUST_PROXY   Trust X-Forwarded-* headers (default false)
   --log-level <level>   PALIMVO_LOG_LEVEL     debug, info, warn or error (default info)
+  --plugin-workers <n>  PALIMVO_PLUGIN_WORKERS  Worker threads for plugin tools (default 4)
   --dev-insecure        PALIMVO_DEV_INSECURE  Leave the API open until the first account exists,
                                               skipping the setup wizard. Development only; refused
                                               unless the host is a loopback address.

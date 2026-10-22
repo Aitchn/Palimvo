@@ -36,7 +36,12 @@ describe("server", () => {
     const s = await start();
     const res = await s.fetch("/api/nope");
     expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ code: "not_found", message: "Not found" });
+    // The wording differs between the API fallback and the web app's own 404 ("Not found" and
+    // "Not found."), and a built web app may or may not be present; the contract is code + message.
+    const body = (await res.json()) as { code: string; message: unknown };
+    expect(body.code).toBe("not_found");
+    expect(body.message).toEqual(expect.any(String));
+    expect(Object.keys(body).every((k) => ["code", "message", "details"].includes(k))).toBe(true);
   });
 
   it("logs the effective configuration at startup", async () => {
@@ -133,16 +138,26 @@ describe("bundle", () => {
       const child = spawn(process.execPath, [bundle, "serve", "--port", "0", "--data-dir", "d"], {
         cwd,
       });
+      let buf = "";
+      let sawSandbox: (line: string) => void = () => {};
+      const ready = new Promise<void>((resolve, reject) => {
+        sawSandbox = (line) => {
+          if (line.includes('"msg":"plugin sandbox ready"')) resolve();
+          else if (line.includes('"msg":"plugin sandbox failed to start"')) reject(new Error(line));
+        };
+      });
       const out = await new Promise<string>((resolve, reject) => {
-        let buf = "";
         child.stdout.on("data", (d: Buffer) => {
           buf += d.toString();
+          sawSandbox(buf);
           if (buf.includes('"msg":"listening"')) resolve(buf);
         });
         child.once("exit", (code) => reject(new Error(`exited ${code}: ${buf}`)));
       });
       const url = /"url":"([^"]+)"/.exec(out)?.[1];
       expect((await fetch(`${url}/api/health`)).status).toBe(200);
+      // The plugin sandbox's workers start from code embedded in the single bundle file.
+      await ready;
 
       const exited = new Promise<number | null>((r) => child.once("exit", r));
       child.kill("SIGTERM");

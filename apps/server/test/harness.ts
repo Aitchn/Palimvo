@@ -18,12 +18,14 @@ export interface TestServer extends RunningServer {
 /** Starts a server on a random port with a throwaway data directory. */
 export async function startTestServer(
   overrides: Partial<Config> = {},
-  options: Pick<StartOptions, "history" | "backup" | "mcp"> = {},
+  options: Pick<StartOptions, "history" | "backup" | "mcp" | "sandbox"> = {},
 ): Promise<TestServer> {
   const dataDir = overrides.dataDir ?? (await mkdtemp(path.join(tmpdir(), "palimvo-test-")));
   const config: Config = {
     ...defaultConfig(),
     logLevel: "debug",
+    // Two workers are enough for tests and keep every test server cheap to start.
+    pluginWorkers: 2,
     // Most tests exercise the API without the setup wizard; setup.test.ts turns this off.
     devInsecure: true,
     ...overrides,
@@ -44,6 +46,7 @@ export async function startTestServer(
     history: { commitDelayMs: 60_000, commitMaxDelayMs: 60_000, ...options.history },
     backup: { credentials: null, ...options.backup },
     ...(options.mcp ? { mcp: options.mcp } : {}),
+    sandbox: options.sandbox ?? {},
   });
   return {
     ...running,

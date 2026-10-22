@@ -1,5 +1,6 @@
 import path from "node:path";
 import { AppError } from "../errors.ts";
+import { DEFAULT_WORKERS } from "../plugins/sandbox/pool.ts";
 import { LOG_LEVELS, type LogLevel } from "../log.ts";
 
 export interface Config {
@@ -14,6 +15,8 @@ export interface Config {
   /** Folder holding the built web app. Unset: look for one next to the server (see `findWebDir`). */
   webDir?: string;
   logLevel: LogLevel;
+  /** Worker threads that run plugin MCP tools in the QuickJS sandbox (`PALIMVO_PLUGIN_WORKERS`). */
+  pluginWorkers: number;
   /**
    * Development only: with no account yet the API stays open instead of waiting for the setup
    * wizard. Refused unless the server listens on a loopback address.
@@ -49,6 +52,12 @@ const SETTINGS: Setting[] = [
   { key: "trustProxy", env: "PALIMVO_TRUST_PROXY", flag: "trust-proxy", parse: parseBool },
   { key: "logLevel", env: "PALIMVO_LOG_LEVEL", flag: "log-level", parse: parseLogLevel },
   {
+    key: "pluginWorkers",
+    env: "PALIMVO_PLUGIN_WORKERS",
+    flag: "plugin-workers",
+    parse: parseWorkers,
+  },
+  {
     key: "devInsecure",
     env: "PALIMVO_DEV_INSECURE",
     flag: "dev-insecure",
@@ -78,6 +87,7 @@ export function defaultConfig(cwd: string = process.cwd()): Config {
     port: 3000,
     trustProxy: false,
     logLevel: "info",
+    pluginWorkers: DEFAULT_WORKERS,
     devInsecure: false,
   };
 }
@@ -125,6 +135,13 @@ function parsePort(v: string, name: string): number {
   return Number.isInteger(n) && n >= 0 && n <= 65535
     ? n
     : invalid(name, `"${v}" is not a port (0-65535)`);
+}
+
+function parseWorkers(v: string, name: string): number {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 1 && n <= 64
+    ? n
+    : invalid(name, `"${v}" is not a number of workers (1-64)`);
 }
 
 function parseBool(v: string, name: string): boolean {

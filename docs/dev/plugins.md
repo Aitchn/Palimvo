@@ -5,7 +5,7 @@ browser code in a sandboxed iframe and its server code (MCP tools) in a QuickJS 
 approves each exact version before anything runs. Design reasons:
 [ADR 0017](../adr/0017-plugin-manifest-v2.md) (manifest) and
 [ADR 0019](../adr/0019-plugin-web-host.md) (browser host). This page is a first draft; the UI
-layers are described under [Changing the interface](#changing-the-interface); server tools (T34) land in a later change. The installer and the library are
+layers are described under [Changing the interface](#changing-the-interface); server tools under [server.js](#serverjs-mcp-tools). The installer and the library are
 described under [Installing, approving and the library](#installing-approving-and-the-library).
 
 ```
@@ -204,10 +204,37 @@ globalThis.__plugin = {
 };
 ```
 
-The sandbox has a `vault` global (`read`, `list`, `search`, `write`, `propose`, each taking one
-object) and a `console.log`; there is no network, file system, timer or `require`. Tools appear
-to AI clients as `<plugin-id>.<tool>` through `list_tools` / `call_tool`, only in vaults where the
-plugin is enabled. Arguments are validated against `inputSchema` before your code runs.
+`server.js` is a separate file from `main.js` (it runs on the server, `main.js` in the browser) and
+is bundled into one script. Every tool in `contributes.tools` needs an entry in
+`globalThis.__plugin.tools`: an `async` function that takes the arguments object and returns
+anything JSON can hold. Tools appear to AI clients as `<plugin-id>.<tool>` through `list_tools` /
+`call_tool`, only in vaults where the plugin runs. A vault administrator can also list them in
+`tools/list` of `/mcp/<vault>` (`PUT /api/vaults/:vault/plugin-tools` with `{ "listed": true }`).
+Arguments are validated against `inputSchema` before your code runs; a tool without
+`readOnly: true` requires a `reason` from the caller, like every change.
+
+The sandbox is QuickJS (ES2023, no Node APIs). Design: [ADR 0003](../adr/0003-plugin-tool-sandbox.md).
+
+| In the sandbox                             |                                                                                                       |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `vault.read({ path })`                     | The text of a note or text file (up to 1 MiB).                                                        |
+| `vault.list({ dir? })`                     | Paths of the files below a folder (at most 2000).                                                     |
+| `vault.search({ q, limit?, dir? })`        | `[{ path, matches? }]`, best matches first (at most 50).                                              |
+| `vault.write({ path, content })`           | Saves the file; returns `{ path, version }`. The history credits the plugin acting for the AI client. |
+| `vault.propose({ path, content, title? })` | Creates an edit proposal instead of saving; a person reviews it. Returns `{ id, state }`.             |
+| `console.log(...)`                         | Up to 100 lines, returned next to the result as `logs`.                                               |
+
+- Every `vault` function returns a promise and takes one object. Await them; a call you do not wait
+  for may finish after your tool has returned.
+- A call fails when the path is outside the folders your manifest declares, or the caller may not
+  do that there. The error reaches your code as an exception with a message starting
+  `permission_denied:` that you can catch.
+- Limits per call: 5 seconds in all (host calls included), 32 MB of QuickJS heap inside a 64 MB
+  hard ceiling, 256 KB of stack, 200 `vault` calls, 1 MiB of result. A plugin that goes over is
+  stopped and its worker replaced; other plugins' calls are not affected.
+- Each call starts in a fresh context: globals and changes to built-in prototypes do not carry over
+  to the next call. There is no `fetch`, `require`, `process`, timer or `import()`.
+- Use `console.log` while developing; the lines come back in the tool result.
 
 ## Approval and the content hash
 
