@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 import { AppError, errorHandler } from "./errors.ts";
 import type { Logger } from "./log.ts";
+import { fileRoutes } from "./routes/files.ts";
+import { vaultRoutes } from "./routes/vaults.ts";
+import type { VaultService } from "./vault/service.ts";
+import type { VaultTrash } from "./vault/trash.ts";
 
 export interface AppDeps {
   logger: Logger;
@@ -8,6 +12,8 @@ export interface AppDeps {
   /** False once shutdown has begun, so load balancers stop sending traffic. */
   ready: () => boolean;
   startedAt: number;
+  vaults: VaultService;
+  trash: VaultTrash;
 }
 
 /** Builds the HTTP application. Domain routers are mounted here as they are added. */
@@ -41,6 +47,9 @@ export function createApp(deps: AppDeps): Hono {
       ready ? 200 : 503,
     );
   });
+
+  app.route("/", vaultRoutes(deps));
+  app.route("/", fileRoutes(deps.vaults));
 
   return app;
 }

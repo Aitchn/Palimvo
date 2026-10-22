@@ -1,4 +1,6 @@
 import { build } from "esbuild";
+// @ts-expect-error -- plain script shared with `pnpm build`, no type declarations
+import { bundleOptions } from "../scripts/bundle.mjs";
 import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -124,15 +126,7 @@ describe("bundle", () => {
     const cwd = await mkdtemp(path.join(tmpdir(), "palimvo-bundle-"));
     try {
       const bundle = path.join(cwd, "palimvo.mjs");
-      await build({
-        entryPoints: [path.resolve(import.meta.dirname, "../src/index.ts")],
-        bundle: true,
-        platform: "node",
-        target: "node24",
-        format: "esm",
-        outfile: bundle,
-        logLevel: "silent",
-      });
+      await build({ ...bundleOptions(bundle), logLevel: "silent" });
       const { stdout } = await exec(process.execPath, [bundle, "version"], { cwd });
       expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
 
