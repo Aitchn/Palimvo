@@ -1,4 +1,5 @@
 import type { Server } from "node:http";
+import path from "node:path";
 import { serve } from "@hono/node-server";
 import pkg from "../package.json" with { type: "json" };
 import { createApp } from "./app.ts";
@@ -6,6 +7,8 @@ import { describeConfig, type LoadedConfig } from "./config/index.ts";
 import { errorFields } from "./errors.ts";
 import { acquireLock } from "./lock.ts";
 import { createLogger, type Logger } from "./log.ts";
+import { VaultService, type VaultHooks } from "./vault/service.ts";
+import { VaultTrash } from "./vault/trash.ts";
 
 export const VERSION: string = pkg.version;
 
@@ -31,12 +34,15 @@ export interface StartOptions {
   loaded: LoadedConfig;
   logger?: Logger;
   shutdownTimeoutMs?: number;
+  /** Other subsystems follow what the vault file layer does through these. */
+  vaultHooks?: VaultHooks;
 }
 
 export async function startServer({
   loaded,
   logger,
   shutdownTimeoutMs = SHUTDOWN_TIMEOUT_MS,
+  vaultHooks,
 }: StartOptions): Promise<RunningServer> {
   const { config } = loaded;
   const log = logger ?? createLogger({ level: config.logLevel });
@@ -50,11 +56,27 @@ export async function startServer({
 
     let closing = false;
     const hooks: { name: string; hook: ShutdownHook }[] = [];
+    const vaults = new VaultService(path.join(config.dataDir, "vaults"), {
+      logger: log,
+      ...(vaultHooks ? { hooks: vaultHooks } : {}),
+    });
+    await vaults.init();
+    const trash = new VaultTrash(vaults, path.join(config.dataDir, "trash", "vaults"));
+    // Registered first, so it runs last: after the server stopped taking requests, queued writes finish.
+    hooks.push({
+      name: "vaults",
+      hook: async () => {
+        await vaults.idle();
+        vaults.close();
+      },
+    });
     const app = createApp({
       logger: log,
       version: VERSION,
       ready: () => !closing,
       startedAt: Date.now(),
+      vaults,
+      trash,
     });
 
     const server = await listen(app.fetch, config.host, config.port);
