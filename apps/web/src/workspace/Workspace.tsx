@@ -12,6 +12,7 @@ import { useFileOperations } from "../files/useFileOperations.ts";
 import { useVaultTree } from "../files/useVaultTree.ts";
 import { Shell } from "../shell/Shell.tsx";
 import { Tabs } from "../shell/Tabs.tsx";
+import { HistoryPanel } from "../history/HistoryPanel.tsx";
 import { BacklinksPanel } from "../search/BacklinksPanel.tsx";
 import { Icon } from "../ui/index.ts";
 import { fileHref, pathFromLocation, vaultHref } from "./deepLinks.ts";
@@ -269,6 +270,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
             view={sidebarView}
             onViewChange={setSidebarView}
             searchFocus={searchRequest}
+            revision={revision.current}
           />
         }
         sidebarRequest={searchRequest}
@@ -297,6 +299,15 @@ function VaultWorkspace({ vault }: { vault: string }) {
                   revision={revision.current}
                   onOpen={openFile}
                 />
+                {can.viewHistory && (
+                  <HistoryPanel
+                    key={`history:${activeFile.path}`}
+                    vault={vault}
+                    path={activeFile.path}
+                    revision={revision.current}
+                    canRestore={can.restore}
+                  />
+                )}
               </>
             ) : (
               <p className="muted">{t("shell.inspectorEmpty")}</p>

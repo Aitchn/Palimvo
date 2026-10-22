@@ -44,11 +44,25 @@ export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Ho
   app.get("/api/vaults/:vault/history", async (c) => {
     const vault = await known(c, "history.view");
     const limit = Number(c.req.query("limit") ?? 50);
+    // Changes still waiting for their commit timer belong in the list people are looking at.
+    // If git is busy the older list is still right, and the commit retries on its own timer.
+    await history.commit(vault).catch(() => undefined);
     const commits = await history.list(vault, {
       ...(c.req.query("path") ? { path: normalizePath(c.req.query("path")!) } : {}),
       limit: Number.isFinite(limit) ? limit : 50,
     });
     return c.json({ commits });
+  });
+
+  // Registered before `:commit/diff`, so "compare" is never taken for a commit id.
+  app.get("/api/vaults/:vault/history/compare", async (c) => {
+    const vault = await known(c, "history.view");
+    const from = c.req.query("from") ?? "";
+    const to = c.req.query("to") ?? "";
+    const file = c.req.query("path");
+    return c.json({
+      diff: await history.compare(vault, from, to, file ? normalizePath(file) : undefined),
+    });
   });
 
   app.get("/api/vaults/:vault/history/:commit/diff", async (c) => {
