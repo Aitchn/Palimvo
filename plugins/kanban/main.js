@@ -103,11 +103,17 @@ function unquote(raw) {
 export function setProperty(content, field, value) {
   const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content);
   if (!fm) return `---\n${field}: ${value}\n---\n${content}`;
-  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const line = new RegExp(`^${escaped}:.*$`, "m");
-  const body = line.test(fm[1])
-    ? fm[1].replace(line, () => `${field}: ${value}`)
-    : `${fm[1]}\n${field}: ${value}`;
+  // Replace the whole value: the `key:` line and, for a block list, the indented lines under it.
+  const lines = fm[1].split(/\r?\n/);
+  const at = lines.findIndex((l) => l.startsWith(`${field}:`));
+  let kept;
+  if (at < 0) kept = [...lines, `${field}: ${value}`];
+  else {
+    let end = at + 1;
+    while (end < lines.length && /^\s+\S/.test(lines[end])) end++;
+    kept = [...lines.slice(0, at), `${field}: ${value}`, ...lines.slice(end)];
+  }
+  const body = kept.join("\n");
   return `---\n${body}\n---${content.slice(fm[0].length)}`;
 }
 
@@ -292,16 +298,33 @@ function mount(palimvo, container, initial, withBar) {
         if (e.key !== "Enter" || !input.value.trim()) return;
         const text = input.value.trim().replace(/[\\/:*?"<>|]/g, "-");
         input.value = "";
-        const path = `${folderPath() || DEFAULT_FOLDER}/${text}.md`;
-        palimvo.vault
-          .write(path, `---\n${options.field}: ${name}\n---\n# ${text}\n`, {
-            reason: `Kanban: new card ${text}`,
-          })
-          .then(load, fail);
+        createCard(text, name).then(load, fail);
       });
       col.append(input);
     }
     return col;
+  }
+
+  /** Writes a new note under a name nobody uses yet ("Plan trip 2" when "Plan trip" exists). */
+  async function createCard(text, columnName) {
+    const dir = folderPath() || DEFAULT_FOLDER;
+    let title = text;
+    for (let n = 2; n < 1000; n++) {
+      const taken = await palimvo.vault.read(`${dir}/${title}.md`).then(
+        () => true,
+        (err) => {
+          if (err && err.code === "not_found") return false;
+          throw err;
+        },
+      );
+      if (!taken) break;
+      title = `${text} ${n}`;
+    }
+    await palimvo.vault.write(
+      `${dir}/${title}.md`,
+      `---\n${options.field}: ${columnName}\n---\n# ${title}\n`,
+      { reason: `Kanban: new card ${title}` },
+    );
   }
 
   function card(note, extra, allColumns, current) {

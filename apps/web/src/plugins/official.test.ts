@@ -41,7 +41,8 @@ function fakePalimvo(
           .filter((p) => !folder || p.startsWith(`${folder}/`))
           .map((p) => ({ path: p, name: p.split("/").pop(), kind: "file" })),
       read: async (path: string) => {
-        if (!(path in vault)) throw new Error(`not found: ${path}`);
+        if (!(path in vault))
+          throw Object.assign(new Error(`not found: ${path}`), { code: "not_found" });
         return vault[path] as string;
       },
       write: async (path: string, content: string) => {
@@ -96,6 +97,10 @@ describe("kanban", () => {
       "---\nx: 1\nstatus: doing\n---\nbody",
     );
     expect(setProperty("# plain", "status", "todo")).toBe("---\nstatus: todo\n---\n# plain");
+    // A block list is one value: its items go with it.
+    expect(setProperty("---\nstatus:\n  - todo\n  - x\nowner: ann\n---\nb", "status", "done")).toBe(
+      "---\nstatus: done\nowner: ann\n---\nb",
+    );
     // `$&` in a value is text, not a regexp replacement pattern.
     expect(setProperty("---\nstatus: a\n---\n", "status", "$&x")).toBe("---\nstatus: $&x\n---\n");
   });
@@ -142,6 +147,28 @@ describe("kanban", () => {
     await settle();
     expect(vault["tasks/b.md"]).toBe("---\nstatus: done\nowner: ann\n---\n# B");
     expect(el.querySelector('[data-column="done"] [data-path="tasks/b.md"]')).not.toBeNull();
+    el.remove();
+  });
+
+  it("never overwrites a note when a new card has a name that is taken", async () => {
+    const mod = await load("kanban");
+    const { palimvo, registered, vault } = fakePalimvo("kanban", notes());
+    mod.default(palimvo);
+    const el = document.createElement("div");
+    document.body.append(el);
+    await registered.get("code:kanban")!({ el, source: "folder: tasks" });
+    await settle();
+    const add = async (title: string) => {
+      const input = el.querySelector(".kb-new") as HTMLInputElement;
+      input.value = title;
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+      await settle();
+    };
+    await add("a");
+    await add("a");
+    expect(vault["tasks/a.md"]).toContain("# A");
+    expect(vault["tasks/a 2.md"]).toContain("# a 2");
+    expect(vault["tasks/a 3.md"]).toContain("# a 3");
     el.remove();
   });
 
@@ -261,6 +288,7 @@ describe("json-tree", () => {
     );
     const big = await open(JSON.stringify(Array.from({ length: 600 }, (_, i) => i)));
     expect(big.textContent).toContain("… 100 more");
+    expect(big.querySelectorAll(".leaf").length).toBe(501);
   });
 });
 

@@ -54,7 +54,15 @@ function render(t, key, value, depth, query) {
     leaf.append(label(), scalar(value));
     return leaf;
   }
-  const entries = Object.entries(value).filter(([k, v]) => matches(k, v, query));
+  // Without a search only the first MAX_CHILDREN entries are ever looked at, so a huge array is
+  // not copied just to be cut down.
+  const all = query ? Object.entries(value).filter(([k, v]) => matches(k, v, query)) : null;
+  const total = all ? all.length : Array.isArray(value) ? value.length : Object.keys(value).length;
+  const entries =
+    all ??
+    (Array.isArray(value)
+      ? value.slice(0, MAX_CHILDREN).map((v, i) => [String(i), v])
+      : Object.entries(value).slice(0, MAX_CHILDREN));
   const details = h("details");
   details.open = depth < OPEN_DEPTH || Boolean(query);
   const summary = h("summary");
@@ -63,8 +71,8 @@ function render(t, key, value, depth, query) {
   details.append(summary);
   for (const [k, v] of entries.slice(0, MAX_CHILDREN))
     details.append(render(t, Array.isArray(value) ? Number(k) : k, v, depth + 1, query));
-  if (entries.length > MAX_CHILDREN)
-    details.append(h("div", "leaf meta", t("more", { count: entries.length - MAX_CHILDREN })));
+  if (total > MAX_CHILDREN)
+    details.append(h("div", "leaf meta", t("more", { count: total - MAX_CHILDREN })));
   return details;
 }
 
