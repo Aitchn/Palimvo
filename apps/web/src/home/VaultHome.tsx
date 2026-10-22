@@ -6,6 +6,9 @@ import { getHome } from "../api/home.ts";
 import { useAsync } from "../app/useAsync.ts";
 import { tabTitle } from "../files/model.ts";
 import type { VaultCan } from "../workspace/useVaultPermissions.ts";
+import { resolveLocalized } from "@palimvo/plugin-sdk";
+import { PluginFrame } from "../plugins/PluginFrame.tsx";
+import { usePluginRuntime } from "../plugins/PluginsProvider.tsx";
 import { Button, Icon, Skeleton } from "../ui/index.ts";
 import { ActivityWidget } from "./ActivityWidget.tsx";
 import { HomeSettingsDialog } from "./HomeSettingsDialog.tsx";
@@ -228,12 +231,30 @@ function WidgetCard({
         </Card>
       );
     case "plugin":
-      return (
-        <Card id={widget.id} title={widget.plugin}>
-          <p className="muted">
-            {t("home.plugin.unavailable", { plugin: widget.plugin, view: widget.view })}
-          </p>
-        </Card>
-      );
+      return <PluginWidgetCard id={widget.id} plugin={widget.plugin} widget={widget.view} />;
   }
+}
+
+/** A plugin's home widget: drawn in its sandboxed frame while the plugin runs, else a short note. */
+function PluginWidgetCard({ id, plugin, widget }: { id: string; plugin: string; widget: string }) {
+  const { t, i18n } = useTranslation();
+  const runtime = usePluginRuntime();
+  const entry = runtime?.registry.homeWidget(plugin, widget);
+  return (
+    <Card
+      id={id}
+      title={entry ? resolveLocalized(entry.name, i18n.language) : plugin}
+      wide={entry?.size === "large"}
+    >
+      {entry ? (
+        <PluginFrame pluginId={plugin} mode="homeWidget" target={widget} autoHeight />
+      ) : (
+        <p className="muted" role="status">
+          {runtime?.loaded === false
+            ? t("plugins.loading")
+            : t("home.plugin.unavailable", { plugin, view: widget })}
+        </p>
+      )}
+    </Card>
+  );
 }

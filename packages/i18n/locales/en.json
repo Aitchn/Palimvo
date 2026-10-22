@@ -242,7 +242,7 @@
       "title": "Database: {name}"
     },
     "plugin": {
-      "unavailable": "The view {view} of the plugin {plugin} is shown once plugins are available."
+      "unavailable": "The widget {view} of the plugin {plugin} is not available in this vault."
     },
     "settings": {
       "blocks": "Blocks on this page",
@@ -617,6 +617,23 @@
     "errorClient": "The app that sent you here is not registered, or its return address does not match.",
     "errorRequest": "The connection request is incomplete or uses something Palimvo does not support.",
     "errorNoVaults": "You are not allowed to connect AI to any vault."
+  },
+  "plugins": {
+    "unavailable": "The plugin {plugin} is not running in this vault.",
+    "loading": "Loading plugin…",
+    "error": "The plugin {name} reported a problem: {detail}",
+    "stopped": {
+      "navigated": "The plugin {name} tried to leave its sandbox page and was stopped. Check its code and disable it in the vault settings if needed.",
+      "revoked": "The plugin {name} is no longer available. Its approval or your access may have changed."
+    },
+    "viewer": {
+      "label": "Viewer",
+      "text": "Text"
+    },
+    "views": {
+      "title": "Plugin views",
+      "missing": "This plugin view is not available."
+    }
   },
   "errors": {
     "unknown": "Something went wrong.",
