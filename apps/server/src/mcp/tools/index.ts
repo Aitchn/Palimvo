@@ -15,11 +15,12 @@ import {
   setNotePropertyTool,
   updateNote,
 } from "./notes.ts";
+import { createEditProposal, getEditProposal, listEditProposals } from "./proposals.ts";
 import { listVaults } from "./vaults.ts";
 
 /**
  * Every tool the server ships that appears in `tools/list` (about 20 with the entry tools).
- * Advanced tools (T29) and `create_edit_proposal` (needs the proposal store, T25) are added later.
+ * The other advanced tools (T29) are added later.
  */
 export function coreTools(): AnyTool[] {
   return [
@@ -40,6 +41,9 @@ export function coreTools(): AnyTool[] {
     uploadFile,
     downloadFile,
     queryBaseTool,
+    createEditProposal,
+    listEditProposals,
+    getEditProposal,
     ...entryTools(),
   ];
 }

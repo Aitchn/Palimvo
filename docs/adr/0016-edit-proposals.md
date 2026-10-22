@@ -1,4 +1,4 @@
-# 0015. Edit proposals
+# 0016. Edit proposals
 
 - Status: accepted
 - Date: 2026-10-22
@@ -51,6 +51,9 @@ needed any more.
   rejecting need `proposal.review` on the folder of every file touched (a folder may take it
   away), and are refused for AI tokens whatever their owner may do. `proposal.review` is part of
   the vault administrator set, not of the default member set (ADR 0011).
+- **MCP.** `create_edit_proposal` (native) and `list_edit_proposals` / `get_edit_proposal`
+  (advanced) share the service with the REST routes through `McpDeps.proposals`. Hunks are given as
+  `before` / `after` text only, which is how a model describes an edit. There is no accept tool.
 - **Live documents.** `ProposalService` takes the writer as `writeBatch`, the same call the REST
   batch route uses. When the collaboration server (T16) routes batches through its live documents,
   proposals follow without changes.

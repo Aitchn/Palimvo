@@ -1,7 +1,7 @@
 # Edit proposals
 
 An AI that may only propose, or a person who may not write, describes changes to notes; a person
-with the review right accepts or rejects them one hunk at a time. Design: ADR 0015.
+with the review right accepts or rejects them one hunk at a time. Design: ADR 0016.
 
 Code: `apps/server/src/proposals/proposals.ts` (service), `apps/server/src/routes/proposals.ts`
 (REST), `apps/web/src/proposals/` (sidebar list and review dialog). Tests:
@@ -51,6 +51,15 @@ Deciding:
 waiting. Errors: `proposal_changed` (409, reload and retry), `proposal_stale` (409, a note changed
 after it was proposed; only reject), `version_conflict` (creating against an old version),
 `invalid_request` (the text is not where the hunk says, overlap, a canvas that would not parse).
+
+## MCP
+
+`create_edit_proposal` is a native tool (needs `proposal.create`, so a "propose" token has it and a
+"read" token does not). It takes `title`, optional `rationale` (default: the `reason`), optional
+`sources`, and `files: [{ path, base_version, hunks: [{ before, after, why }] }]`, where
+`base_version` is the `version` from `read_note`. `list_edit_proposals` and `get_edit_proposal` are
+advanced tools (through `call_tool`). A token limited to folders sees only proposals whose files it
+may all read. There is no MCP tool to accept or reject: deciding is a person's call.
 
 ## Stored form
 
