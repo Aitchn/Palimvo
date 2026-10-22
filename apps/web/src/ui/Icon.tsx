@@ -21,6 +21,13 @@ const paths = {
   inspector: "M3 4h18v16H3V4Zm12 0v16M17.5 8h1.5M17.5 11h1.5M17.5 14h1.5",
   info: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM12 11v5M12 8h.01",
   warning: "M12 3 2 20h20L12 3Zm0 6v5M12 17h.01",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  folderAdd: "M4 5h6l2 2h8v13H4V5Zm8 6v6M9 14h6",
+  upload: "M12 16V4m0 0L8 8m4-4 4 4M4 16v4h16v-4",
+  download: "M12 4v12m0 0-4-4m4 4 4-4M4 20h16",
+  edit: "M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4",
+  trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",
+  command: "M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6Z",
   offline:
     "M3 3l18 18M8.5 8.8A9 9 0 0 0 3 12M21 12a9 9 0 0 0-4.6-3.6M12 18h.01M8 15a5 5 0 0 1 3-1.5",
 } as const;

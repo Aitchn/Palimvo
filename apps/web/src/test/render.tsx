@@ -62,3 +62,37 @@ export function mockFetch(handlers: Record<string, () => Response | Promise<Resp
   globalThis.fetch = fake as typeof fetch;
   return calls;
 }
+
+export interface RecordedCall {
+  method: string;
+  url: string;
+  body?: unknown;
+  headers: Record<string, string>;
+}
+
+/**
+ * Like {@link mockFetch}, but routes by `"METHOD url"` (the method defaults to GET) and records the
+ * parsed JSON body of every call. Handlers may be replaced during a test through the returned map.
+ */
+export function mockRoutes(
+  handlers: Record<string, (call: RecordedCall) => Response | Promise<Response>>,
+) {
+  const calls: RecordedCall[] = [];
+  const fake = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input.toString();
+    const method = init?.method ?? "GET";
+    const call: RecordedCall = {
+      method,
+      url,
+      headers: (init?.headers ?? {}) as Record<string, string>,
+      body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+    };
+    calls.push(call);
+    const handler = handlers[`${method} ${url}`];
+    return handler
+      ? handler(call)
+      : Response.json({ code: "not_found", message: "Not found." }, { status: 404 });
+  };
+  globalThis.fetch = fake as typeof fetch;
+  return { calls, handlers };
+}

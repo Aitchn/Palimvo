@@ -4,6 +4,8 @@ import { Icon } from "../ui/index.ts";
 export interface TabItem {
   id: string;
   title: string;
+  /** Longer text shown as a tooltip (the full path). */
+  detail?: string;
 }
 
 interface Props {
@@ -25,6 +27,7 @@ export function Tabs({ tabs, activeId, onSelect, onClose }: Props) {
             role="tab"
             aria-selected={tab.id === activeId}
             className="tab-title"
+            title={tab.detail}
             onClick={() => onSelect(tab.id)}
           >
             <Icon name="note" />

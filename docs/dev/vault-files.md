@@ -53,10 +53,28 @@ product's `.aivault` cannot be reached through the file API.
 | `DELETE /api/vaults/:vault/files/<path>`                                   | delete a file or folder                                                        |
 | `POST /api/vaults/:vault/folders` `{path}`                                 | create a folder                                                                |
 | `POST /api/vaults/:vault/move` `{from, to}`                                | move or rename                                                                 |
+| `GET /api/vaults/:vault/archive?path=<folder>`                             | a folder (default: the whole vault) as a ZIP download                          |
 | `POST /api/vaults/:vault/batch` `{writes: [{path, baseVersion, content}]}` | write several files together                                                   |
 
 Errors are `{code, message, details?}`; see `packages/core/src/errors.ts`. Accounts and
 permissions arrive with T10; until then the server listens on loopback only by default.
+
+## ZIP download
+
+`apps/server/src/zip.ts` streams the archive: each file is read and deflated in chunks, so memory
+stays flat for any folder size. Empty folders are included; hidden names never are. The classic
+ZIP format is used (no ZIP64), so an archive holds at most 65535 entries and 4 GiB; beyond that the
+download fails with `payload_too_large`. Names are UTF-8.
+
+## Serving the web app
+
+The server also serves the built web app (`apps/web/dist`), so one process is the whole product.
+Anything the API does not answer is a file of the app, or `index.html` for a page navigation, so
+deep links like `/v/notes/Plan.md` open the app. Hashed files under `/assets/` are cached for good;
+everything else is revalidated with an `ETag`. `/api`, `/mcp`, `/oauth` and `/.well-known` never
+fall back to the app. Set `PALIMVO_WEB_DIR` (`--web-dir`) to use another build; otherwise the
+server looks for `web/` next to the bundle, then `apps/web/dist`, and serves the API only if it
+finds none.
 
 ## Vaults from the previous product
 

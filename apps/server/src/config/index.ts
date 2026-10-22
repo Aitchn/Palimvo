@@ -11,6 +11,8 @@ export interface Config {
   /** Externally visible origin, e.g. `https://notes.example.com`. Needed for OAuth. */
   publicUrl?: string;
   trustProxy: boolean;
+  /** Folder holding the built web app. Unset: look for one next to the server (see `findWebDir`). */
+  webDir?: string;
   logLevel: LogLevel;
 }
 
@@ -36,6 +38,7 @@ const SETTINGS: Setting[] = [
   { key: "host", env: "PALIMVO_HOST", flag: "host", parse: nonEmpty },
   { key: "port", env: "PALIMVO_PORT", flag: "port", parse: parsePort },
   { key: "publicUrl", env: "PALIMVO_PUBLIC_URL", flag: "public-url", parse: parsePublicUrl },
+  { key: "webDir", env: "PALIMVO_WEB_DIR", flag: "web-dir", parse: (v) => path.resolve(v) },
   { key: "trustProxy", env: "PALIMVO_TRUST_PROXY", flag: "trust-proxy", parse: parseBool },
   { key: "logLevel", env: "PALIMVO_LOG_LEVEL", flag: "log-level", parse: parseLogLevel },
 ];

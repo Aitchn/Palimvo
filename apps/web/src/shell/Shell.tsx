@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
+import { registerCommands } from "../commands/registry.ts";
 import { Button, Icon, Sheet } from "../ui/index.ts";
 import { useLayout, useOnline } from "./layout.ts";
 import { Rail } from "./Rail.tsx";
@@ -27,6 +28,34 @@ export function Shell({ sidebar, inspector, tabs, children }: Props) {
   const [settings, setSettings] = useState(false);
   const location = useLocation();
   const { closeDrawer, isMobile } = layout;
+
+  // The toggles change every render; commands reach them through a ref so they register once.
+  const latest = useRef(layout);
+  latest.current = layout;
+  useEffect(
+    () =>
+      registerCommands([
+        {
+          id: "view.toggleSidebar",
+          title: t("nav.toggleSidebar"),
+          icon: "sidebar",
+          run: () => latest.current.toggleSidebar(),
+        },
+        {
+          id: "view.toggleInspector",
+          title: t("nav.toggleInspector"),
+          icon: "inspector",
+          run: () => latest.current.toggleInspector(),
+        },
+        {
+          id: "view.settings",
+          title: t("nav.settings"),
+          icon: "settings",
+          run: () => setSettings(true),
+        },
+      ]),
+    [t],
+  );
 
   useEffect(() => {
     if (isMobile) closeDrawer();

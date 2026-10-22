@@ -3,9 +3,11 @@ import type { BackupService } from "./history/backup.ts";
 import type { VaultHistory } from "./history/history.ts";
 import { AppError, errorHandler } from "./errors.ts";
 import type { Logger } from "./log.ts";
+import { archiveRoutes } from "./routes/archive.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { historyRoutes } from "./routes/history.ts";
 import { vaultRoutes } from "./routes/vaults.ts";
+import { webRoutes } from "./web.ts";
 import type { VaultService } from "./vault/service.ts";
 import type { VaultTrash } from "./vault/trash.ts";
 
@@ -19,6 +21,8 @@ export interface AppDeps {
   trash: VaultTrash;
   history: VaultHistory;
   backup: BackupService;
+  /** Folder with the built web app; leave out to serve the API only. */
+  webDir?: string;
 }
 
 /** Builds the HTTP application. Domain routers are mounted here as they are added. */
@@ -56,6 +60,9 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", vaultRoutes(deps));
   app.route("/", fileRoutes(deps.vaults, deps.history));
   app.route("/", historyRoutes(deps));
+  app.route("/", archiveRoutes(deps.vaults));
+  // Last: anything the API did not claim is a file of the web app or one of its routes.
+  if (deps.webDir) app.route("/", webRoutes(deps.webDir));
 
   return app;
 }
