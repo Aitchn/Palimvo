@@ -9,10 +9,32 @@ export interface VaultCan {
   upload: boolean;
   /** Open the permissions of a folder. */
   managePermissions: boolean;
+  /** Browse earlier versions and see who made them. */
+  viewHistory: boolean;
+  /** Put an earlier version of a file back. */
+  restore: boolean;
+  /** Save a checkpoint of the whole vault. */
+  checkpoint: boolean;
 }
 
-const NOTHING: VaultCan = { write: false, delete: false, upload: false, managePermissions: false };
-const EVERYTHING: VaultCan = { write: true, delete: true, upload: true, managePermissions: true };
+const NOTHING: VaultCan = {
+  write: false,
+  delete: false,
+  upload: false,
+  managePermissions: false,
+  viewHistory: false,
+  restore: false,
+  checkpoint: false,
+};
+const EVERYTHING: VaultCan = {
+  write: true,
+  delete: true,
+  upload: true,
+  managePermissions: true,
+  viewHistory: true,
+  restore: true,
+  checkpoint: true,
+};
 
 /**
  * What the signed-in person may do in a vault, for deciding which buttons to show. The server
@@ -47,5 +69,9 @@ export function useVaultPermissions(vault: string, folder = ""): VaultCan {
     // Importing writes the files one by one, so it needs both permissions.
     upload: names.has("file.upload") && names.has("note.write"),
     managePermissions: names.has("permissions.manage"),
+    viewHistory: names.has("history.view"),
+    // Restoring rewrites the file, so it needs the right to write as well.
+    restore: names.has("history.restore") && names.has("note.write"),
+    checkpoint: names.has("history.view") && names.has("note.write"),
   };
 }

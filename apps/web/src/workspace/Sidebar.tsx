@@ -6,6 +6,7 @@ import { describeError } from "../api/errors.ts";
 import { FolderPermissionsDialog } from "../roles/FolderPermissionsDialog.tsx";
 import { FileTree, type RowMenuRequest } from "../files/FileTree.tsx";
 import type { useFileOperations } from "../files/useFileOperations.ts";
+import { ChangeLog } from "../history/ChangeLog.tsx";
 import { SearchPanel } from "../search/SearchPanel.tsx";
 import { Button, ContextMenu, Skeleton, type MenuItem } from "../ui/index.ts";
 import type { TreeState } from "../files/useVaultTree.ts";
@@ -14,7 +15,7 @@ import type { VaultCan } from "./useVaultPermissions.ts";
 
 type Operations = ReturnType<typeof useFileOperations>;
 
-export type SidebarView = "files" | "search";
+export type SidebarView = "files" | "search" | "history";
 
 interface Props {
   vault: string;
@@ -32,6 +33,8 @@ interface Props {
   onViewChange: (view: SidebarView) => void;
   /** Changes whenever the search box should take focus. */
   searchFocus: number;
+  /** Changes when the vault's files changed, so the change log is fetched again. */
+  revision: number;
 }
 
 /** Starts the browser's download of a folder (or the whole vault) as a ZIP. */
@@ -59,6 +62,7 @@ export function Sidebar({
   view,
   onViewChange,
   searchFocus,
+  revision,
 }: Props) {
   const { t } = useTranslation();
   const [menu, setMenu] = useState<RowMenuRequest | null>(null);
@@ -187,7 +191,10 @@ export function Sidebar({
         <VaultSwitcher vault={vault} />
       </div>
       <div className="sidebar-views" role="group" aria-label={t("search.viewLabel")}>
-        {(["files", "search"] as const).map((id) => (
+        {(can.viewHistory
+          ? (["files", "search", "history"] as const)
+          : (["files", "search"] as const)
+        ).map((id) => (
           <button
             key={id}
             type="button"
@@ -195,11 +202,20 @@ export function Sidebar({
             aria-pressed={view === id}
             onClick={() => onViewChange(id)}
           >
-            {t(id === "files" ? "search.files" : "search.title")}
+            {t(
+              id === "files" ? "search.files" : id === "search" ? "search.title" : "history.title",
+            )}
           </button>
         ))}
       </div>
-      {view === "search" ? (
+      {view === "history" && can.viewHistory ? (
+        <ChangeLog
+          vault={vault}
+          revision={revision}
+          canCheckpoint={can.checkpoint}
+          onOpenFile={onOpen}
+        />
+      ) : view === "search" ? (
         <SearchPanel
           vault={vault}
           query={query}
