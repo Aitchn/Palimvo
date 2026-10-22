@@ -321,8 +321,14 @@
         locale = message.data.locale;
         strings = message.data.strings;
       }
-      if (message.name === "theme:changed")
+      if (message.name === "theme:changed") {
+        // Same variables as the app, freshly read, and the matching color scheme.
         document.documentElement.dataset.theme = message.data.theme;
+        document.documentElement.style.cssText =
+          message.data.tokens + "color-scheme:" + message.data.theme + ";";
+        emit(message.name, { theme: message.data.theme });
+        return;
+      }
       emit(message.name, message.data);
     } else if (message.type === "update" && drawn) {
       // New data for the same contribution (the YAML or the vault changed): draw it again, in order.

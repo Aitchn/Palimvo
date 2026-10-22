@@ -5,6 +5,7 @@ import type { HostActions, VaultBackend } from "./bridge.ts";
 import {
   mountPlugin,
   localeEvent,
+  frameTokens,
   type LoadedPlugin,
   type MountedFrame,
   type MountOptions,
@@ -33,6 +34,8 @@ export interface MountRequest {
   mode: FrameMode;
   target: string;
   context?: Record<string, unknown>;
+  /** Code block frames: the note that holds the block; `updateSource` is checked against it. */
+  notePath?: string;
   /** Code block frames: replaces the block's source in the note. */
   updateSource?: (source: string) => Promise<void>;
   onReady?: MountOptions["onReady"];
@@ -185,6 +188,7 @@ export class PluginHost {
         request.pluginId,
       ),
       actions,
+      notePath: request.notePath,
       mode: request.mode,
       target: request.target,
       context: request.context,
@@ -299,11 +303,8 @@ export class PluginHost {
   emit(name: "theme:changed", data: { theme: "light" | "dark" }): void;
   emit(name: "locale:changed", data: { locale: string }): void;
   emit(name: string, data: unknown): void {
-    const targets = [
-      ...this.live,
-      ...[...this.background].map(([pluginId, frame]) => ({ pluginId, frame })),
-    ];
-    for (const { pluginId, frame } of targets) {
+    // Background frames are mounted through `mount`, so `live` already holds them.
+    for (const { pluginId, frame } of this.live) {
       const entry = this.hosted.get(pluginId);
       if (!entry || !entry.session.active) continue;
       let payload: unknown = data;
@@ -311,6 +312,8 @@ export class PluginHost {
         payload = scopeFileEvent(entry.session.binding, data as FileChangedEvent);
       } else if (name === "file:opened") {
         payload = canRead(entry.session.binding, (data as { path: string }).path) ? data : null;
+      } else if (name === "theme:changed") {
+        payload = { ...(data as object), tokens: frameTokens() };
       } else if (name === "locale:changed") {
         payload = localeEvent(entry.plugin, (data as { locale: string }).locale);
       }

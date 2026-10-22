@@ -13,6 +13,8 @@ interface Props {
   context?: Record<string, unknown>;
   /** The frame grows with its content (code blocks, widgets) instead of filling its parent. */
   autoHeight?: boolean;
+  /** Code blocks: the note holding the block (writes are checked against it). */
+  notePath?: string;
   /** Code blocks: replaces the block's source in the note. */
   updateSource?: (source: string) => Promise<void>;
   className?: string;
@@ -32,6 +34,7 @@ export function PluginFrame({
   context,
   autoHeight = false,
   updateSource,
+  notePath,
   className,
 }: Props) {
   const { t, i18n } = useTranslation();
@@ -61,6 +64,7 @@ export function PluginFrame({
         mode,
         target,
         context: latestContext.current,
+        ...(notePath ? { notePath } : {}),
         ...(latestUpdate.current
           ? {
               updateSource: (source: string) => latestUpdate.current?.(source) ?? Promise.resolve(),
@@ -81,7 +85,7 @@ export function PluginFrame({
       frame.current = null;
     };
     // `context` changes go through `update` below; everything else starts over.
-  }, [runtime?.host, session, pluginId, mode, target, autoHeight]);
+  }, [runtime?.host, session, pluginId, mode, target, autoHeight, notePath]);
 
   const first = useRef(true);
   useEffect(() => {

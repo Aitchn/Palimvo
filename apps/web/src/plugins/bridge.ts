@@ -114,6 +114,8 @@ export class PluginBridge {
     private backend: VaultBackend,
     private actions: HostActions,
     private timeoutMs = RPC_TIMEOUT_MS,
+    /** Code block frames: the note holding the block, the only file `ui.updateSource` may change. */
+    private notePath?: string,
   ) {
     this.unsubscribe = session.onRevoke((reason) => this.dispose(reason));
   }
@@ -251,8 +253,10 @@ export class PluginBridge {
         return null;
       }
       case "ui.updateSource": {
-        if (!this.actions.updateSource)
+        if (!this.actions.updateSource || !this.notePath)
           throw new RpcError("unavailable", "This view has no source to update");
+        // Same rule as vault.write: declared folder and the person's right to write.
+        if (!canWrite(binding, this.notePath)) throw denied("change", this.notePath);
         await this.actions.updateSource(p.source as string);
         return null;
       }

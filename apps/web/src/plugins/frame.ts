@@ -27,6 +27,8 @@ export interface MountOptions {
   mode: FrameMode;
   /** The view id, viewer id, code block language, component type, base view type, widget id. */
   target: string;
+  /** Code block frames: the note that holds the block. */
+  notePath?: string;
   /** What the contribution draws (note path, source, rows, …). Plain JSON. */
   context?: Record<string, unknown>;
   locale: string;
@@ -94,7 +96,7 @@ const TOKEN_NAMES = [
   "--radius-lg",
 ];
 
-function frameTokens(): string {
+export function frameTokens(): string {
   if (typeof getComputedStyle !== "function") return "";
   const style = getComputedStyle(document.documentElement);
   return TOKEN_NAMES.map((name) => [name, style.getPropertyValue(name).trim()] as const)
@@ -219,7 +221,13 @@ export function mountPlugin(container: HTMLElement, options: MountOptions): Moun
   iframe.setAttribute("referrerpolicy", "no-referrer");
   iframe.srcdoc = frameDocument(plugin, options.theme);
 
-  const bridge = new PluginBridge(session, options.backend, options.actions);
+  const bridge = new PluginBridge(
+    session,
+    options.backend,
+    options.actions,
+    undefined,
+    options.notePath,
+  );
   // Everything after the handshake goes over a private channel handed to the frame once. A page
   // the frame navigates to has no port, and its "hello" is ignored.
   const channel = new MessageChannel();

@@ -367,6 +367,30 @@ export default (palimvo) => {
     await page.screenshot({ path: shotPath("plugin-home-widget") });
   });
 
+  test("a running frame follows a light/dark switch, colors included", async ({ page }) => {
+    const p = plugin(
+      "paint",
+      `export default (palimvo) => {
+        palimvo.ui.registerHomeWidget("w", ({ el }) => {
+          el.id = "out";
+          const show = () => { el.textContent = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() + "|" + getComputedStyle(document.documentElement).colorScheme; };
+          show();
+          palimvo.events.on("theme:changed", () => setTimeout(show, 50));
+        });
+      };`,
+      { contributes: { homeWidgets: [{ id: "w", name: "Paint" }] } },
+    );
+    await page.emulateMedia({ colorScheme: "light" });
+    await serve(page, [p], [["paint", "w"]]);
+    await page.goto("/v/sample");
+    const out = frameOf(page, "paint").locator("#out");
+    await expect(out).toContainText("light");
+    const before = await out.textContent();
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(out).toContainText("dark");
+    expect(await out.textContent()).not.toBe(before);
+  });
+
   test("a plugin page opens from the sidebar and fills the main area", async ({ page }) => {
     await serve(page, [hello()], []);
     await page.goto("/v/sample");

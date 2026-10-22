@@ -10,6 +10,8 @@ function setup(
   permissions: { read?: string[]; write?: string[] },
   actor: PluginActor = everything,
   timeoutMs?: number,
+  notePath?: string,
+  withUpdate = false,
 ) {
   const plugin = makePlugin({
     id: "demo",
@@ -22,8 +24,9 @@ function setup(
     openFile: vi.fn(),
     showNotice: vi.fn(),
     invokeExtension: vi.fn(async () => ["answer"]),
+    ...(withUpdate ? { updateSource: vi.fn(async () => {}) } : {}),
   };
-  const bridge = new PluginBridge(session, backend, actions, timeoutMs);
+  const bridge = new PluginBridge(session, backend, actions, timeoutMs, notePath);
   let n = 0;
   const call = (method: string, params: Record<string, unknown> = {}) =>
     bridge.request({
@@ -217,6 +220,28 @@ describe("ui calls", () => {
   it("has no source to update unless the frame is a code block", async () => {
     const { call } = setup({});
     expect(await code(call("ui.updateSource", { source: "a" }))).toBe("unavailable");
+  });
+
+  it("lets a code block change its own note only with write access to it", async () => {
+    const allowed = setup({ write: ["docs"] }, everything, undefined, "docs/a.md", true);
+    await allowed.call("ui.updateSource", { source: "new" });
+    expect(allowed.actions.updateSource).toHaveBeenCalledWith("new");
+
+    const outside = setup({ write: ["docs"] }, everything, undefined, "other/a.md", true);
+    expect(await code(outside.call("ui.updateSource", { source: "x" }))).toBe("permission_denied");
+    expect(outside.actions.updateSource).not.toHaveBeenCalled();
+
+    const readOnly = setup({ read: ["**"] }, everything, undefined, "docs/a.md", true);
+    expect(await code(readOnly.call("ui.updateSource", { source: "x" }))).toBe("permission_denied");
+
+    const cannot = setup(
+      { write: ["**"] },
+      { ...everything, write: false },
+      undefined,
+      "a.md",
+      true,
+    );
+    expect(await code(cannot.call("ui.updateSource", { source: "x" }))).toBe("permission_denied");
   });
 
   it("answers extension calls only for the points the plugin declared", async () => {
