@@ -152,6 +152,41 @@ describe("listing and searching", () => {
   });
 });
 
+describe("graph", () => {
+  it("shows only files in the declared folders and links between two of them", async () => {
+    const { call, backend } = setup({ read: ["decisions", "Welcome.md"] });
+    const graph = (await call("vault.graph")) as {
+      nodes: Array<{ path: string }>;
+      edges: Array<{ from: string; to: string }>;
+    };
+    expect(graph.nodes.map((n) => n.path)).toEqual(["decisions/0001-a.md", "Welcome.md"]);
+    // Welcome -> diary leaves the plugin's folders, so that link is not shown either.
+    expect(graph.edges).toEqual([{ from: "Welcome.md", to: "decisions/0001-a.md", embed: false }]);
+    expect(backend.calls).toEqual(["graph "]);
+  });
+
+  it("passes the center, depth and tags on and checks the center", async () => {
+    const { call, backend } = setup({ read: ["decisions"] });
+    await call("vault.graph", { around: "decisions/0001-a.md", depth: 2, tags: true });
+    expect(backend.calls).toEqual(["graph decisions/0001-a.md"]);
+    expect(await code(call("vault.graph", { around: "private/diary.md" }))).toBe(
+      "permission_denied",
+    );
+    expect(await code(call("vault.graph", { around: "../x.md" }))).toBe("invalid_argument");
+  });
+
+  it("refuses a plugin that may not read, and bad depths", async () => {
+    expect(await code(setup({}).call("vault.graph"))).toBe("permission_denied");
+    expect(
+      await code(setup({ read: ["**"] }, { ...everything, read: false }).call("vault.graph")),
+    ).toBe("permission_denied");
+    const { call } = setup({ read: ["**"] });
+    expect(await code(call("vault.graph", { depth: 0 }))).toBe("invalid_argument");
+    expect(await code(call("vault.graph", { depth: 9 }))).toBe("invalid_argument");
+    expect(await code(call("vault.graph", { tags: "yes" }))).toBe("invalid_argument");
+  });
+});
+
 describe("writing", () => {
   it("writes inside the declared folders and says which plugin did", async () => {
     const { call, backend } = setup({ write: ["decisions"] });

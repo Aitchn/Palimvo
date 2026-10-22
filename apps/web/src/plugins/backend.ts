@@ -3,7 +3,7 @@ import type { VaultSearchHit } from "@palimvo/plugin-sdk";
 import { ApiError } from "../api/errors.ts";
 import { encodePath, request } from "../api/client.ts";
 import { fileTree, readFile } from "../api/files.ts";
-import { searchVault } from "../api/search.ts";
+import { graphOf, searchVault } from "../api/search.ts";
 import { RpcError, type RpcErrorCode } from "./protocol.ts";
 import type { VaultBackend } from "./bridge.ts";
 
@@ -100,6 +100,15 @@ export function apiBackend(vault: string, pluginId: string): VaultBackend {
     queryBase() {
       // The database engine and its endpoint arrive with T21.
       return Promise.reject(new RpcError("unavailable", "Database queries are not available yet"));
+    },
+    async graph(options, signal) {
+      const { nodes, edges } = await translated(() => graphOf(vault, { ...options, signal }));
+      return {
+        nodes: nodes.flatMap(({ kind, ...node }) =>
+          kind === "markdown" || kind === "canvas" || kind === "base" ? [{ ...node, kind }] : [],
+        ),
+        edges,
+      };
     },
     async write(path, content, reason, signal) {
       const result = await translated(() =>

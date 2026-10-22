@@ -37,6 +37,9 @@ describe("parseRpc", () => {
     ["a fractional limit", rpc("vault.search", { query: "x", limit: 1.5 })],
     ["a notice without a message", rpc("ui.showNotice", {})],
     ["a non-boolean recursive", rpc("vault.list", { recursive: "yes" })],
+    ["a graph depth of 0", rpc("vault.graph", { depth: 0 })],
+    ["a graph depth above the limit", rpc("vault.graph", { depth: 7 })],
+    ["graph tags that are not a boolean", rpc("vault.graph", { tags: 1 })],
     [
       "text over the size limit",
       rpc("vault.write", { path: "a", content: "x".repeat(MAX_WRITE_CHARS + 1) }),

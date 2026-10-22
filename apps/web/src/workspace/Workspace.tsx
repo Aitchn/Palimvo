@@ -34,7 +34,12 @@ import {
   type PluginViewRef,
 } from "../plugins/PluginViews.tsx";
 import { PluginThemeStyle } from "../plugins/pluginTheme.tsx";
-import { PluginCommands, SlotStatusBar, SlotToolbar } from "../plugins/SlotViews.tsx";
+import {
+  PluginCommands,
+  PluginInspectorSections,
+  SlotStatusBar,
+  SlotToolbar,
+} from "../plugins/SlotViews.tsx";
 
 /** `/v/:vault/*`: a vault's workspace. A new instance per vault, so tabs and open folders never mix. */
 export function VaultPage() {
@@ -374,6 +379,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
                   revision={revision.current}
                   onOpen={openFile}
                 />
+                <PluginInspectorSections path={activeFile.path} />
                 {can.viewHistory && (
                   <HistoryPanel
                     key={`history:${activeFile.path}`}

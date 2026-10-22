@@ -84,6 +84,20 @@ export function fakeBackend(): VaultBackend & { calls: string[] } {
         ],
       };
     },
+    async graph(options) {
+      calls.push(`graph ${options.around ?? ""}`);
+      return {
+        nodes: [
+          { path: "decisions/0001-a.md", title: "0001-a", kind: "markdown" },
+          { path: "private/diary.md", title: "diary", kind: "markdown" },
+          { path: "Welcome.md", title: "Welcome", kind: "markdown" },
+        ],
+        edges: [
+          { from: "Welcome.md", to: "decisions/0001-a.md", embed: false },
+          { from: "Welcome.md", to: "private/diary.md", embed: false },
+        ],
+      };
+    },
     async write(path, content, reason) {
       calls.push(`write ${path} ${content} ${reason ?? ""}`);
       return { revision: "r1" };

@@ -1,5 +1,11 @@
 import { InvalidPathError, normalizeVaultPath, type TreeNode } from "@palimvo/core";
-import type { BaseQueryResult, VaultListEntry, VaultSearchHit } from "@palimvo/plugin-sdk";
+import type {
+  BaseQueryResult,
+  VaultGraph,
+  VaultGraphOptions,
+  VaultListEntry,
+  VaultSearchHit,
+} from "@palimvo/plugin-sdk";
 import {
   MAX_BINARY_BYTES,
   MAX_PENDING_REQUESTS,
@@ -23,6 +29,8 @@ export interface VaultBackend {
     signal: AbortSignal,
   ): Promise<VaultSearchHit[]>;
   queryBase(path: string, view: string | undefined, signal: AbortSignal): Promise<BaseQueryResult>;
+  /** The vault's link graph, or the part of it around one file. */
+  graph(options: VaultGraphOptions, signal: AbortSignal): Promise<VaultGraph>;
   write(
     path: string,
     content: string,
@@ -216,6 +224,31 @@ export class PluginBridge {
           return typeof rowPath !== "string" || canRead(binding, rowPath);
         });
         return { columns: result.columns, rows };
+      }
+      case "vault.graph": {
+        if (!binding.actor.read || binding.read.length === 0)
+          throw new RpcError("permission_denied", "The plugin may not read this vault");
+        const around = p.around ? pathOf(p.around) : undefined;
+        if (around !== undefined && !canRead(binding, around)) throw denied("read", around);
+        const graph = await this.backend.graph(
+          {
+            ...(around !== undefined ? { around } : {}),
+            ...(typeof p.depth === "number" ? { depth: p.depth } : {}),
+            ...(p.tags === true ? { tags: true } : {}),
+          },
+          signal,
+        );
+        // Only files in the plugin's folders, and links between two of them.
+        const shown = new Set<string>();
+        const nodes = graph.nodes.filter((node) => {
+          const ok = canRead(binding, node.path);
+          if (ok) shown.add(node.path);
+          return ok;
+        });
+        return {
+          nodes,
+          edges: graph.edges.filter((edge) => shown.has(edge.from) && shown.has(edge.to)),
+        };
       }
       case "vault.write": {
         const path = pathOf(p.path);

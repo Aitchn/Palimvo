@@ -13,10 +13,11 @@ const examples = readdirSync(`${root}examples/`, { withFileTypes: true })
   .map((e) => e.name);
 
 describe("official plugin manifests", () => {
-  it("ships the five planned plugins", () => {
+  it("ships the planned plugins", () => {
     expect(folders.sort()).toEqual([
       "chart-pack",
       "decisions",
+      "graph",
       "json-tree",
       "kanban",
       "kanban-due",
