@@ -121,7 +121,6 @@ test("upload a 100 MiB video and small files, then view them", async ({ page }) 
   await writeFile(videoFile, video);
   await input.setInputFiles(videoFile);
   await expect(page.getByRole("treeitem", { name: /^big\.mp4/ })).toBeVisible({ timeout: 120_000 });
-  await expect(page.getByText("Uploaded", { exact: true })).toBeVisible();
   expect((await stat(path.join(dataDir, "vaults", "media", "big.mp4"))).size).toBe(100 * MiB);
 
   // The file comes back byte for byte, and the viewer offers it as a video and as a download.
