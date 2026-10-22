@@ -2,8 +2,10 @@ import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { AppError } from "@palimvo/core";
 import { z } from "zod";
+import type { VaultHistory } from "../history/history.ts";
 import { MAX_TEXT_BYTES } from "../vault/fsutil.ts";
 import { MAX_BATCH_BYTES, type VaultService } from "../vault/service.ts";
+import { requestAuthor, requestNote } from "./author.ts";
 import { readJson } from "./util.ts";
 
 const JSON_OVERHEAD = 1024 * 1024;
@@ -42,8 +44,12 @@ function notModified(c: Context, tag: string): boolean {
   );
 }
 
-/** File tree, reading, writing, moving and deleting inside a vault: `/api/vaults/:vault/…`. */
-export function fileRoutes(vaults: VaultService): Hono {
+/**
+ * File tree, reading, writing, moving and deleting inside a vault: `/api/vaults/:vault/…`.
+ * Every change is recorded with `history` (who made it and why) while the vault's write queue
+ * is still held, so a commit never separates a change from its author.
+ */
+export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
   const app = new Hono();
 
   app.get("/api/vaults/:vault/files", async (c) => {
@@ -69,26 +75,47 @@ export function fileRoutes(vaults: VaultService): Hono {
     bodyLimit({ maxSize: MAX_TEXT_BYTES + JSON_OVERHEAD, onError: tooLarge }),
     async (c) => {
       const { content, baseVersion } = await readJson(c, putBody);
-      const file = await vaults.writeFile(c.req.param("vault"), filePathOf(c), content, {
+      const vault = c.req.param("vault");
+      const author = requestAuthor(c);
+      const note = requestNote(c);
+      const file = await vaults.writeFile(vault, filePathOf(c), content, {
         baseVersion,
+        onWritten: (written) => history.record(vault, [written.path], author, note),
       });
       return c.json({ path: file.path, version: file.version, mtime: file.mtime });
     },
   );
 
   app.delete("/api/vaults/:vault/files/*", async (c) => {
-    await vaults.deleteFile(c.req.param("vault"), filePathOf(c));
+    const vault = c.req.param("vault");
+    const target = filePathOf(c);
+    const author = requestAuthor(c);
+    const note = requestNote(c, `Delete ${target}`);
+    await vaults.deleteFile(vault, target, (paths) => history.record(vault, paths, author, note));
     return c.body(null, 204);
   });
 
   app.post("/api/vaults/:vault/folders", async (c) => {
     const { path } = await readJson(c, folderBody);
-    return c.json(await vaults.createFolder(c.req.param("vault"), path), 201);
+    const vault = c.req.param("vault");
+    const author = requestAuthor(c);
+    const note = requestNote(c, `Create folder ${path}`);
+    const created = await vaults.createFolder(vault, path, (placeholder) =>
+      history.record(vault, [placeholder], author, note),
+    );
+    return c.json(created, 201);
   });
 
   app.post("/api/vaults/:vault/move", async (c) => {
     const { from, to } = await readJson(c, moveBody);
-    return c.json(await vaults.move(c.req.param("vault"), from, to));
+    const vault = c.req.param("vault");
+    const author = requestAuthor(c);
+    const note = requestNote(c, `Move ${from} to ${to}`);
+    return c.json(
+      await vaults.move(vault, from, to, (moved) =>
+        history.record(vault, moved.flat(), author, note),
+      ),
+    );
   });
 
   app.post(
@@ -96,7 +123,19 @@ export function fileRoutes(vaults: VaultService): Hono {
     bodyLimit({ maxSize: MAX_BATCH_BYTES + JSON_OVERHEAD, onError: tooLarge }),
     async (c) => {
       const { writes } = await readJson(c, batchBody);
-      return c.json({ files: await vaults.writeBatch(c.req.param("vault"), writes) });
+      const vault = c.req.param("vault");
+      const author = requestAuthor(c);
+      const note = requestNote(c);
+      const files = await vaults.writeBatch(vault, writes, {
+        onWritten: (results) =>
+          history.record(
+            vault,
+            results.map((r) => r.path),
+            author,
+            note,
+          ),
+      });
+      return c.json({ files });
     },
   );
 

@@ -15,6 +15,8 @@ All access goes through `VaultService` (`apps/server/src/vault/service.ts`).
   carry a `baseVersion`; if the file is no longer at that version (`null` means "must not exist")
   the write fails with `409 version_conflict` and `details.current` holds the latest content.
   Leave `baseVersion` out to overwrite.
+- `onWritten` / `onDone` callbacks run while the queue is still held. Version history uses them to
+  record who made a change before any commit can snapshot it.
 - Writes to one file run one at a time; writes to different files run in parallel. Moves, deletes,
   batches and `exclusive()` tasks (history snapshots) run alone. Paths reached through different
   symlinks share one lock.
@@ -59,8 +61,8 @@ permissions arrive with T10; until then the server listens on loopback only by d
 ## Vaults from the previous product
 
 The first time a vault is used, a `.aivault/` folder is renamed to `.palimvo/` (if both exist,
-both are left alone and a warning is logged). `VaultHooks.legacyMetaRenamed` lets version history
-commit the rename once it exists.
+both are left alone and a warning is logged). `VaultHooks.legacyMetaRenamed` makes version history
+commit the rename (see [version-history.md](version-history.md)).
 
 ## Benchmark
 
