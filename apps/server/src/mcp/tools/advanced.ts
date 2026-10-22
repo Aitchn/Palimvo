@@ -10,6 +10,7 @@ import {
   fileExtension,
   fileKind,
   parseBase,
+  supportedFileType,
   updateBaseSource,
   type BaseFile,
   type BaseFilter,
@@ -127,7 +128,7 @@ export const restoreVersion = mcpTool({
       .describe("The file's path in that change, if it was named differently then."),
   }),
   description:
-    "Put one file back to how it was in an earlier change (a new change on top; nothing is lost). Find the id with get_history. Example: {path:'Plan.md', commit:'3fa9c1d2e4b5'}.",
+    "Put one file back to how it was in an earlier change (a new change on top; nothing is lost). Binary files also need upload rights. Find the id with get_history. Example: {path:'Plan.md', commit:'3fa9c1d2e4b5'}.",
   handler: async (args, ctx) => {
     const path = cleanPath(args.path);
     const from = args.from ? cleanPath(args.from) : path;
@@ -135,7 +136,23 @@ export const restoreVersion = mcpTool({
     const guard = readableIn(ctx);
     guard.require(path);
     guard.require(from);
+    // A binary file is an upload: the same right, file-type check and size limit as upload_file.
+    const binary = fileKind(path) === "other";
+    if (binary !== (fileKind(from) === "other"))
+      throw invalid("Notes, canvases and databases cannot be swapped with other kinds of files.");
+    if (binary) {
+      ctx.access.requireTree("file.upload", ctx.vault, path);
+      if (!supportedFileType(path))
+        throw new AppError(
+          "unsupported_type",
+          undefined,
+          { path },
+          { message: `This vault does not accept files like ${path}. Plugins can add file types.` },
+        );
+    }
     const bytes = await ctx.deps.history.blob(ctx.vault, args.commit, from);
+    if (binary && bytes.byteLength > DEFAULT_MAX_FILE_BYTES)
+      throw new AppError("payload_too_large", undefined, { limit: DEFAULT_MAX_FILE_BYTES });
     const written = await ctx.deps.vaults.writeBytes(ctx.vault, path, bytes, {
       onWritten: (w) => recorder(ctx)([w.path]),
     });

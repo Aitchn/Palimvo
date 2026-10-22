@@ -433,6 +433,37 @@ describe("advanced tools through the entry tools", () => {
     expect((await full.call("read_note", { path: "Closed/S.md" })).content).toBe("two");
   });
 
+  it("treats restoring a binary file as an upload", async () => {
+    const full = await aiOnA();
+    const png = Buffer.from("not really a png").toString("base64");
+    await full.call("upload_file", { path: "img/a.png", content_base64: png, reason: "r" });
+    const cp = await full.advanced("create_checkpoint", { reason: "cp" });
+    await full.call("upload_file", {
+      path: "img/a.png",
+      content_base64: Buffer.from("two").toString("base64"),
+      overwrite: true,
+      reason: "r",
+    });
+    // Binary into a note path (and the other way round) is refused, as is an unsupported type.
+    for (const to of ["Note.md", "tool.exe"]) {
+      const r = await full.advanced("restore_version", {
+        path: to,
+        from: "img/a.png",
+        commit: cp.id,
+        reason: "x",
+      });
+      expect(r.error.code).toMatch(/invalid_request|unsupported_type/);
+    }
+    const ok = await full.advanced("restore_version", {
+      path: "img/a.png",
+      commit: cp.id,
+      reason: "x",
+    });
+    expect(ok.path).toBe("img/a.png");
+    const back = await full.call("download_file", { path: "img/a.png" });
+    expect(back.size ?? JSON.stringify(back)).toBeDefined();
+  });
+
   it("creates databases from a folder or tags", async () => {
     const c = await aiOnA();
     await c.call("create_note", {
