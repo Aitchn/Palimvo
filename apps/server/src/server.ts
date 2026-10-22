@@ -10,6 +10,8 @@ import { assertGit } from "./history/git.ts";
 import { SYSTEM_AUTHOR, VaultHistory, type HistoryOptions } from "./history/history.ts";
 import { describeConfig, type LoadedConfig } from "./config/index.ts";
 import { errorFields } from "./errors.ts";
+import { AssistantConfig, type AssistantConfigOptions } from "./assistant/config.ts";
+import { SecretBox } from "./secrets/box.ts";
 import { acquireLock } from "./lock.ts";
 import { createLogger, type Logger } from "./log.ts";
 import { Store } from "./store/index.ts";
@@ -41,7 +43,13 @@ export interface RunningServer {
    */
   onShutdown(name: string, hook: ShutdownHook): void;
   /** The services behind the API, for code that runs inside the server process (and tests). */
-  services: { vaults: VaultService; history: VaultHistory; backup: BackupService };
+  services: {
+    vaults: VaultService;
+    history: VaultHistory;
+    backup: BackupService;
+    /** Assistant providers and their encrypted API keys. */
+    assistant: AssistantConfig;
+  };
   /** Idempotent. Resolves when everything has stopped. */
   close(): Promise<void>;
 }
@@ -57,6 +65,8 @@ export interface StartOptions {
   backup?: Pick<BackupOptions, "tickMs" | "allowLocalRemotes" | "credentials">;
   /** Extra MCP tools and per-vault tool providers (tests; later plugins). */
   mcp?: { tools?: AnyTool[]; providers?: ToolProvider[]; plugins?: PluginCatalog };
+  /** Environment to read secrets from (tests), and hooks for the assistant provider setup. */
+  assistant?: Pick<AssistantConfigOptions, "env" | "allowFake" | "factory" | "testTimeoutMs">;
 }
 
 export async function startServer({
@@ -67,6 +77,7 @@ export async function startServer({
   history: historyOptions,
   backup: backupOptions,
   mcp: mcpOptions,
+  assistant: assistantOptions,
 }: StartOptions): Promise<RunningServer> {
   const { config } = loaded;
   const log = logger ?? createLogger({ level: config.logLevel });
@@ -137,6 +148,9 @@ export async function startServer({
       },
     });
     backup.start();
+    const box = await SecretBox.load(config.dataDir, assistantOptions?.env ?? process.env);
+    log.info("secret key loaded", { source: box.source });
+    const assistant = new AssistantConfig({ store: openStore, box, ...assistantOptions });
     const auth = new AuthService(openStore);
     const setup = new SetupService(openStore, config.dataDir, {
       devInsecure: config.devInsecure,
@@ -168,6 +182,7 @@ export async function startServer({
       history: history,
       indexes: createVaultIndexes(vaults),
       backup,
+      assistant,
       ...(mcpOptions?.tools ? { mcpTools: mcpOptions.tools } : {}),
       ...(mcpOptions?.providers ? { toolProviders: mcpOptions.providers } : {}),
       ...(mcpOptions?.plugins ? { plugins: mcpOptions.plugins } : {}),
@@ -209,7 +224,7 @@ export async function startServer({
       logger: log,
       store: openStore,
       auth,
-      services: { vaults, history: history, backup },
+      services: { vaults, history: history, backup, assistant },
       onShutdown: (name, hook) => void hooks.push({ name, hook }),
       close,
     };

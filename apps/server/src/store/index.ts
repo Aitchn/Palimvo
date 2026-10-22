@@ -1,5 +1,6 @@
 import path from "node:path";
 import { AccountsRepo, type VaultMember, type VaultPosition } from "./accounts.ts";
+import { AssistantRepo, SecretsRepo } from "./assistant.ts";
 import { AuditRepo } from "./audit.ts";
 import { Db, DB_FILE, type BackupResult } from "./db.ts";
 import { InvitesRepo } from "./invites.ts";
@@ -14,6 +15,7 @@ import { TokensRepo } from "./tokens.ts";
 
 export { DB_FILE, isUniqueViolation, type BackupResult } from "./db.ts";
 export * from "./accounts.ts";
+export * from "./assistant.ts";
 export * from "./audit.ts";
 export * from "./invites.ts";
 export * from "./library.ts";
@@ -44,6 +46,8 @@ export class Store {
   readonly library: LibraryRepo;
   readonly invites: InvitesRepo;
   readonly publicAccess: PublicAccessRepo;
+  readonly secrets: SecretsRepo;
+  readonly assistant: AssistantRepo;
 
   private constructor(
     private readonly db: Db,
@@ -59,6 +63,8 @@ export class Store {
     this.library = new LibraryRepo(db, now);
     this.invites = new InvitesRepo(db, now);
     this.publicAccess = new PublicAccessRepo(db, now);
+    this.secrets = new SecretsRepo(db, now);
+    this.assistant = new AssistantRepo(db, now);
   }
 
   static async open(options: StoreOptions): Promise<Store> {

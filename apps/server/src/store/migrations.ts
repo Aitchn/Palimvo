@@ -219,4 +219,38 @@ create table public_access (
 alter table roles add column join_deny integer not null default 0;
 `,
   },
+  {
+    version: 4,
+    name: "assistant providers and secrets",
+    sql: `
+-- Encrypted values (API keys). The ciphertext is AES-256-GCM with the row id as associated data.
+create table secrets (
+  id text primary key,
+  ciphertext text not null,
+  last4 text not null,
+  created_at integer not null,
+  updated_at integer not null
+) strict;
+
+create table assistant_providers (
+  id text primary key,
+  kind text not null check (kind in ('anthropic', 'openai-compatible', 'fake')),
+  name text not null collate nocase unique,
+  base_url text,
+  secret_id text references secrets (id),
+  enabled integer not null default 1 check (enabled in (0, 1)),
+  created_at integer not null,
+  updated_at integer not null
+) strict;
+
+-- provider_id is also "env-anthropic" or "env-openai" for providers that come from environment
+-- variables, which have no row in assistant_providers.
+create table assistant_models (
+  provider_id text not null,
+  model_id text not null,
+  enabled integer not null default 0 check (enabled in (0, 1)),
+  primary key (provider_id, model_id)
+) strict;
+`,
+  },
 ];

@@ -15,6 +15,8 @@ import { setupRoutes } from "./routes/setup.ts";
 import type { SetupService } from "./auth/setup.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { archiveRoutes } from "./routes/archive.ts";
+import type { AssistantConfig } from "./assistant/config.ts";
+import { assistantRoutes } from "./routes/assistant.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { oauthRoutes } from "./routes/oauth.ts";
 import { tokenRoutes } from "./routes/tokens.ts";
@@ -51,6 +53,8 @@ export interface AppDeps {
   history: VaultHistory;
   indexes: VaultIndexes;
   backup: BackupService;
+  /** Providers and API keys of the built-in assistant. */
+  assistant: AssistantConfig;
   /** Folder with the built web app; leave out to serve the API only. */
   webDir?: string;
   /** Extra MCP tools per vault (plugins); they appear behind `list_tools`. */
@@ -124,6 +128,7 @@ export function createApp(deps: AppDeps): Hono {
   );
   app.route("/", adminRoutes({ auth: deps.auth, vaults: deps.vaults, publicUrl: deps.publicUrl }));
   app.route("/", roleRoutes(deps.auth));
+  app.route("/", assistantRoutes(deps.auth, deps.assistant));
   app.route("/", tokenRoutes({ auth: deps.auth, tokens: deps.auth.tokens, vaults: deps.vaults }));
   app.route("/", memberRoutes(deps.auth, deps.vaults));
   app.route("/", publicRoutes(deps.auth, deps.vaults));

@@ -7,6 +7,7 @@ export const ERROR_CODES = {
   invalid_request: { status: 400, message: "The request is not valid." },
   invalid_path: { status: 400, message: "The path is not allowed." },
   effort_unsupported: { status: 400, message: "This model does not support that reasoning level." },
+  invalid_provider_url: { status: 400, message: "That provider address is not allowed." },
   invalid_tag: { status: 400, message: "That is not a usable checkpoint tag name." },
   invalid_backup_remote: { status: 400, message: "That backup address is not allowed." },
   schema_invalid: { status: 400, message: "The stored data has an invalid format." },
@@ -43,6 +44,10 @@ export const ERROR_CODES = {
   payload_too_large: { status: 413, message: "The content is too large." },
   unsupported_type: { status: 415, message: "That file type is not accepted." },
   rate_limited: { status: 429, message: "Too many requests. Try again later." },
+  secret_unreadable: {
+    status: 500,
+    message: "A stored secret cannot be decrypted. Check PALIMVO_SECRET_KEY or secret.key.",
+  },
   internal: { status: 500, message: "Something went wrong on the server." },
   not_implemented: { status: 501, message: "This is not supported yet." },
   unavailable: { status: 503, message: "The service is temporarily unavailable." },
