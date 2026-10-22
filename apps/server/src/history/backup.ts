@@ -99,14 +99,17 @@ export class BackupService {
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 7 * 24 * 60) {
       throw new AppError("invalid_request", undefined, { field: "intervalMinutes" });
     }
-    const config = await this.readConfig(vault);
-    if (next) config.backup = { remote: next.remote, intervalMinutes: minutes };
-    else delete config.backup;
     const note = next ? "Turn on remote backup" : "Turn off remote backup";
-    await this.vaults.writeMeta(
+    await this.vaults.modifyMeta(
       vault,
       VAULT_CONFIG_FILE,
-      `${JSON.stringify(config, null, 2)}\n`,
+      (text) => {
+        if (text === null) throw new AppError("vault_not_found", undefined, { vault });
+        const config = parseVaultConfig(text);
+        if (next) config.backup = { remote: next.remote, intervalMinutes: minutes };
+        else delete config.backup;
+        return `${JSON.stringify(config, null, 2)}\n`;
+      },
       () =>
         this.history.record(vault, [`${VAULT_META_DIR}/${VAULT_CONFIG_FILE}`], author, {
           summary: note,

@@ -130,6 +130,12 @@
             path,
             ...(options && options.view ? { view: options.view } : {}),
           }),
+        graph: (options) =>
+          call("vault.graph", {
+            ...(options && options.around ? { around: options.around } : {}),
+            ...(options && options.depth ? { depth: options.depth } : {}),
+            ...(options && options.tags ? { tags: true } : {}),
+          }),
         write: (path, content, options) =>
           call("vault.write", {
             path,

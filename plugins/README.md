@@ -1,27 +1,32 @@
 # Official plugins
 
-Plugins shipped with the server (disabled by default) live here, one folder per plugin with a
+Plugins shipped with the server (in the plugin library from the start; nothing is installed in a vault until a person chooses to) live here, one folder per plugin with a
 `manifest.json` ([manifest v2](../docs/dev/plugins.md)).
 
 | Folder       | Does                                                   | Code lands in |
 | ------------ | ------------------------------------------------------ | ------------- |
-| `decisions`  | decision notes, status, timeline, 4 MCP tools          | T36           |
-| `kanban`     | board view and `kanban` code block                     | T35           |
-| `kanban-due` | due-date badges for the board                          | T35           |
-| `calendar`   | month and week calendar, `calendar` block, home widget | T54           |
-| `chart-pack` | radar, treemap and sparkline components                | T35           |
-| `json-tree`  | collapsible viewer for `.json`                         | T35           |
+| `decisions`  | decision notes, status, 4 MCP tools                    | ready         |
+| `kanban`     | board view and `kanban` code block                     | ready         |
+| `kanban-due` | due-date badges for the board                          | ready         |
+| `graph`      | link graph page and a local graph panel                | ready         |
+| `calendar`   | month and week calendar, `calendar` block, home widget | ready         |
 
-`calendar` ships its code; see [its README](calendar/README.md). The others hold only the manifests (validated by the plugin SDK tests); the loader must
-skip a folder whose `main` file is missing until the code arrives.
+Each plugin folder has its own `README.md`, `main.js` and `locales/{en,zh-TW,zh-CN}.json`. The
+`decisions` has its tools (`server.js`) but no page yet: the timeline arrives with T37.
+`kanban` + `kanban-due` also show an extension point.
 
 ## Examples
 
-`examples/` holds one small plugin per UI layer for plugin authors. They are not seeded into the
-server library.
+`examples/` holds small plugins for plugin authors, one per kind of contribution. They are never
+seeded into the server library (`PluginManager.seedBuiltins` skips the folder, and a test locks it).
 
 | Folder                    | Shows                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------- |
 | `examples/theme-midnight` | a CSS-variable theme (`contributes.theme`)                                              |
 | `examples/slots-demo`     | an entry in every UI slot: toolbar, context menu, command palette, status bar, settings |
 | `examples/hello-app`      | a whole-page application (`contributes.app`)                                            |
+| `examples/chart-pack`     | component types for `component` blocks (radar, treemap, sparkline)                      |
+| `examples/json-tree`      | a file viewer (`contributes.viewers`) with search and folding                           |
+
+Tests: `apps/web/src/plugins/official.test.ts` (logic of the board, due dates and both examples)
+and `tests/e2e/official-plugins.spec.ts` (in a browser, in the real sandbox).

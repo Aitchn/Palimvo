@@ -5,7 +5,7 @@ browser code in a sandboxed iframe and its server code (MCP tools) in a QuickJS 
 approves each exact version before anything runs. Design reasons:
 [ADR 0017](../adr/0017-plugin-manifest-v2.md) (manifest) and
 [ADR 0019](../adr/0019-plugin-web-host.md) (browser host). This page is a first draft; the UI
-layers are described under [Changing the interface](#changing-the-interface); server tools (T34) land in a later change. The installer and the library are
+layers are described under [Changing the interface](#changing-the-interface); server tools under [server.js](#serverjs-mcp-tools). The installer and the library are
 described under [Installing, approving and the library](#installing-approving-and-the-library).
 
 ```
@@ -130,6 +130,7 @@ The app draws the frame; the plugin supplies what happens. Register each entry w
 | `command-palette` | a command in the palette (Ctrl+Shift+P)     | `run(context)`                   |
 | `status-bar`      | an item in the bar under the main area      | `run(context)`                   |
 | `settings`        | a section titled with the entry's title     | `render({ el })`, drawn in frame |
+| `inspector`       | a section in the details panel, per file    | `render({ el, path })`, in frame |
 
 - `title` is shown by the app (localised); `icon` is used when it names one of the app's own
   icons, otherwise toolbar entries show the title and the other slots show no icon.
@@ -138,6 +139,10 @@ The app draws the frame; the plugin supplies what happens. Register each entry w
   hidden. `run` has 30 seconds.
 - `context.path` is the open or clicked file. It is left out when the plugin's `permissions.read`
   does not cover it, so a slot never tells a plugin about files it may not read.
+- `inspector` sections sit in the right-hand details panel under the open file's name. The frame
+  stays while the person moves between files and is told the new `path` (left out when the plugin
+  may not read that file), so draw from `context.path` each time `render` runs. There is no
+  `visible` question for this slot: draw nothing when there is nothing to show.
 - Entries run in the plugin's hidden frame, with the plugin's own permissions. Nothing a plugin
   sends is put into the page: there is no way to supply HTML for the frame.
 
@@ -160,7 +165,7 @@ export default definePlugin((palimvo) => {
 });
 ```
 
-`palimvo.vault` (`read`, `readBinary`, `list`, `search`, `queryBase`, `write`, `propose`),
+`palimvo.vault` (`read`, `readBinary`, `list`, `search`, `queryBase`, `graph`, `write`, `propose`),
 `palimvo.ui`, `palimvo.events` (`file:changed`, `file:opened`, `theme:changed`, `locale:changed`),
 `palimvo.i18n` and `palimvo.extensions` are typed in `packages/plugin-sdk/src/api.ts`. Calls
 reject with an error whose `code` is `permission_denied`, `not_found`, `version_conflict`,
@@ -204,10 +209,37 @@ globalThis.__plugin = {
 };
 ```
 
-The sandbox has a `vault` global (`read`, `list`, `search`, `write`, `propose`, each taking one
-object) and a `console.log`; there is no network, file system, timer or `require`. Tools appear
-to AI clients as `<plugin-id>.<tool>` through `list_tools` / `call_tool`, only in vaults where the
-plugin is enabled. Arguments are validated against `inputSchema` before your code runs.
+`server.js` is a separate file from `main.js` (it runs on the server, `main.js` in the browser) and
+is bundled into one script. Every tool in `contributes.tools` needs an entry in
+`globalThis.__plugin.tools`: an `async` function that takes the arguments object and returns
+anything JSON can hold. Tools appear to AI clients as `<plugin-id>.<tool>` through `list_tools` /
+`call_tool`, only in vaults where the plugin runs. A vault administrator can also list them in
+`tools/list` of `/mcp/<vault>` (`PUT /api/vaults/:vault/plugin-tools` with `{ "listed": true }`).
+Arguments are validated against `inputSchema` before your code runs; a tool without
+`readOnly: true` requires a `reason` from the caller, like every change.
+
+The sandbox is QuickJS (ES2023, no Node APIs). Design: [ADR 0003](../adr/0003-plugin-tool-sandbox.md).
+
+| In the sandbox                             |                                                                                                       |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `vault.read({ path })`                     | The text of a note or text file (up to 1 MiB).                                                        |
+| `vault.list({ dir? })`                     | Paths of the files below a folder (at most 2000).                                                     |
+| `vault.search({ q, limit?, dir? })`        | `[{ path, matches? }]`, best matches first (at most 50).                                              |
+| `vault.write({ path, content })`           | Saves the file; returns `{ path, version }`. The history credits the plugin acting for the AI client. |
+| `vault.propose({ path, content, title? })` | Creates an edit proposal instead of saving; a person reviews it. Returns `{ id, state }`.             |
+| `console.log(...)`                         | Up to 100 lines, returned next to the result as `logs`.                                               |
+
+- Every `vault` function returns a promise and takes one object. Await them; a call you do not wait
+  for may finish after your tool has returned.
+- A call fails when the path is outside the folders your manifest declares, or the caller may not
+  do that there. The error reaches your code as an exception with a message starting
+  `permission_denied:` that you can catch.
+- Limits per call: 5 seconds in all (host calls included), 32 MB of QuickJS heap inside a 64 MB
+  hard ceiling, 256 KB of stack, 200 `vault` calls, 1 MiB of result. A plugin that goes over is
+  stopped and its worker replaced; other plugins' calls are not affected.
+- Each call starts in a fresh context: globals and changes to built-in prototypes do not carry over
+  to the next call. There is no `fetch`, `require`, `process`, timer or `import()`.
+- Use `console.log` while developing; the lines come back in the tool result.
 
 ## Approval and the content hash
 
@@ -247,13 +279,24 @@ Design: [ADR 0018](../adr/0018-plugin-installation-and-library.md).
   (index in `library_plugins`). `POST /api/plugin-library` (needs `library.publish`) adds a
   version; versions are immutable. The official plugins in the repository's `plugins/` folder are
   added at start-up when their files pass the checks (a folder whose files are not there yet is
-  skipped with a warning) and cannot be removed.
+  skipped with a warning; `plugins/examples/` is never added) and cannot be removed. They are only
+  in the library: nothing is installed in a vault until a person chooses it. A development build that still reports version `0.0.0` accepts every `minPalimvo`, so the official plugins work from a checkout.
 
 - **Web host endpoints.** `GET /api/vaults/:vault/plugin-runtime` (needs `vault.view`) lists the
   running plugins as `{ plugins: [{ id, version, hash, manifest }] }`. `GET .../plugin-runtime/:id`
   returns `{ id, hash, files }`, the text of `main`, the locale files and the theme stylesheet,
   after the files are re-hashed (`plugin_not_approved` otherwise). The host checks that `hash`
   matches the list.
+
+## Official plugins to learn from
+
+[`plugins/`](../../plugins/README.md) holds the plugins that ship in the library (`kanban`, with a
+page, a code block and an extension point, and `kanban-due`, a contributor to it) and, under
+`plugins/examples/`, small plugins that are never added to the library: `json-tree` (a viewer),
+`chart-pack` (component types) and the UI-layer demos. All have tests. Note how they keep to the sandbox:
+no storage (state lives in memory), styles in an inline `<style>` that use the app's CSS
+variables, strings through `palimvo.i18n.t`, and every render function returning a cleanup when
+it listens to events.
 
 ## Moving a version 1 plugin
 

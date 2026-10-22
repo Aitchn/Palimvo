@@ -359,11 +359,14 @@ export default (palimvo) => {
     const theme = await page.locator("html").getAttribute("data-theme");
     await expect(frame.locator("#hello")).toHaveText(`Hello Ada [en/${theme}]`);
     await expect(frame.locator("#note")).toHaveText("# Welcome.md");
-    // The card grows with what the plugin drew.
-    const height = await page
-      .locator('.plugin-host[data-plugin="hello"]')
-      .evaluate((el) => el.getBoundingClientRect().height);
-    expect(height).toBeGreaterThan(100);
+    // The card grows with what the plugin drew (the frame reports its height a moment after it draws).
+    await expect
+      .poll(() =>
+        page
+          .locator('.plugin-host[data-plugin="hello"]')
+          .evaluate((el) => el.getBoundingClientRect().height),
+      )
+      .toBeGreaterThan(100);
     await page.screenshot({ path: shotPath("plugin-home-widget") });
   });
 

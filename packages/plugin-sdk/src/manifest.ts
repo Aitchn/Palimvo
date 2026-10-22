@@ -26,13 +26,15 @@ export interface PluginPermissions {
   network: false | string[];
 }
 
-export type SlotName = "toolbar" | "context-menu" | "command-palette" | "status-bar" | "settings";
+export type SlotName =
+  "toolbar" | "context-menu" | "command-palette" | "status-bar" | "settings" | "inspector";
 export const SLOT_NAMES: readonly SlotName[] = [
   "toolbar",
   "context-menu",
   "command-palette",
   "status-bar",
   "settings",
+  "inspector",
 ];
 
 export type HomeWidgetSize = "small" | "medium" | "large";

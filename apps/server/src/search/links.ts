@@ -5,15 +5,29 @@ import {
   linkResolver,
   noteTitle,
   parseCanvas,
+  parseFrontmatter,
+  extractInlineTags,
+  propertyTags,
   pathKey,
   type Backlink,
   type FileContent,
   type GraphData,
   type GraphEdge,
+  type GraphNode,
   type LineMatch,
   type OutLink,
 } from "@palimvo/core";
 import { eachFile, type FileSource } from "./files.ts";
+
+/** What `LinkIndex.graph` can leave out or add. */
+export interface GraphOptions {
+  /** Put each note's tags on its node. */
+  tags?: boolean;
+  /** Only the files within `depth` links of this file (either direction), with the links among them. */
+  around?: string;
+  /** How many links away `around` reaches; default 1. */
+  depth?: number;
+}
 
 const MAX_LINES_PER_FILE = 3;
 const MAX_LINE_LENGTH = 200;
@@ -29,6 +43,8 @@ interface FoundLink {
 /** What the link queries need from one file version, worked out once per version. */
 interface Derived {
   links: FoundLink[];
+  /** Tags of a note, read on first use. */
+  tags?: string[];
   /** The links resolved against one file list (valid while that list is the current one). */
   resolved?: { paths: readonly string[]; to: (string | undefined)[] };
 }
@@ -89,19 +105,24 @@ export class LinkIndex {
     return out;
   }
 
-  /** Every note, canvas and base with the links between them. */
-  async graph(vault: string): Promise<GraphData> {
+  /** Every note, canvas and base with the links between them, or the part around one file. */
+  async graph(vault: string, options: GraphOptions = {}): Promise<GraphData> {
     const paths = await this.source.list(vault);
     const resolver = linkResolver(paths);
-    const nodes = paths
+    const nodes: GraphNode[] = paths
       .filter((p) => fileKind(p) !== "other")
       .map((path) => ({ path, title: noteTitle(path), kind: fileKind(path) }));
     const isNode = new Set(nodes.map((n) => n.path));
     const edges = new Map<string, GraphEdge>();
     const unresolved = new Map<string, { from: string; target: string }>();
+    const tags = new Map<string, string[]>();
     await eachFile(this.source, vault, paths, (path, file) => {
       if (!file) return;
       const d = this.derive(path, file);
+      if (options.tags && fileKind(path) === "markdown") {
+        d.tags ??= noteTags(file.content);
+        if (d.tags.length > 0) tags.set(path, d.tags);
+      }
       const to = this.resolve(path, d, paths, resolver);
       d.links.forEach((link, i) => {
         const dest = to[i];
@@ -116,7 +137,12 @@ export class LinkIndex {
         }
       });
     });
-    return { nodes, edges: [...edges.values()], unresolved: [...unresolved.values()] };
+    for (const node of nodes) {
+      const found = tags.get(node.path);
+      if (found) node.tags = found;
+    }
+    const whole = { nodes, edges: [...edges.values()], unresolved: [...unresolved.values()] };
+    return options.around === undefined ? whole : around(whole, options.around, options.depth ?? 1);
   }
 
   private derive(path: string, file: FileContent): Derived {
@@ -141,6 +167,44 @@ export class LinkIndex {
     }
     return d.resolved.to;
   }
+}
+
+/** The tags of a note: its `tags` property and the inline `#tags` of its body. */
+function noteTags(content: string): string[] {
+  const { properties, body } = parseFrontmatter(content);
+  return [...new Set([...propertyTags(properties), ...extractInlineTags(body)])];
+}
+
+/** The part of a graph within `depth` links of `start`, counting links in both directions. */
+function around(graph: GraphData, start: string, depth: number): GraphData {
+  const next = new Map<string, string[]>();
+  const add = (a: string, b: string) => {
+    const list = next.get(a);
+    if (list) list.push(b);
+    else next.set(a, [b]);
+  };
+  for (const e of graph.edges) {
+    add(e.from, e.to);
+    add(e.to, e.from);
+  }
+  const reached = new Set([start]);
+  let frontier = [start];
+  for (let step = 0; step < depth && frontier.length > 0; step++) {
+    const found: string[] = [];
+    for (const path of frontier) {
+      for (const other of next.get(path) ?? []) {
+        if (reached.has(other)) continue;
+        reached.add(other);
+        found.push(other);
+      }
+    }
+    frontier = found;
+  }
+  return {
+    nodes: graph.nodes.filter((n) => reached.has(n.path)),
+    edges: graph.edges.filter((e) => reached.has(e.from) && reached.has(e.to)),
+    unresolved: graph.unresolved.filter((u) => reached.has(u.from)),
+  };
 }
 
 /** Wikilinks and embeds of a note, with their lines. Lines inside code fences do not count. */

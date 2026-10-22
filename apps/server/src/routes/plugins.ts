@@ -7,6 +7,7 @@ import { principalOf, requireAccount } from "../auth/principal.ts";
 import type { InstalledPlugin, PluginManager } from "../plugins/manager.ts";
 import { summarizePermissions } from "../plugins/summary.ts";
 import { describeFiles, packageFilesSchema, toPluginFiles } from "../plugins/upload.ts";
+import type { PluginToolSettingsStore } from "../plugins/toolSettings.ts";
 import type { LibraryPlugin } from "../store/index.ts";
 import type { VaultService } from "../vault/service.ts";
 import { requestAuthor, requestNote } from "./author.ts";
@@ -63,7 +64,11 @@ const installedJson = (p: InstalledPlugin) => ({
  *   **only a signed-in person with `plugin.approve`** approves a hash (an AI token never can, and
  *   the person's own token cannot stand in for them).
  */
-export function pluginRoutes(plugins: PluginManager, vaults: VaultService): Hono {
+export function pluginRoutes(
+  plugins: PluginManager,
+  vaults: VaultService,
+  toolSettings?: PluginToolSettingsStore,
+): Hono {
   const app = new Hono();
 
   const vaultOf = async (c: Context, permission?: "plugin.install" | "plugin.approve") => {
@@ -111,6 +116,22 @@ export function pluginRoutes(plugins: PluginManager, vaults: VaultService): Hono
   app.delete("/api/plugin-library/:id/:version", removeFromLibrary);
 
   // ---- vault ----------------------------------------------------------------------------------
+
+  // How the vault's plugin tools reach AI clients: `listed` puts them in `tools/list` of `/mcp/<vault>`.
+  if (toolSettings) {
+    app.get("/api/vaults/:vault/plugin-tools", async (c) => {
+      const vault = await vaultOf(c);
+      return c.json(await toolSettings.load(vault));
+    });
+    app.put("/api/vaults/:vault/plugin-tools", async (c) => {
+      const vault = c.req.param("vault")!;
+      accessOf(c).requireVault("vault.settings", vault);
+      await vaults.assertVault(vault);
+      const body = await readJson(c, z.object({ listed: z.boolean() }));
+      const { author, note } = actorOf(c);
+      return c.json(await toolSettings.set(vault, body, { author, note }));
+    });
+  }
 
   app.get("/api/vaults/:vault/plugins", async (c) => {
     const vault = await vaultOf(c);

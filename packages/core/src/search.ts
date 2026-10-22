@@ -44,6 +44,8 @@ export interface GraphNode {
   /** The file name without its extension. */
   title: string;
   kind: FileKind;
+  /** Tags of a note (frontmatter and inline, without `#`); only present when the graph was asked with tags. */
+  tags?: string[];
 }
 
 export interface GraphEdge {

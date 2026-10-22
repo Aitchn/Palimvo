@@ -1,0 +1,11 @@
+{
+  "field": "屬性",
+  "folder": "資料夾",
+  "allFolders": "所有資料夾",
+  "newCard": "＋ 新卡片（Enter）",
+  "moveTo": "移到欄位",
+  "empty": "還沒有筆記帶有「{field}」屬性。請在筆記屬性加上它，或在上方輸入資料夾。",
+  "column.todo": "待辦",
+  "column.doing": "進行中",
+  "column.done": "完成"
+}

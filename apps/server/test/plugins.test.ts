@@ -132,6 +132,37 @@ describe("plugin library", () => {
   });
 });
 
+describe("the official plugins of this repository", () => {
+  it("pass the package checks on a development build and install in a vault", async () => {
+    const { root } = await world();
+    const dir = path.resolve(import.meta.dirname, "../../../plugins");
+    // plugins/examples/ (chart-pack, json-tree and the UI-layer demos) is for plugin authors.
+    expect((await server.services.plugins.seedBuiltins(dir)).sort()).toEqual([
+      "decisions@0.1.0",
+      "graph@1.0.0",
+      "kanban-due@1.0.0",
+      "kanban@1.0.0",
+    ]);
+    const library = await json<{ plugins: Json[] }>(await root.client.get("/api/plugin-library"));
+    expect(library.plugins.map((p) => p.id).sort()).toEqual([
+      "decisions",
+      "graph",
+      "kanban",
+      "kanban-due",
+    ]);
+    // In the library, but not installed anywhere until a person picks one.
+    const before = await json<{ plugins: Json[] }>(await root.client.get("/api/vaults/a/plugins"));
+    expect(before.plugins).toEqual([]);
+    const res = await root.client.post("/api/vaults/a/plugins", {
+      library: { id: "kanban-due" },
+    });
+    expect(res.status).toBe(201);
+    const after = await json<{ plugins: Json[] }>(await root.client.get("/api/vaults/a/plugins"));
+    // Installed switched off: a person still has to approve and enable it.
+    expect(after.plugins.map((p) => [p.id, p.enabled])).toEqual([["kanban-due", false]]);
+  });
+});
+
 describe("installing and approving in a vault", () => {
   it("installs switched off, runs only after a person approves the exact hash", async () => {
     const { root, mia } = await world();

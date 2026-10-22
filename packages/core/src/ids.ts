@@ -34,6 +34,7 @@ export const ENV = {
   publicUrl: "PALIMVO_PUBLIC_URL",
   trustProxy: "PALIMVO_TRUST_PROXY",
   logLevel: "PALIMVO_LOG_LEVEL",
+  pluginWorkers: "PALIMVO_PLUGIN_WORKERS",
 } as const;
 
 export const NPM_SCOPE = "@palimvo";

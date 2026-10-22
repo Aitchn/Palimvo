@@ -10,6 +10,7 @@ import type { VaultService } from "../vault/service.ts";
 export const DEFAULT_SEARCH_LIMIT = 50;
 export const MAX_SEARCH_LIMIT = 200;
 const MAX_QUERY_LENGTH = 500;
+export const MAX_GRAPH_DEPTH = 6;
 
 const searchQuery = z.object({
   q: z.string().max(MAX_QUERY_LENGTH),
@@ -17,6 +18,14 @@ const searchQuery = z.object({
   offset: z.coerce.number().int().min(0).default(0),
   /** Only search below this folder. */
   path: z.string().optional(),
+});
+
+const graphQuery = z.object({
+  /** Put each note's tags on its node. */
+  tags: z.enum(["0", "1", "true", "false"]).optional(),
+  /** Only the files within `depth` links of this file. */
+  around: z.string().optional(),
+  depth: z.coerce.number().int().min(1).max(MAX_GRAPH_DEPTH).default(1),
 });
 
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
@@ -91,7 +100,13 @@ export function searchRoutes(vaults: VaultService, indexes: VaultIndexes, auth: 
     const vault = c.req.param("vault");
     accessOf(c).requireVault("note.read", vault);
     await vaults.assertVault(vault);
-    return c.json(await indexes.links.graph(vault));
+    const { tags, around, depth } = parse(graphQuery, c.req.query());
+    return c.json(
+      await indexes.links.graph(vault, {
+        tags: tags === "1" || tags === "true",
+        ...(around === undefined ? {} : { around: normalize(around), depth }),
+      }),
+    );
   });
 
   return app;

@@ -16,6 +16,9 @@ import { createLogger, type Logger } from "./log.ts";
 import { Store } from "./store/index.ts";
 import { createVaultIndexes } from "./search/index.ts";
 import { PluginManager } from "./plugins/manager.ts";
+import { SandboxPool, type PoolOptions } from "./plugins/sandbox/index.ts";
+import { PluginToolProvider } from "./plugins/serverTools.ts";
+import { PluginToolSettingsStore } from "./plugins/toolSettings.ts";
 import { findWebDir } from "./web.ts";
 import { VaultService, type VaultHooks } from "./vault/service.ts";
 import { VaultTrash } from "./vault/trash.ts";
@@ -66,6 +69,8 @@ export interface StartOptions {
   /** Folder with the official plugins; default: look for `plugins/` next to the server (see `findPluginsDir`). */
   pluginsDir?: string;
   mcp?: { tools?: AnyTool[]; providers?: ToolProvider[]; plugins?: PluginCatalog };
+  /** Plugin tool sandbox limits and recycling (tests make them short). `size` comes from the config. */
+  sandbox?: Omit<PoolOptions, "size">;
 }
 
 export async function startServer({
@@ -76,6 +81,7 @@ export async function startServer({
   history: historyOptions,
   backup: backupOptions,
   mcp: mcpOptions,
+  sandbox: sandboxOptions,
   pluginsDir,
 }: StartOptions): Promise<RunningServer> {
   const { config } = loaded;
@@ -84,6 +90,7 @@ export async function startServer({
   const gitVersion = await assertGit();
   const lock = await acquireLock(config.dataDir);
   let store: Store | undefined;
+  let sandbox: SandboxPool | undefined;
   try {
     store = await Store.openInDataDir(config.dataDir);
     log.info("starting palimvo", {
@@ -135,6 +142,20 @@ export async function startServer({
       const added = await plugins.seedBuiltins(officialDir);
       if (added.length > 0) log.info("official plugins added to the library", { plugins: added });
     }
+    // Plugin MCP tools run in QuickJS workers. Started now so the first call does not wait for a worker.
+    const pool = new SandboxPool({ ...sandboxOptions, size: config.pluginWorkers });
+    sandbox = pool;
+    const toolSettings = new PluginToolSettingsStore(vaults, history);
+    const pluginTools = new PluginToolProvider({
+      manager: plugins,
+      pool,
+      settings: toolSettings,
+      logger: log,
+    });
+    void pool.warm().then(
+      () => log.info("plugin sandbox ready", { workers: pool.stats().workers }),
+      (err: unknown) => log.error("plugin sandbox failed to start", errorFields(err)),
+    );
     const backup = new BackupService(vaults, history, { logger: log, ...backupOptions });
     vaults.onChange((change) => {
       if (change.type === "removed") history.forget(change.vault);
@@ -159,6 +180,7 @@ export async function startServer({
         await history.flushAll();
       },
     });
+    hooks.push({ name: "plugin sandbox", hook: () => pool.close() });
     backup.start();
     const auth = new AuthService(openStore);
     const setup = new SetupService(openStore, config.dataDir, {
@@ -192,7 +214,8 @@ export async function startServer({
       indexes: createVaultIndexes(vaults),
       backup,
       ...(mcpOptions?.tools ? { mcpTools: mcpOptions.tools } : {}),
-      ...(mcpOptions?.providers ? { toolProviders: mcpOptions.providers } : {}),
+      toolProviders: [pluginTools, ...(mcpOptions?.providers ?? [])],
+      pluginToolSettings: toolSettings,
       pluginManager: plugins,
       ...(mcpOptions?.plugins ? { plugins: mcpOptions.plugins } : {}),
     });
@@ -238,6 +261,8 @@ export async function startServer({
       close,
     };
   } catch (err) {
+    // A failed start (the port is taken, say) must not leave sandbox workers keeping the process alive.
+    await sandbox?.close();
     store?.close();
     await lock.release();
     throw err;

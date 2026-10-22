@@ -11,6 +11,7 @@ describe("loadConfig", () => {
       port: 3000,
       trustProxy: false,
       logLevel: "info",
+      pluginWorkers: 4,
     });
     expect(config.dataDir).toBe(path.resolve("/work", "data"));
     expect(sources.port).toBe("default");
@@ -23,6 +24,12 @@ describe("loadConfig", () => {
     );
     expect(config).toMatchObject({ port: 5000, host: "0.0.0.0", trustProxy: true });
     expect(sources).toMatchObject({ port: "cli", host: "env", logLevel: "default" });
+  });
+
+  it("reads the number of plugin workers and refuses nonsense", () => {
+    expect(loadConfig({ PALIMVO_PLUGIN_WORKERS: "8" }).config.pluginWorkers).toBe(8);
+    for (const bad of ["0", "-1", "2.5", "many", "65"])
+      expect(() => loadConfig({ PALIMVO_PLUGIN_WORKERS: bad })).toThrow(AppError);
   });
 
   it("normalizes the public URL", () => {

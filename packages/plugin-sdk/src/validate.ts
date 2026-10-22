@@ -501,7 +501,16 @@ function checkContributes(
     (v, p) => {
       c.keys(v, ["name", "description", "inputSchema", "readOnly"], p);
       c.string(v.description, `${p}.description`, L.toolDescriptionLength);
-      checkJsonSchema(c, v.inputSchema, `${p}.inputSchema`);
+      const schema = checkJsonSchema(c, v.inputSchema, `${p}.inputSchema`);
+      const props = schema?.properties;
+      if (isObj(props))
+        for (const reserved of ["vault", "reason"])
+          if (reserved in props)
+            c.issue(
+              `${p}.inputSchema.properties.${reserved}`,
+              "reserved",
+              `"${reserved}" is added by the server to every tool and cannot be declared.`,
+            );
       if (v.readOnly !== undefined && typeof v.readOnly !== "boolean") {
         c.issue(`${p}.readOnly`, "invalid_type", "must be true or false.");
       }
