@@ -6,7 +6,10 @@ import { describeError } from "../api/errors.ts";
 import { FolderPermissionsDialog } from "../roles/FolderPermissionsDialog.tsx";
 import { FileTree, type RowMenuRequest } from "../files/FileTree.tsx";
 import type { useFileOperations } from "../files/useFileOperations.ts";
+import { listProposals } from "../api/proposals.ts";
+import { useAsync } from "../app/useAsync.ts";
 import { ChangeLog } from "../history/ChangeLog.tsx";
+import { ProposalsPanel } from "../proposals/ProposalsPanel.tsx";
 import { SearchPanel } from "../search/SearchPanel.tsx";
 import { Button, ContextMenu, Skeleton, type MenuItem } from "../ui/index.ts";
 import type { TreeState } from "../files/useVaultTree.ts";
@@ -15,7 +18,7 @@ import type { VaultCan } from "./useVaultPermissions.ts";
 
 type Operations = ReturnType<typeof useFileOperations>;
 
-export type SidebarView = "files" | "search" | "history";
+export type SidebarView = "files" | "search" | "history" | "proposals";
 
 interface Props {
   vault: string;
@@ -36,6 +39,13 @@ interface Props {
   /** Changes when the vault's files changed, so the change log is fetched again. */
   revision: number;
 }
+
+const VIEW_LABELS = {
+  files: "search.files",
+  search: "search.title",
+  history: "history.title",
+  proposals: "proposals.title",
+} as const;
 
 /** Starts the browser's download of a folder (or the whole vault) as a ZIP. */
 function download(vault: string, folder: string) {
@@ -70,6 +80,17 @@ export function Sidebar({
   const picker = useRef<HTMLInputElement>(null);
   const importInto = useRef("");
   const [query, setQuery] = useState("");
+  const [allProposals, setAllProposals] = useState(false);
+  // Fetched even while another view is shown, so the tab can say how many are waiting.
+  const proposals = useAsync(
+    (signal) =>
+      can.propose ? listProposals(vault, { all: allProposals, signal }) : Promise.resolve([]),
+    `proposals:${vault}:${allProposals}:${revision}:${can.propose}`,
+  );
+  const waiting =
+    proposals.status === "ready"
+      ? proposals.data.filter((p) => p.state === "pending" || p.state === "partial").length
+      : 0;
 
   const pickFilesFor = (folder: string) => {
     importInto.current = folder;
@@ -191,9 +212,13 @@ export function Sidebar({
         <VaultSwitcher vault={vault} />
       </div>
       <div className="sidebar-views" role="group" aria-label={t("search.viewLabel")}>
-        {(can.viewHistory
-          ? (["files", "search", "history"] as const)
-          : (["files", "search"] as const)
+        {(
+          [
+            "files",
+            "search",
+            ...(can.viewHistory ? (["history"] as const) : []),
+            ...(can.propose ? (["proposals"] as const) : []),
+          ] as const
         ).map((id) => (
           <button
             key={id}
@@ -202,13 +227,29 @@ export function Sidebar({
             aria-pressed={view === id}
             onClick={() => onViewChange(id)}
           >
-            {t(
-              id === "files" ? "search.files" : id === "search" ? "search.title" : "history.title",
+            {t(VIEW_LABELS[id])}
+            {id === "proposals" && waiting > 0 && (
+              <span
+                className="sidebar-badge"
+                aria-label={t("proposals.waitingBadge", { count: waiting })}
+              >
+                {waiting}
+              </span>
             )}
           </button>
         ))}
       </div>
-      {view === "history" && can.viewHistory ? (
+      {view === "proposals" && can.propose ? (
+        <ProposalsPanel
+          vault={vault}
+          proposals={proposals}
+          showAll={allProposals}
+          onShowAll={setAllProposals}
+          canReview={can.review}
+          onChanged={tree.reload}
+          onOpenFile={onOpen}
+        />
+      ) : view === "history" && can.viewHistory ? (
         <ChangeLog
           vault={vault}
           revision={revision}

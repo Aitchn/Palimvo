@@ -15,6 +15,10 @@ export interface VaultCan {
   restore: boolean;
   /** Save a checkpoint of the whole vault. */
   checkpoint: boolean;
+  /** See the vault's edit proposals and make new ones. */
+  propose: boolean;
+  /** Accept or reject proposed changes (each folder may still say no). */
+  review: boolean;
 }
 
 const NOTHING: VaultCan = {
@@ -25,6 +29,8 @@ const NOTHING: VaultCan = {
   viewHistory: false,
   restore: false,
   checkpoint: false,
+  propose: false,
+  review: false,
 };
 const EVERYTHING: VaultCan = {
   write: true,
@@ -34,6 +40,8 @@ const EVERYTHING: VaultCan = {
   viewHistory: true,
   restore: true,
   checkpoint: true,
+  propose: true,
+  review: true,
 };
 
 /**
@@ -73,5 +81,7 @@ export function useVaultPermissions(vault: string, folder = ""): VaultCan {
     // Restoring rewrites the file, so it needs the right to write as well.
     restore: names.has("history.restore") && names.has("note.write"),
     checkpoint: names.has("history.view") && names.has("note.write"),
+    propose: names.has("proposal.create") || names.has("proposal.review"),
+    review: names.has("proposal.review"),
   };
 }

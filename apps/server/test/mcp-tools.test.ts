@@ -25,6 +25,7 @@ const NATIVE = [
   "upload_file",
   "download_file",
   "query_base",
+  "create_edit_proposal",
   "list_tools",
   "describe_tool",
   "call_tool",
@@ -564,5 +565,152 @@ describe("three AI clients tidying one vault at once", () => {
       for (const name of c.co_authors ?? []) authors.add(name);
     }
     expect([...authors]).toEqual(expect.arrayContaining(["Claude Code", "Cursor", "ChatGPT"]));
+  });
+});
+
+describe("edit proposals", () => {
+  it("lets a propose-only AI suggest changes that a person with review rights accepts", async () => {
+    const { root, mia } = await world.cached();
+    expect(
+      (await root.client.put("/api/vaults/a/files/Plan.md", { content: "Launch in June.\n" }))
+        .status,
+    ).toBe(200);
+    const version = (
+      await json<{ version: string }>(await root.client.get("/api/vaults/a/files/Plan.md"))
+    ).version;
+    const secret = await makeToken(mia, { name: "Proposer", access: "propose", vaultId: "a" });
+    const c = await connect("/mcp/a", secret, { "x-palimvo-author": "ai:Claude%20Code" });
+    const call = async (tool: string, args: Record<string, unknown> = {}) =>
+      body(await c.callTool({ name: tool, arguments: args }));
+
+    // Writing is refused, proposing is not.
+    expect(
+      (await call("update_note", { path: "Plan.md", append: "x", reason: "r" })).error.code,
+    ).toBe("propose_only");
+    const made = await call("create_edit_proposal", {
+      title: "Move the launch",
+      reason: "The vendor is late",
+      files: [
+        {
+          path: "Plan.md",
+          base_version: version,
+          hunks: [{ before: "June", after: "September", why: "New date" }],
+        },
+      ],
+    });
+    expect(made).toMatchObject({ state: "pending", files: [{ path: "Plan.md", changes: 1 }] });
+    expect((await call("read_note", { path: "Plan.md" })).content).toContain("June");
+
+    // The AI can look at it through the advanced tools.
+    const listed = body(
+      await c.callTool({
+        name: "call_tool",
+        arguments: { name: "list_edit_proposals", arguments: {} },
+      }),
+    );
+    expect(listed.proposals).toMatchObject([
+      { id: made.id, proposed_by: "Claude Code", files: [{ path: "Plan.md", waiting: 1 }] },
+    ]);
+    const got = body(
+      await c.callTool({
+        name: "call_tool",
+        arguments: { name: "get_edit_proposal", arguments: { id: made.id } },
+      }),
+    );
+    expect(got.files[0].changes[0]).toMatchObject({ before: "June", after: "September" });
+
+    // A wrong base version is the AI's to fix.
+    const stale = await call("create_edit_proposal", {
+      title: "Again",
+      reason: "r",
+      files: [
+        {
+          path: "Plan.md",
+          base_version: "0".repeat(16),
+          hunks: [{ before: "June", after: "May" }],
+        },
+      ],
+    });
+    expect(stale.error.code).toBe("version_conflict");
+
+    // The member behind the token cannot accept; the administrator can, and the history says who.
+    const accept = (client: Client) =>
+      client.post(`/api/vaults/a/proposals/${made.id}/accept`, { version: 1 });
+    expect((await accept(mia.client)).status).toBe(403);
+    expect((await accept(root.client)).status).toBe(200);
+    await server.services.history.commit("a");
+    const { commits } = await json<{ commits: { author: Json; approvedBy: Json[] }[] }>(
+      await root.client.get("/api/vaults/a/history?path=Plan.md"),
+    );
+    expect(commits[0]).toMatchObject({
+      author: { kind: "ai", name: "Claude Code" },
+      approvedBy: [{ kind: "human", name: "root" }],
+    });
+  });
+
+  it("is not offered to a read-only token, and a folder-limited token cannot see other folders' proposals", async () => {
+    const { root, mia } = await world.cached();
+    const read = await connect("/mcp", await makeToken(mia, { name: "r", access: "read" }));
+    expect((await read.listTools()).tools.map((t) => t.name)).not.toContain("create_edit_proposal");
+
+    for (const path of ["design/a.md", "secret/b.md"])
+      expect(
+        (await root.client.put(`/api/vaults/a/files/${path}`, { content: "text" })).status,
+      ).toBe(200);
+    const versionOf = async (path: string) =>
+      (await json<{ version: string }>(await root.client.get(`/api/vaults/a/files/${path}`)))
+        .version;
+    const full = await connect(
+      "/mcp/a",
+      await makeToken(mia, { name: "Full", access: "propose", vaultId: "a" }),
+    );
+    const secretProposal = body(
+      await full.callTool({
+        name: "create_edit_proposal",
+        arguments: {
+          title: "Secret",
+          reason: "r",
+          files: [
+            {
+              path: "secret/b.md",
+              base_version: await versionOf("secret/b.md"),
+              hunks: [{ before: "text", after: "other" }],
+            },
+          ],
+        },
+      }),
+    );
+    const limited = await connect(
+      "/mcp/a",
+      await makeToken(mia, {
+        name: "Designer",
+        access: "propose",
+        vaultId: "a",
+        folders: ["design"],
+      }),
+    );
+    const call = async (name: string, args: Record<string, unknown>) =>
+      body(await limited.callTool({ name: "call_tool", arguments: { name, arguments: args } }));
+    expect((await call("list_edit_proposals", {})).proposals).toEqual([]);
+    expect((await call("get_edit_proposal", { id: secretProposal.id })).error.code).toBe(
+      "not_found",
+    );
+    const refused = body(
+      await limited.callTool({
+        name: "create_edit_proposal",
+        arguments: {
+          title: "Nope",
+          reason: "r",
+          files: [
+            {
+              path: "secret/b.md",
+              base_version: await versionOf("secret/b.md"),
+              hunks: [{ before: "text", after: "x" }],
+            },
+          ],
+        },
+      }),
+    );
+    expect(refused.error.code).toBe("token_scope_denied");
   });
 });

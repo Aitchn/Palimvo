@@ -3,6 +3,7 @@ import { appendFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promis
 import path from "node:path";
 import {
   AppError,
+  GIT_APPROVER_TRAILER,
   GIT_AUTHOR_TRAILER,
   GIT_REASON_TRAILER,
   authorFromGit,
@@ -24,6 +25,8 @@ export interface ChangeNote {
   reason?: string | undefined;
   /** What the app did ("Move a to b"); only used for the subject when nobody gave a reason. */
   summary?: string | undefined;
+  /** Who accepted this change when someone else proposed it; recorded in a `Palimvo-Approved-by` trailer. */
+  approvedBy?: Author | undefined;
 }
 
 /** Receives "this path was changed by this author" notes from the file API and, later, the collab hub. */
@@ -51,6 +54,8 @@ export interface CommitInfo {
   date: string;
   author: Author;
   coAuthors: Author[];
+  /** Who accepted the change, when it was proposed by someone else (`Palimvo-Approved-by`). */
+  approvedBy: Author[];
   subject: string;
   /** Free text below the subject, without trailers. */
   body: string;
@@ -84,6 +89,7 @@ export const EXTERNAL_AUTHOR: Author = makeAuthor("external", "External change",
  */
 const EXCLUDES = [
   "/.palimvo/collab/",
+  "/.palimvo/proposals/",
   "/.palimvo/cache/",
   "/.palimvo/uploads/",
   "/.palimvo/tmp/",
@@ -130,6 +136,8 @@ interface Pending {
   authors: Map<string, Author[]>;
   reasons: Map<string, string[]>;
   summaries: Map<string, string[]>;
+  /** path -> who accepted the proposed change to it */
+  approvers: Map<string, Author[]>;
   timer?: ReturnType<typeof setTimeout>;
   firstAt?: number;
 }
@@ -179,6 +187,13 @@ export class VaultHistory implements ChangeRecorder {
       p.authors.set(file, [...list.filter((a) => !sameAuthor(a, author)), author]);
       if (reason) addTo(p.reasons, file, reason);
       if (summary) addTo(p.summaries, file, summary);
+      if (note.approvedBy) {
+        const approvers = p.approvers.get(file) ?? [];
+        p.approvers.set(file, [
+          ...approvers.filter((a) => !sameAuthor(a, note.approvedBy!)),
+          note.approvedBy,
+        ]);
+      }
     }
     this.schedule(vault);
   }
@@ -227,15 +242,21 @@ export class VaultHistory implements ChangeRecorder {
     return this.git.run(vault, async () => {
       const p = this.pendingFor(vault);
       clearTimeout(p.timer);
-      let taken: Pick<Pending, "authors" | "reasons" | "summaries"> | undefined;
+      let taken: Pick<Pending, "authors" | "reasons" | "summaries" | "approvers"> | undefined;
       try {
         return await this.writeLock(vault, () => {
           // Take the notes only once no write is running: a write that finished before this point
           // has recorded its author, and one that starts later is not in this snapshot.
-          taken = { authors: p.authors, reasons: p.reasons, summaries: p.summaries };
+          taken = {
+            authors: p.authors,
+            reasons: p.reasons,
+            summaries: p.summaries,
+            approvers: p.approvers,
+          };
           p.authors = new Map();
           p.reasons = new Map();
           p.summaries = new Map();
+          p.approvers = new Map();
           p.firstAt = undefined;
           return this.commitLocked(vault, taken, request);
         });
@@ -246,6 +267,7 @@ export class VaultHistory implements ChangeRecorder {
           restore(p.authors, taken.authors);
           restore(p.reasons, taken.reasons);
           restore(p.summaries, taken.summaries);
+          restore(p.approvers, taken.approvers);
         }
         if (!(err instanceof AppError)) {
           this.log.error("commit failed", { vault, ...errorFields(err) });
@@ -314,6 +336,7 @@ export class VaultHistory implements ChangeRecorder {
           date,
           author: parsed.author ?? authorFromGit(name, email),
           coAuthors: parsed.coAuthors,
+          approvedBy: parsed.approvedBy,
           subject,
           body: parsed.text,
           reasons: parsed.reasons,
@@ -485,7 +508,12 @@ export class VaultHistory implements ChangeRecorder {
   private pendingFor(vault: string): Pending {
     let p = this.pending.get(vault);
     if (!p) {
-      p = { authors: new Map(), reasons: new Map(), summaries: new Map() };
+      p = {
+        authors: new Map(),
+        reasons: new Map(),
+        summaries: new Map(),
+        approvers: new Map(),
+      };
       this.pending.set(vault, p);
     }
     return p;
@@ -631,10 +659,10 @@ export class VaultHistory implements ChangeRecorder {
 
   private async commitLocked(
     vault: string,
-    notes: Pick<Pending, "authors" | "reasons" | "summaries">,
+    notes: Pick<Pending, "authors" | "reasons" | "summaries" | "approvers">,
     request?: CommitRequest,
   ): Promise<CommitInfo[]> {
-    const { authors, reasons, summaries } = notes;
+    const { authors, reasons, summaries, approvers } = notes;
     await this.baseline(vault, new Set(authors.keys()));
     await this.excludeLargeFiles(vault);
     await this.gitIn(vault, ["add", "-A"]);
@@ -656,6 +684,7 @@ export class VaultHistory implements ChangeRecorder {
           files: changed,
           co,
           reasons: distinct(changed.flatMap((f) => reasons.get(f) ?? [])),
+          approvedBy: distinctAuthors(changed.flatMap((f) => approvers.get(f) ?? [])),
           allowEmpty: request.allowEmpty ?? false,
           checkpoint: request.checkpoint ?? false,
         }),
@@ -671,7 +700,15 @@ export class VaultHistory implements ChangeRecorder {
       const author = list?.at(-1) ?? EXTERNAL_AUTHOR;
       const why = reasons.get(file) ?? [];
       const what = why.length ? [] : (summaries.get(file) ?? []);
-      const key = [`${author.kind}:${author.id}`, ...why, "\0", ...what].join("\0");
+      const approvedBy = approvers.get(file) ?? [];
+      const key = [
+        `${author.kind}:${author.id}`,
+        ...why,
+        "\0",
+        ...what,
+        "\0",
+        ...approvedBy.map((a) => `${a.kind}:${a.id}`),
+      ].join("\0");
       const group = groups.get(key) ?? { author, files: [], co: [] };
       group.files.push(file);
       for (const a of list ?? []) {
@@ -693,6 +730,7 @@ export class VaultHistory implements ChangeRecorder {
           files: group.files,
           co: group.co,
           reasons: why,
+          approvedBy: distinctAuthors(group.files.flatMap((f) => approvers.get(f) ?? [])),
           allowEmpty: false,
           checkpoint: false,
         }),
@@ -714,6 +752,7 @@ export class VaultHistory implements ChangeRecorder {
       files: string[];
       co: Author[];
       reasons: string[];
+      approvedBy?: Author[];
       allowEmpty: boolean;
       checkpoint: boolean;
     },
@@ -721,6 +760,7 @@ export class VaultHistory implements ChangeRecorder {
     const trailers = [
       `${GIT_AUTHOR_TRAILER}: ${c.author.kind}:${c.author.name}${c.author.client ? `/${c.author.client}` : ""}`,
       ...c.reasons.map((r) => `${GIT_REASON_TRAILER}: ${r}`),
+      ...(c.approvedBy ?? []).map((a) => `${GIT_APPROVER_TRAILER}: ${a.kind}:${a.name} <${a.id}>`),
       ...(c.checkpoint ? [`${CHECKPOINT_TRAILER}: true`] : []),
       ...c.co.map((a) => `Co-authored-by: ${a.name} <${gitEmail(a)}>`),
     ];
@@ -767,6 +807,12 @@ function distinct(values: string[]): string[] {
   return [...new Set(values)];
 }
 
+function distinctAuthors(authors: Author[]): Author[] {
+  const out: Author[] = [];
+  for (const a of authors) if (!out.some((o) => sameAuthor(o, a))) out.push(a);
+  return out;
+}
+
 function subjectFor(files: string[], reasons: string[], summaries: string[]): string {
   const said = reasons.length ? reasons : summaries;
   if (said.length === 1) return said[0]!;
@@ -799,13 +845,15 @@ function notFound(vault: string): AppError {
   return new AppError("vault_not_found", undefined, { vault });
 }
 
-const TRAILER = /^(Palimvo-Author|Palimvo-Reason|Palimvo-Checkpoint|Co-authored-by): (.*)$/;
+const TRAILER =
+  /^(Palimvo-Author|Palimvo-Reason|Palimvo-Approved-by|Palimvo-Checkpoint|Co-authored-by): (.*)$/;
 
 /** Splits a commit body into free text and the trailers the app writes. */
 function parseMessage(body: string): {
   text: string;
   author: Author | null;
   coAuthors: Author[];
+  approvedBy: Author[];
   reasons: string[];
   checkpoint: boolean;
 } {
@@ -813,6 +861,7 @@ function parseMessage(body: string): {
   const out = {
     author: null as Author | null,
     coAuthors: [] as Author[],
+    approvedBy: [] as Author[],
     reasons: [] as string[],
     checkpoint: false,
   };
@@ -830,6 +879,16 @@ function parseMessage(body: string): {
       case GIT_REASON_TRAILER:
         out.reasons.push(value);
         break;
+      case GIT_APPROVER_TRAILER: {
+        // `kind:name <id>`; older commits have no id, which is then made from the name.
+        const at = value.lastIndexOf(" <");
+        const withId = at > 0 && value.endsWith(">");
+        const approver = parseAuthor(encodeURIComponent(withId ? value.slice(0, at) : value));
+        if (approver) {
+          out.approvedBy.push(withId ? { ...approver, id: value.slice(at + 2, -1) } : approver);
+        }
+        break;
+      }
       case CHECKPOINT_TRAILER:
         out.checkpoint = true;
         break;

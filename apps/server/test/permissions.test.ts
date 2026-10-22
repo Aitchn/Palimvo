@@ -106,6 +106,7 @@ const VAULT_CASES: Case[] = [
     json: { path: "a.md", commit: "HEAD" },
     also: ["note.write"],
   },
+  { permission: "proposal.create", method: "GET", path: `${V}/proposals` },
   { permission: "vault.settings", method: "GET", path: `${V}/backup` },
   { permission: "members.manage", method: "GET", path: `${V}/members` },
   { permission: "permissions.manage", method: "GET", path: `${V}/permissions` },

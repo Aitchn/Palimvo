@@ -747,6 +747,16 @@ export class VaultService {
     }
   }
 
+  /** The names of the files directly inside a `.palimvo/` folder (empty when it does not exist). */
+  async listMeta(vaultId: string, dir: string): Promise<string[]> {
+    const abs = await this.metaPath(vaultId, dir);
+    const entries = await readdir(abs, { withFileTypes: true }).catch((err: unknown) => {
+      if (isMissing(err)) return [];
+      throw err;
+    });
+    return entries.filter((e) => e.isFile()).map((e) => e.name);
+  }
+
   /** Writes a `.palimvo/` file atomically. `onWritten` runs while the write queue is still held. */
   async writeMeta(
     vaultId: string,

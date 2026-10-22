@@ -22,6 +22,8 @@ import { memberRoutes } from "./routes/members.ts";
 import { roleRoutes } from "./routes/roles.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { historyRoutes } from "./routes/history.ts";
+import { proposalRoutes } from "./routes/proposals.ts";
+import { ProposalService } from "./proposals/proposals.ts";
 import { publicRoutes } from "./routes/public.ts";
 import { searchRoutes } from "./routes/search.ts";
 import type { VaultIndexes } from "./search/index.ts";
@@ -127,7 +129,9 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", publicRoutes(deps.auth, deps.vaults));
   app.route("/", vaultRoutes(deps));
   app.route("/", fileRoutes(deps.vaults, deps.history, deps.auth));
+  const proposals = new ProposalService({ vaults: deps.vaults, history: deps.history });
   app.route("/", historyRoutes(deps));
+  app.route("/", proposalRoutes(deps.vaults, proposals, deps.auth));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
   app.route(
@@ -160,6 +164,7 @@ export function createApp(deps: AppDeps): Hono {
         vaults: deps.vaults,
         history: deps.history,
         indexes: deps.indexes,
+        proposals,
         ...(deps.plugins ? { plugins: deps.plugins } : {}),
       },
       registry,
