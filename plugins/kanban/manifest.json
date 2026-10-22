@@ -1,0 +1,42 @@
+{
+  "manifestVersion": 2,
+  "id": "kanban",
+  "version": "1.0.0",
+  "name": { "en": "Kanban board", "zh-TW": "看板", "zh-CN": "看板" },
+  "description": {
+    "en": "Show notes as cards on a board, grouped by a property such as status.",
+    "zh-TW": "把筆記顯示成看板上的卡片，依狀態等屬性分欄。",
+    "zh-CN": "把笔记显示成看板上的卡片，按状态等属性分栏。"
+  },
+  "author": "Palimvo",
+  "license": "Apache-2.0",
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"], "write": ["**"] },
+  "contributes": {
+    "views": [
+      {
+        "id": "board",
+        "name": { "en": "Board", "zh-TW": "看板", "zh-CN": "看板" },
+        "icon": "layout-dashboard"
+      }
+    ],
+    "codeBlocks": [
+      { "language": "kanban", "name": { "en": "Kanban board", "zh-TW": "看板", "zh-CN": "看板" } }
+    ],
+    "extensionPoints": [
+      {
+        "id": "card-badge",
+        "name": { "en": "Card badge", "zh-TW": "卡片徽章", "zh-CN": "卡片徽章" },
+        "description": {
+          "en": "Receives a card's properties and returns a small badge to show on it."
+        }
+      }
+    ]
+  },
+  "main": "main.js",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-TW": "locales/zh-TW.json",
+    "zh-CN": "locales/zh-CN.json"
+  }
+}

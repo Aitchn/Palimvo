@@ -1,0 +1,25 @@
+{
+  "manifestVersion": 2,
+  "id": "kanban-due",
+  "version": "1.0.0",
+  "name": { "en": "Kanban due dates", "zh-TW": "看板到期日", "zh-CN": "看板到期日" },
+  "description": {
+    "en": "Adds overdue and due-soon badges to kanban cards.",
+    "zh-TW": "在看板卡片上加上逾期與即將到期的徽章。",
+    "zh-CN": "在看板卡片上加上逾期与即将到期的徽章。"
+  },
+  "author": "Palimvo",
+  "license": "Apache-2.0",
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"] },
+  "dependencies": { "kanban": "^1.0.0" },
+  "contributes": {
+    "extensions": [{ "plugin": "kanban", "point": "card-badge" }]
+  },
+  "main": "main.js",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-TW": "locales/zh-TW.json",
+    "zh-CN": "locales/zh-CN.json"
+  }
+}

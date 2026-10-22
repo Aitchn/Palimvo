@@ -1,0 +1,84 @@
+{
+  "manifestVersion": 2,
+  "id": "decisions",
+  "version": "0.1.0",
+  "name": { "en": "Decisions", "zh-TW": "決策紀錄", "zh-CN": "决策记录" },
+  "description": {
+    "en": "Record decisions as notes, follow their status and see them on a timeline.",
+    "zh-TW": "把決策記成筆記、追蹤狀態，並用時間軸檢視。",
+    "zh-CN": "把决策记成笔记、跟踪状态，并用时间轴查看。"
+  },
+  "author": "Palimvo",
+  "license": "Apache-2.0",
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["decisions"], "write": ["decisions"] },
+  "contributes": {
+    "views": [
+      {
+        "id": "timeline",
+        "name": { "en": "Decision timeline", "zh-TW": "決策時間軸", "zh-CN": "决策时间轴" },
+        "icon": "git-branch"
+      }
+    ],
+    "homeWidgets": [
+      {
+        "id": "recent",
+        "name": { "en": "Recent decisions", "zh-TW": "最近的決策", "zh-CN": "最近的决策" },
+        "size": "medium"
+      }
+    ],
+    "tools": [
+      {
+        "name": "record_decision",
+        "description": "Record a decision as a note in decisions/. Use status \"proposed\" unless a person agreed.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "context": { "type": "string" },
+            "decision": { "type": "string" },
+            "status": { "enum": ["proposed", "accepted"] },
+            "tree": { "type": "string" },
+            "requires": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["title", "decision"]
+        }
+      },
+      {
+        "name": "list_decisions",
+        "description": "List decisions, optionally filtered by status or tree.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "status": { "type": "string" }, "tree": { "type": "string" } }
+        },
+        "readOnly": true
+      },
+      {
+        "name": "update_decision_status",
+        "description": "Change the status of a decision (accepted, rejected, superseded).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "status": { "enum": ["proposed", "accepted", "rejected", "superseded"] },
+            "reason": { "type": "string" }
+          },
+          "required": ["id", "status"]
+        }
+      },
+      {
+        "name": "list_decision_trees",
+        "description": "List the decision trees (one per project or area) and how many decisions each holds.",
+        "inputSchema": { "type": "object", "properties": {} },
+        "readOnly": true
+      }
+    ]
+  },
+  "main": "main.js",
+  "server": "server.js",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-TW": "locales/zh-TW.json",
+    "zh-CN": "locales/zh-CN.json"
+  }
+}
