@@ -1,3 +1,5 @@
+import type { FileTransfers } from "../files/transfers.ts";
+import type { UploadLinks } from "../files/links.ts";
 import type { Context } from "hono";
 import type { z } from "zod";
 import { AppError, isAppError, vaultScope } from "@palimvo/core";
@@ -38,6 +40,12 @@ export interface McpDeps {
   /** Call after a change to who may do what (a new vault's administrator). */
   access: AccessControl;
   proposals: ProposalService;
+  /** Storing binary files: whole, in resumable parts, and through upload links. */
+  transfers: FileTransfers;
+  uploadLinks: UploadLinks;
+  /** The server's public address, for links handed to AI clients. */
+  publicUrl: string | undefined;
+  trustProxy: boolean;
   /** Which plugins are enabled in a vault; `list_vaults` shows them. Absent until the plugin platform exists. */
   plugins?: PluginCatalog;
   [key: string]: unknown;

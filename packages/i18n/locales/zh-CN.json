@@ -458,7 +458,24 @@
     "proposals.hunk.accepted",
     "proposals.hunk.rejected",
     "errors.proposal_stale",
-    "errors.proposal_changed"
+    "errors.proposal_changed",
+    "viewers.download",
+    "viewers.loadFailed",
+    "viewers.noViewer",
+    "viewers.tooBig",
+    "viewers.jsonInvalid",
+    "viewers.showText",
+    "viewers.showMore",
+    "viewers.rowsLimited",
+    "uploads.title",
+    "uploads.cancel",
+    "uploads.progress",
+    "uploads.done",
+    "errors.upload_offset",
+    "errors.upload_incomplete",
+    "errors.upload_limit",
+    "errors.storage_full",
+    "files.importSkipped"
   ],
   "common": {
     "appName": "Palimvo",
@@ -549,7 +566,7 @@
     "deleteFolderBody": "文件夹和里面的所有内容会从笔记库移除，但仍保留在版本历史中。",
     "deleted": "已删除“{name}”",
     "imported": "已导入 {count} 个文件",
-    "importSkipped": "跳过了 {count} 个文件：目前只能导入文本文件。",
+    "importSkipped": "跳过了 {count} 个文件：隐藏文件、太大，或这个笔记库不接受的文件类型。",
     "importFailed": "有 {count} 个文件无法导入。"
   },
   "quickOpen": {
@@ -1051,6 +1068,26 @@
     "unavailable": "服务暂时不可用。",
     "public_url_required": "OAuth 需要服务器的公开地址。请管理员设置 PALIMVO_PUBLIC_URL。",
     "proposal_stale": "提案之后有笔记被改动，这项修改无法应用。",
-    "proposal_changed": "这份提案已被更改或已决定过，请重新加载后再试。"
+    "proposal_changed": "这份提案已被更改或已决定过，请重新加载后再试。",
+    "upload_offset": "这一段的位置对不上，会从服务器已收到的地方继续。",
+    "upload_incomplete": "文件还没有全部传完。",
+    "upload_limit": "未完成的上传太多了，请先完成或取消一些。",
+    "storage_full": "服务器的空间不足，放不下这个文件。"
+  },
+  "viewers": {
+    "download": "下载",
+    "loadFailed": "无法加载这个文件。",
+    "noViewer": "目前没有内置的方式可以显示 {type} 文件，你可以把它下载下来。",
+    "tooBig": "这个文件有 {size}，太大了无法在这里显示，请改用下载。",
+    "jsonInvalid": "不是有效的 JSON，所以改用文本显示。",
+    "showText": "显示原始文本",
+    "showMore": "再显示 {count} 项",
+    "rowsLimited": "只显示前 {count} 行，要看完整内容请下载文件。"
+  },
+  "uploads": {
+    "title": "上传",
+    "cancel": "取消上传 {name}",
+    "progress": "{sent} / {total}",
+    "done": "已上传"
   }
 }

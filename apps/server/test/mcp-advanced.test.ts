@@ -514,5 +514,110 @@ describe("advanced tools through the entry tools", () => {
     expect(types.media.image).toContain("png");
     expect(types.documents).toEqual(expect.arrayContaining(["pdf", "json"]));
     expect(types.max_bytes).toBe(64 * 1024 * 1024);
+    expect(types.max_bytes_chunked).toBe(4096 * 1024 * 1024);
+    expect(types.plugin_types).toEqual([]);
+  });
+
+  it("uploads a big file in pieces", async () => {
+    const c = await aiOnA();
+    const bytes = randomBytes(300_000);
+    const begun = await c.advanced("begin_upload", {
+      path: "media/take1.wav",
+      size: bytes.length,
+      reason: "recording",
+    });
+    expect(begun).toMatchObject({ size: bytes.length, received: 0 });
+    let sent = 0;
+    while (sent < bytes.length) {
+      const piece = bytes.subarray(sent, sent + 128_000);
+      const r = await c.advanced("upload_part", {
+        upload_id: begun.upload_id,
+        offset: sent,
+        content_base64: piece.toString("base64"),
+        reason: "recording",
+      });
+      sent += piece.length;
+      expect(r).toMatchObject({ received: sent, complete: sent === bytes.length });
+    }
+    const wrong = await c.advanced("upload_part", {
+      upload_id: begun.upload_id,
+      offset: 0,
+      content_base64: "AAAA",
+      reason: "recording",
+    });
+    expect(wrong.error.code).toBe("upload_offset");
+    const done = await c.advanced("finish_upload", {
+      upload_id: begun.upload_id,
+      reason: "recording",
+    });
+    expect(done).toMatchObject({ path: "media/take1.wav", size: bytes.length });
+    const back = await c.call("download_file", { path: "media/take1.wav" });
+    expect(Buffer.from(back.content_base64, "base64").equals(bytes)).toBe(true);
+    expect(
+      (await c.advanced("finish_upload", { upload_id: begun.upload_id, reason: "x" })).error.code,
+    ).toBe("not_found");
+  });
+
+  it("cancels an upload and checks the type up front", async () => {
+    const c = await aiOnA();
+    const begun = await c.advanced("begin_upload", { path: "x.mp4", size: 10, reason: "r" });
+    expect(await c.advanced("cancel_upload", { upload_id: begun.upload_id })).toEqual({
+      cancelled: true,
+    });
+    expect(
+      (
+        await c.advanced("upload_part", {
+          upload_id: begun.upload_id,
+          offset: 0,
+          content_base64: "AAAA",
+          reason: "r",
+        })
+      ).error.code,
+    ).toBe("not_found");
+    expect(
+      (await c.advanced("begin_upload", { path: "x.weird", size: 10, reason: "r" })).error.code,
+    ).toBe("unsupported_type");
+    expect(
+      (await c.advanced("begin_upload", { path: "n.md", size: 10, reason: "r" })).error.code,
+    ).toBe("invalid_request");
+  });
+
+  it("makes an upload link whose command uploads without the AI sending bytes", async () => {
+    const c = await aiOnA();
+    const link = await c.advanced("create_upload_link", { path: "big/video.mp4", reason: "demo" });
+    expect(link.url).toMatch(/^https:\/\/palimvo\.test\/api\/upload-links\/[a-f0-9]{64}$/);
+    expect(link.bash).toContain(`${link.url}/upload.sh`);
+    expect(link.powershell).toContain(`${link.url}/upload.ps1`);
+    const base = new URL(link.url).pathname;
+    const bytes = randomBytes(70_000);
+    const started = await (
+      await server.fetch(`${base}/begin`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ size: bytes.length }),
+      })
+    ).json();
+    await server.fetch(`${base}/parts?offset=0`, { method: "PUT", body: bytes });
+    expect((await server.fetch(`${base}/finish`, { method: "POST" })).status).toBe(201);
+    expect(started).toMatchObject({ size: bytes.length });
+    // The upload is credited to the AI that made the link, with its reason.
+    await server.services.history.flushAll();
+    const { mia } = await world();
+    const log = await json<{ commits: unknown[] }>(
+      await mia.client.get("/api/vaults/a/history?path=big/video.mp4"),
+    );
+    expect(JSON.stringify(log.commits[0])).toContain("demo");
+    const again = await c.advanced("create_upload_link", { path: "big/video.mp4", reason: "demo" });
+    expect(again.error.code).toBe("already_exists");
+  });
+
+  it("refuses uploads to someone who may not upload", async () => {
+    const { mia } = await world();
+    const reader = await connectWith(
+      "/mcp/a",
+      await apiToken(mia, { vaultId: "a", access: "read" }),
+    );
+    const r = await reader.advanced("create_upload_link", { path: "z.mp4", reason: "r" });
+    expect(r.error.code).toBeDefined();
   });
 });

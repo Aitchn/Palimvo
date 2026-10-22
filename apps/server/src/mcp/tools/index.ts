@@ -25,12 +25,19 @@ import {
   updateNote,
 } from "./notes.ts";
 import { createEditProposal, getEditProposal, listEditProposals } from "./proposals.ts";
+import {
+  beginUpload,
+  cancelUpload,
+  createUploadLink,
+  finishUpload,
+  uploadPart,
+} from "./uploads.ts";
 import { listVaults } from "./vaults.ts";
 
 /**
  * Every tool the server ships: the ones in `tools/list` (about 20 with the entry tools) and the
  * advanced ones reached through `call_tool`. Advanced tools that need services which do not exist
- * yet (plugins, components, chunked uploads, vault settings) are added with those services.
+ * yet (plugins, components, vault settings) are added with those services.
  */
 export function coreTools(): AnyTool[] {
   return [
@@ -61,6 +68,11 @@ export function coreTools(): AnyTool[] {
     restoreVersion,
     createBase,
     listFileTypes,
+    beginUpload,
+    uploadPart,
+    finishUpload,
+    cancelUpload,
+    createUploadLink,
     createVault,
     removeVault,
   ];

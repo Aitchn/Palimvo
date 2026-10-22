@@ -21,6 +21,16 @@ export function setCsrfToken(token: string | null): void {
   csrfToken = token;
 }
 
+/** Headers a hand-made request needs besides the cookie: the CSRF token, when there is one. */
+export function csrfHeaders(): Record<string, string> {
+  return csrfToken ? { "X-Palimvo-Csrf": csrfToken } : {};
+}
+
+/** Reports a response the browser could not send through {@link request} (an upload with progress). */
+export async function failure(response: Response): Promise<ApiError> {
+  return failed(response);
+}
+
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
   if (csrfToken && (options.method ?? "GET") !== "GET") headers["X-Palimvo-Csrf"] = csrfToken;

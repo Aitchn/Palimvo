@@ -88,7 +88,7 @@
     "deleteFolderBody": "The folder and everything inside it are removed from the vault. They stay in the version history.",
     "deleted": "Deleted {name}",
     "imported": "{count, plural, one {Imported # file} other {Imported # files}}",
-    "importSkipped": "{count, plural, one {# file was skipped} other {# files were skipped}}: only text files can be imported for now.",
+    "importSkipped": "{count, plural, one {# file was skipped} other {# files were skipped}}: hidden, too large, or a kind of file this vault does not accept.",
     "importFailed": "{count, plural, one {# file could not be imported} other {# files could not be imported}}."
   },
   "quickOpen": {
@@ -590,6 +590,26 @@
     "unavailable": "The service is temporarily unavailable.",
     "public_url_required": "OAuth needs the server's public address. Ask an administrator to set PALIMVO_PUBLIC_URL.",
     "proposal_stale": "A note changed after this was proposed, so the change cannot be applied.",
-    "proposal_changed": "This proposal changed or was already decided. Reload it and try again."
+    "proposal_changed": "This proposal changed or was already decided. Reload it and try again.",
+    "upload_offset": "That part does not start where the upload left off. It will carry on from what the server has.",
+    "upload_incomplete": "Not all of the file has arrived yet.",
+    "upload_limit": "There are too many unfinished uploads. Finish or cancel some first.",
+    "storage_full": "The server does not have room for this file."
+  },
+  "viewers": {
+    "download": "Download",
+    "loadFailed": "This file could not be loaded.",
+    "noViewer": "The app has no built-in view for {type} files yet. You can download it.",
+    "tooBig": "This file is {size}, too large to show here. Download it instead.",
+    "jsonInvalid": "Not valid JSON, so it is shown as text.",
+    "showText": "Show as text",
+    "showMore": "{count, plural, one {Show # more} other {Show # more}}",
+    "rowsLimited": "Only the first {count} rows are shown. Download the file to see all of it."
+  },
+  "uploads": {
+    "title": "Uploads",
+    "cancel": "Cancel upload of {name}",
+    "progress": "{sent} of {total}",
+    "done": "Uploaded"
   }
 }

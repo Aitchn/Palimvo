@@ -219,4 +219,25 @@ create table public_access (
 alter table roles add column join_deny integer not null default 0;
 `,
   },
+  {
+    version: 4,
+    name: "upload links",
+    sql: `
+-- A link that lets one file be uploaded without signing in. The secret is shown once; only its
+-- hash is stored. The link is used up when the file is saved.
+create table upload_links (
+  token_hash text primary key,
+  vault_id text not null,
+  path text not null,
+  create_only integer not null default 0 check (create_only in (0, 1)),
+  author text not null, -- JSON: who the history credits
+  reason text,
+  created_at integer not null,
+  expires_at integer not null,
+  upload_id text -- the resumable upload this link started
+) strict;
+create index upload_links_vault on upload_links (vault_id);
+create index upload_links_expires on upload_links (expires_at);
+`,
+  },
 ];

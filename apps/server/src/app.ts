@@ -22,6 +22,12 @@ import { memberRoutes } from "./routes/members.ts";
 import { roleRoutes } from "./routes/roles.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { rawRoutes } from "./routes/raw.ts";
+import { FileTransfers } from "./files/transfers.ts";
+import { NO_PLUGIN_FILE_TYPES, UploadPolicy, type FileTypeSource } from "./files/policy.ts";
+import { UploadSessions } from "./files/sessions.ts";
+import { UploadLinks } from "./files/links.ts";
+import { uploadRoutes } from "./routes/uploads.ts";
+import { uploadLinkRoutes } from "./routes/uploadLinks.ts";
 import { historyRoutes } from "./routes/history.ts";
 import { proposalRoutes } from "./routes/proposals.ts";
 import { ProposalService } from "./proposals/proposals.ts";
@@ -60,6 +66,8 @@ export interface AppDeps {
   mcpTools?: AnyTool[];
   /** Which plugins are enabled per vault, for `list_vaults`. */
   plugins?: PluginCatalog;
+  /** File types that enabled plugins add to what a vault accepts as uploads. */
+  fileTypes?: FileTypeSource;
 }
 
 /** Builds the HTTP application. Domain routers are mounted here as they are added. */
@@ -93,6 +101,22 @@ export function createApp(deps: AppDeps): Hono {
       ready ? 200 : 503,
     );
   });
+
+  const transfers = new FileTransfers(
+    deps.vaults,
+    deps.history,
+    new UploadPolicy(deps.vaults, deps.fileTypes ?? NO_PLUGIN_FILE_TYPES),
+    new UploadSessions(deps.vaults),
+  );
+  const uploadLinks = new UploadLinks(deps.store, transfers);
+  // Before the session and CSRF checks: an upload link's secret is its own permission.
+  app.route(
+    "/",
+    uploadLinkRoutes(uploadLinks, {
+      publicUrl: deps.publicUrl,
+      trustProxy: deps.trustProxy ?? false,
+    }),
+  );
 
   app.use(
     "/api/*",
@@ -130,12 +154,21 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", publicRoutes(deps.auth, deps.vaults));
   app.route("/", vaultRoutes(deps));
   app.route("/", fileRoutes(deps.vaults, deps.history, deps.auth));
+  app.route(
+    "/",
+    uploadRoutes({
+      transfers,
+      links: uploadLinks,
+      publicUrl: deps.publicUrl,
+      trustProxy: deps.trustProxy ?? false,
+    }),
+  );
   const proposals = new ProposalService({ vaults: deps.vaults, history: deps.history });
   app.route("/", historyRoutes(deps));
   app.route("/", proposalRoutes(deps.vaults, proposals, deps.auth));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
-  app.route("/", rawRoutes(deps.vaults));
+  app.route("/", rawRoutes(deps.vaults, deps.auth, transfers.policy));
   app.route(
     "/",
     oauthRoutes({
@@ -169,6 +202,10 @@ export function createApp(deps: AppDeps): Hono {
         trash: deps.trash,
         access: deps.auth.access,
         proposals,
+        transfers,
+        uploadLinks,
+        publicUrl: deps.publicUrl,
+        trustProxy: deps.trustProxy ?? false,
         ...(deps.plugins ? { plugins: deps.plugins } : {}),
       },
       registry,

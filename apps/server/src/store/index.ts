@@ -11,6 +11,7 @@ import { RolesRepo, type Role } from "./roles.ts";
 import { SessionsRepo } from "./sessions.ts";
 import { SettingsRepo } from "./settings.ts";
 import { TokensRepo } from "./tokens.ts";
+import { UploadLinksRepo } from "./uploadLinks.ts";
 
 export { DB_FILE, isUniqueViolation, type BackupResult } from "./db.ts";
 export * from "./accounts.ts";
@@ -23,6 +24,7 @@ export * from "./roles.ts";
 export * from "./sessions.ts";
 export * from "./settings.ts";
 export * from "./tokens.ts";
+export * from "./uploadLinks.ts";
 
 export interface StoreOptions {
   /** `:memory:` keeps everything in RAM (unit tests). */
@@ -44,6 +46,7 @@ export class Store {
   readonly library: LibraryRepo;
   readonly invites: InvitesRepo;
   readonly publicAccess: PublicAccessRepo;
+  readonly uploadLinks: UploadLinksRepo;
 
   private constructor(
     private readonly db: Db,
@@ -59,6 +62,7 @@ export class Store {
     this.library = new LibraryRepo(db, now);
     this.invites = new InvitesRepo(db, now);
     this.publicAccess = new PublicAccessRepo(db, now);
+    this.uploadLinks = new UploadLinksRepo(db, now);
   }
 
   static async open(options: StoreOptions): Promise<Store> {

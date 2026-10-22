@@ -132,7 +132,9 @@ export function useFileOperations({
 
   const importItemsInto = async (folder: string, items: ImportItem[]) => {
     if (items.length === 0) return;
-    const result = await importItems(vault, folder, items, taken);
+    const result = await importItems(vault, folder, items, taken, {
+      describe: (error) => describeError(t, error),
+    });
     reveal(ancestorsOf(joinPath(folder, "x")));
     await refresh();
     if (result.imported.length > 0) {

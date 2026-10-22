@@ -1,9 +1,9 @@
 import { readFile, stat } from "node:fs/promises";
 import { z } from "zod";
-import { AppError, DEFAULT_MAX_FILE_BYTES, fileKind, supportedFileType } from "@palimvo/core";
+import { AppError, DEFAULT_MAX_FILE_BYTES, supportedFileType } from "@palimvo/core";
 import { toolContent } from "../registry.ts";
 import { bytesVersion } from "../../vault/fsutil.ts";
-import { cleanPath, invalid, pathArg, readableIn, recorder, mcpTool } from "./shared.ts";
+import { cleanPath, invalid, pathArg, readableIn, mcpTool } from "./shared.ts";
 
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 /** Images up to this size are returned as image content the model can look at. */
@@ -24,40 +24,25 @@ export const uploadFile = mcpTool({
   handler: async (args, ctx) => {
     const path = cleanPath(args.path);
     ctx.access.requireTree("file.upload", ctx.vault, path);
-    if (fileKind(path) !== "other")
-      throw invalid(`${path} is a note, canvas or database: use create_note or update_note.`);
-    if (!supportedFileType(path))
-      throw new AppError(
-        "unsupported_type",
-        undefined,
-        { path },
-        {
-          message: `This vault does not accept files like ${path}. Plugins can add file types.`,
-        },
-      );
     const b64 = args.content_base64.replace(/\s+/g, "");
     if (!BASE64.test(b64) || Buffer.from(b64, "base64").toString("base64") !== b64)
       throw invalid("content_base64 is not valid base64.");
-    const size =
-      Math.floor((b64.length * 3) / 4) - (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);
-    if (size > DEFAULT_MAX_FILE_BYTES)
-      throw new AppError("payload_too_large", undefined, { limit: DEFAULT_MAX_FILE_BYTES });
-    const bytes = Buffer.from(b64, "base64");
-    const written = await ctx.deps.vaults
-      .writeBytes(ctx.vault, path, bytes, {
+    const written = await ctx.deps.transfers
+      .upload(ctx.vault, path, Buffer.from(b64, "base64"), {
         // Without `overwrite` the file must not exist yet.
-        ...(args.overwrite ? {} : { baseVersion: null }),
-        onWritten: (w) => recorder(ctx)([w.path]),
+        create: !args.overwrite,
+        actor: { author: ctx.author, note: ctx.note },
       })
       .catch((err: unknown) => {
-        if (err instanceof AppError && err.code === "version_conflict")
+        if (
+          err instanceof AppError &&
+          (err.code === "version_conflict" || err.code === "already_exists")
+        )
           throw new AppError(
             "already_exists",
             undefined,
             { path },
-            {
-              message: `${path} already exists. Pass overwrite:true to replace it.`,
-            },
+            { message: `${path} already exists. Pass overwrite:true to replace it.` },
           );
         throw err;
       });
@@ -89,7 +74,9 @@ export const downloadFile = mcpTool({
         limit: DEFAULT_MAX_FILE_BYTES,
       });
     const bytes = await readFile(abs);
-    const mime = supportedFileType(rel)?.mime ?? "application/octet-stream";
+    const mime =
+      supportedFileType(rel, ctx.deps.transfers.policy.pluginTypes(ctx.vault))?.mime ??
+      "application/octet-stream";
     const meta = { path: rel, size: bytes.byteLength, mime, version: bytesVersion(bytes) };
     if (
       mime.startsWith("image/") &&

@@ -1,6 +1,8 @@
-import { joinPath } from "@palimvo/core";
+import { MAX_CHUNKED_FILE_BYTES, fileKind, isTextDocument, joinPath } from "@palimvo/core";
 import { ApiError } from "../api/errors.ts";
 import { writeFile } from "../api/files.ts";
+import { uploadFile } from "../api/uploads.ts";
+import { uploadQueue } from "../uploads/queue.ts";
 import { uniqueName } from "./model.ts";
 
 /** A file to bring in, with the folder-relative path it should get (`photos/a.md`). */
@@ -11,14 +13,14 @@ export interface ImportItem {
 
 export interface ImportResult {
   imported: string[];
-  /** Not text, too big, or hidden: left out on purpose. */
+  /** Hidden, too big, or a kind of file the vault does not accept: left out on purpose. */
   skipped: number;
   /** The server refused or could not be reached. */
   failed: number;
 }
 
 /** Same ceiling as the server's text limit. */
-const MAX_BYTES = 64 * 1024 * 1024;
+const MAX_TEXT_BYTES = 64 * 1024 * 1024;
 const PARALLEL = 4;
 
 interface Entry {
@@ -66,7 +68,12 @@ export function collectDropped(data: DataTransfer): Promise<ImportItem[]> {
   })();
 }
 
-/** Text of a file, or `null` when it is not valid UTF-8 text (binary uploads are a later feature). */
+/** Notes, canvases, databases and the plain-text documents are written as text; everything else is uploaded. */
+export function isTextImport(path: string): boolean {
+  return fileKind(path) !== "other" || isTextDocument(path);
+}
+
+/** Text of a file, or `null` when it is not valid UTF-8 text. */
 async function readText(file: File): Promise<string | null> {
   const bytes = await file.arrayBuffer();
   const view = new Uint8Array(bytes);
@@ -78,31 +85,30 @@ async function readText(file: File): Promise<string | null> {
   }
 }
 
+export interface ImportOptions {
+  /** Turns a failure into a sentence for the upload panel. */
+  describe?: (error: unknown) => string;
+}
+
 /**
- * Writes text files into `folder`. Nothing is overwritten: a name already taken gets a number
- * (`Note 2.md`). `taken` says which paths exist, to pick numbers without a request per try.
+ * Brings files into `folder`: text goes in as notes, anything else (images, sound, video, PDFs and
+ * the types plugins add) is uploaded with a progress bar. Nothing is overwritten: a name already
+ * taken gets a number (`Note 2.md`). `taken` says which paths exist, to pick numbers without a
+ * request per try.
  */
 export async function importItems(
   vault: string,
   folder: string,
   items: ImportItem[],
   taken: (path: string) => boolean,
+  options: ImportOptions = {},
 ): Promise<ImportResult> {
   const result: ImportResult = { imported: [], skipped: 0, failed: 0 };
   const claimed = new Set<string>();
   const exists = (path: string) => taken(path) || claimed.has(path.toLowerCase());
 
-  const one = async (item: ImportItem) => {
-    const hidden = item.path.split("/").some((part) => part.startsWith("."));
-    if (hidden || item.file.size > MAX_BYTES) {
-      result.skipped++;
-      return;
-    }
-    const content = await readText(item.file);
-    if (content === null) {
-      result.skipped++;
-      return;
-    }
+  /** Runs `send` for the first free name; returns false when the file could not be stored. */
+  const place = async (item: ImportItem, send: (target: string) => Promise<void>) => {
     const dir = joinPath(folder, item.path.split("/").slice(0, -1).join("/"));
     const name = item.path.split("/").at(-1) as string;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -110,7 +116,7 @@ export async function importItems(
       const target = joinPath(dir, free);
       claimed.add(target.toLowerCase());
       try {
-        await writeFile(vault, target, content, null);
+        await send(target);
         result.imported.push(target);
         return;
       } catch (error) {
@@ -121,11 +127,67 @@ export async function importItems(
         ) {
           continue;
         }
+        if (error instanceof ApiError && error.code === "unsupported_type") {
+          result.skipped++;
+          return;
+        }
+        if (error instanceof DOMException && error.name === "AbortError") return;
         result.failed++;
         return;
       }
     }
     result.failed++;
+  };
+
+  const sendText = async (item: ImportItem) => {
+    if (item.file.size > MAX_TEXT_BYTES) {
+      result.skipped++;
+      return;
+    }
+    const content = await readText(item.file);
+    if (content === null) {
+      result.skipped++;
+      return;
+    }
+    await place(item, async (target) => {
+      await writeFile(vault, target, content, null);
+    });
+  };
+
+  const sendFile = async (item: ImportItem) => {
+    if (item.file.size > MAX_CHUNKED_FILE_BYTES) {
+      result.skipped++;
+      return;
+    }
+    await place(item, async (target) => {
+      const handle = uploadQueue.start(target, item.file.size);
+      try {
+        await uploadFile(vault, target, item.file, {
+          create: true,
+          signal: handle.signal,
+          onProgress: (sent) => handle.progress(sent),
+        });
+        handle.done();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") handle.cancelled();
+        else if (
+          error instanceof ApiError &&
+          ["already_exists", "version_conflict", "unsupported_type"].includes(error.code)
+        )
+          handle.cancelled();
+        else handle.fail(options.describe?.(error) ?? String(error));
+        throw error;
+      }
+    });
+  };
+
+  const one = async (item: ImportItem) => {
+    const hidden = item.path.split("/").some((part) => part.startsWith("."));
+    if (hidden) {
+      result.skipped++;
+      return;
+    }
+    await (isTextImport(item.path) ? sendText(item) : sendFile(item));
   };
 
   for (let i = 0; i < items.length; i += PARALLEL) {

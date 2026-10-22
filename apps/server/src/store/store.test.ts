@@ -22,7 +22,7 @@ const mkAccount = (username: string, serverAdmin = false) =>
 
 describe("schema", () => {
   it("is at the latest version with all tables and a sound file", () => {
-    expect(store.schemaVersion).toBe(3);
+    expect(store.schemaVersion).toBe(4);
     expect(store.integrityProblems()).toEqual([]);
   });
 
@@ -436,5 +436,38 @@ describe("backup", () => {
     const copy = await Store.open({ file: result.file, checkpointIntervalMs: 0 });
     expect(copy.accounts.getByUsername("ann")).toBeDefined();
     copy.close();
+  });
+});
+
+describe("upload links", () => {
+  const link = (tokenHash: string, expiresAt: number) => ({
+    tokenHash,
+    vaultId: "v",
+    path: "a/b.mp4",
+    createOnly: true,
+    author: { kind: "ai" as const, id: "claude", name: "Claude" },
+    reason: "demo",
+    expiresAt,
+  });
+
+  it("keeps a link until it expires or is used up", () => {
+    store.uploadLinks.create(link("h1", clock + 1000));
+    store.uploadLinks.create(link("h2", clock + 5000));
+    expect(store.uploadLinks.get("h1")).toMatchObject({
+      vaultId: "v",
+      path: "a/b.mp4",
+      createOnly: true,
+      reason: "demo",
+      author: { name: "Claude" },
+    });
+    expect(store.uploadLinks.countForVault("v")).toBe(2);
+    store.uploadLinks.setUpload("h1", "abc");
+    expect(store.uploadLinks.get("h1")?.uploadId).toBe("abc");
+
+    clock += 2000;
+    expect(store.uploadLinks.get("h1")).toBeUndefined();
+    expect(store.uploadLinks.countForVault("v")).toBe(1);
+    store.uploadLinks.delete("h2");
+    expect(store.uploadLinks.get("h2")).toBeUndefined();
   });
 });

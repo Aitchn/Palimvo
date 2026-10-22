@@ -4,7 +4,8 @@ import { describeError } from "../api/errors.ts";
 import { readFile } from "../api/files.ts";
 import { useAsync } from "../app/useAsync.ts";
 import { NoteEditor } from "../editor/NoteEditor.tsx";
-import { Button, Icon, Skeleton } from "../ui/index.ts";
+import { Button, Skeleton } from "../ui/index.ts";
+import { FileViewer } from "../viewers/FileViewer.tsx";
 
 interface Props {
   vault: string;
@@ -20,10 +21,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-/** Extensions that are plain text even though the app has no dedicated view for them. */
-const TEXT = /\.(txt|json|ya?ml|csv|log|toml|ini|js|ts|css|html?)$/i;
-
-/** The main area for an open file: notes are edited; other text files are shown read-only for now. */
+/** The main area for an open file: notes are edited; other files get a viewer for their type. */
 export function FileView({ vault, path, kind, paths, onOpen, onCreate, readOnly = false }: Props) {
   if (kind === "markdown") {
     return (
@@ -39,16 +37,14 @@ export function FileView({ vault, path, kind, paths, onOpen, onCreate, readOnly 
       </article>
     );
   }
-  return <TextPreview vault={vault} path={path} kind={kind} />;
+  // Canvases and databases keep a plain preview until their own views arrive.
+  if (kind === "other") return <FileViewer vault={vault} path={path} />;
+  return <TextPreview vault={vault} path={path} />;
 }
 
-function TextPreview({ vault, path, kind }: Pick<Props, "vault" | "path" | "kind">) {
+function TextPreview({ vault, path }: Pick<Props, "vault" | "path">) {
   const { t } = useTranslation();
-  const previewable = kind !== "other" || TEXT.test(path);
-  const file = useAsync(
-    (signal) => (previewable ? readFile(vault, path, { signal }) : Promise.resolve(null)),
-    `file:${vault}:${path}`,
-  );
+  const file = useAsync((signal) => readFile(vault, path, { signal }), `file:${vault}:${path}`);
   return (
     <article className="file-view" aria-label={basename(path)}>
       <header className="file-view-head">
@@ -63,12 +59,7 @@ function TextPreview({ vault, path, kind }: Pick<Props, "vault" | "path" | "kind
         </div>
       )}
       {file.status === "ready" &&
-        (file.data === null ? (
-          <div className="state">
-            <Icon name="info" />
-            <p className="muted">{t("workspace.noPreview")}</p>
-          </div>
-        ) : file.data.content === "" ? (
+        (file.data.content === "" ? (
           <p className="muted">{t("workspace.emptyFile")}</p>
         ) : (
           <pre className="file-preview" tabIndex={0} aria-label={t("workspace.readOnly")}>

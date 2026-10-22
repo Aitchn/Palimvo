@@ -3,6 +3,10 @@ import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { Hono, type Context } from "hono";
 import { AppError, basename, supportedFileType } from "@palimvo/core";
+import { accessOf } from "../auth/access.ts";
+import { guestPolicy } from "../auth/principal.ts";
+import type { AuthService } from "../auth/service.ts";
+import type { UploadPolicy } from "../files/policy.ts";
 import type { VaultService } from "../vault/service.ts";
 
 /** Types a browser shows in place; everything else is offered as a download. */
@@ -56,24 +60,36 @@ function matches(header: string | undefined, tag: string): boolean {
  * PDFs in notes. Supports byte ranges (seeking in media) and `ETag` revalidation. The file is
  * streamed, never read into memory.
  */
-export function rawRoutes(vaults: VaultService): Hono {
+export function rawRoutes(vaults: VaultService, auth: AuthService, policy: UploadPolicy): Hono {
   const app = new Hono();
 
   app.get("/api/vaults/:vault/raw/*", async (c) => {
-    const { abs, rel } = await vaults.locateFile(c.req.param("vault"), rawPathOf(c));
+    const vault = c.req.param("vault");
+    const target = rawPathOf(c);
+    accessOf(c).requireVault("note.read", vault);
+    const guest = guestPolicy(auth, c, vault);
+    // A guest sees only what is public, and only through the file's own path (not a symlink).
+    if (guest && (!guest.covers(target) || !(await vaults.isDirectPath(vault, target))))
+      throw new AppError("not_found");
+    const { abs, rel } = await vaults.locateFile(vault, target);
     const info = await stat(abs).catch(() => null);
     if (!info?.isFile()) throw new AppError("not_found", undefined, { path: rel });
+    if (guest) c.header("Cache-Control", "no-store");
 
-    const supported = supportedFileType(rel);
+    const supported = supportedFileType(rel, policy.pluginTypes(vault));
     const mime = supported?.mime ?? "application/octet-stream";
     const tag = `"${info.size.toString(16)}-${Math.trunc(info.mtimeMs).toString(16)}"`;
     c.header("Content-Type", mime);
     c.header("ETag", tag);
-    c.header("Cache-Control", "private, no-cache");
+    if (!guest) c.header("Cache-Control", "private, no-cache");
     c.header("Accept-Ranges", "bytes");
     c.header(
       "Content-Disposition",
-      disposition(INLINE.test(mime) ? "inline" : "attachment", basename(rel)),
+      // `?download=1` asks for a save-as even for types a browser could show.
+      disposition(
+        INLINE.test(mime) && c.req.query("download") !== "1" ? "inline" : "attachment",
+        basename(rel),
+      ),
     );
     // A vault file is user content: never let the browser guess it is a page, and never run it as one.
     c.header("X-Content-Type-Options", "nosniff");

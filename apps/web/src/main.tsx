@@ -12,6 +12,7 @@ import "./styles/base.css";
 import "./styles/ui.css";
 import "./styles/shell.css";
 import "./styles/files.css";
+import "./styles/viewers.css";
 import "./styles/history.css";
 import "./styles/proposals.css";
 import "./styles/editor.css";
