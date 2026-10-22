@@ -24,7 +24,37 @@ const HEADINGS = {
 
 // ---- parsing ---------------------------------------------------------------------------------
 
-const unquote = (s) => s.replace(/^(["'])(.*)\1$/, "$2");
+function unquote(s) {
+  if (/^".*"$/.test(s)) {
+    try {
+      return JSON.parse(s);
+    } catch {
+      // Not valid JSON escapes: fall through to plain unquoting.
+    }
+  }
+  return s.replace(/^(["'])(.*)\1$/, "$2");
+}
+
+/** Splits the inside of `[a, "b, c"]` at commas that are not inside double quotes. */
+function splitFlowList(inner) {
+  const parts = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch === "\\" && quoted) {
+      current += ch + (inner[++i] || "");
+      continue;
+    }
+    if (ch === '"') quoted = !quoted;
+    if (ch === "," && !quoted) {
+      parts.push(current);
+      current = "";
+    } else current += ch;
+  }
+  parts.push(current);
+  return parts.map((x) => unquote(x.trim())).filter(Boolean);
+}
 const asList = (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 const asText = (v) => (Array.isArray(v) ? v.join(", ") : v);
 
@@ -49,11 +79,7 @@ function parseFrontmatter(text) {
       data[key] = [];
       listKey = key;
     } else if (raw.startsWith("[") && raw.endsWith("]")) {
-      data[key] = raw
-        .slice(1, -1)
-        .split(",")
-        .map((s) => unquote(s.trim()))
-        .filter(Boolean);
+      data[key] = splitFlowList(raw.slice(1, -1));
     } else {
       data[key] = unquote(raw);
     }
@@ -229,9 +255,10 @@ function sortDecisions(list) {
 
 /**
  * Where a new record for `tree` goes: the folder the tree's records already use (the busiest one),
- * else `<tree>/decisions/` when the vault has a folder named like the tree, else `decisions/<tree>/`.
+ * else `decisions/<tree>/`. (A plugin that may only read decision folders cannot tell whether a
+ * `<tree>/` folder exists, so `<tree>/decisions/` is only reached by records already there.)
  */
-function decisionFolderFor(tree, existing, vaultFiles) {
+function decisionFolderFor(tree, existing) {
   const clean = cleanTreeName(tree);
   if (!clean) return DECISIONS_DIR;
   const counts = new Map();
@@ -239,9 +266,7 @@ function decisionFolderFor(tree, existing, vaultFiles) {
     if (d.tree === clean) counts.set(d.folder, (counts.get(d.folder) || 0) + 1);
   const busiest = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
   if (busiest) return busiest[0];
-  return vaultFiles.some((p) => p.startsWith(`${clean}/`))
-    ? `${clean}/${DECISIONS_DIR}`
-    : `${DECISIONS_DIR}/${clean}`;
+  return `${DECISIONS_DIR}/${clean}`;
 }
 
 /** A file-name-safe version of a title; keeps CJK and other letters. */
@@ -265,7 +290,14 @@ function nextDecisionPath(existing, title, folder, skip = 0) {
   return { number, path: `${folder}/${String(number).padStart(4, "0")}-${slugify(title)}.md` };
 }
 
-const yamlList = (items) => `[${items.map((i) => String(i).replace(/[,\]\n]/g, " ")).join(", ")}]`;
+/** A flow list; an item with anything YAML could misread is double-quoted (JSON escapes are YAML's too). */
+const yamlItem = (i) => {
+  const text = String(i).trim();
+  return /^[^\s"'#[\]{},:&*!|>%@`-][^\n"#[\]{},]*$/.test(text) && !/\s$/.test(text)
+    ? text
+    : JSON.stringify(text);
+};
+const yamlList = (items) => `[${items.map(yamlItem).join(", ")}]`;
 const oneLine = (s) =>
   String(s)
     .replace(/[\r\n"]/g, " ")
@@ -383,10 +415,10 @@ async function recordDecision(input) {
   const title = input.title.trim();
   if (title === "") throw new Error("invalid_argument: title must not be blank");
   const tree = cleanTreeName(input.tree || "");
-  const { files, paths } = await decisionPaths();
+  const { paths } = await decisionPaths();
   // Numbers and references only need the file names, so recording stays cheap in a big vault.
   const existing = paths.map(fromPath);
-  const folder = decisionFolderFor(tree, existing, files);
+  const folder = decisionFolderFor(tree, existing);
   const scope = { folder, tree };
   // References that name a record become [[links]], so they stay clickable in any Obsidian.
   const requires = (input.requires || []).map((r) => {
@@ -438,31 +470,38 @@ async function recordDecision(input) {
 
 async function updateDecisionStatus({ id, status }) {
   const { paths } = await decisionPaths();
-  const records = paths.map(fromPath);
-  const hit = resolveRef(id, { folder: DECISIONS_DIR, tree: "" }, records);
+  const from = { folder: DECISIONS_DIR, tree: "" };
+  // File names first (cheap); a record whose `tree:` field differs from its folder needs a read.
+  let hit = resolveRef(id, from, paths.map(fromPath));
+  if (!hit) hit = resolveRef(id, from, (await readDecisions(paths)).list);
   if (!hit) {
-    const alike = records.filter((d) => d.number === Number(id));
+    const alike = paths.map(fromPath).filter((d) => d.number === Number(id));
     throw new Error(
       alike.length > 1
         ? `invalid_argument: "${id}" matches ${alike.length} records (${alike.map((d) => d.path).join(", ")}); use a path or Tree#number`
         : `not_found: no decision record matches "${id}"`,
     );
   }
-  const text = await vault.read({ path: hit.path });
-  const before = parseDecision(hit.path, text);
-  if (!before) throw new Error(`not_found: "${hit.path}" is not a decision record`);
-  if (before.status === status) return { path: hit.path, status, changed: false, decision: before };
-  const written = await vault.write({
-    path: hit.path,
-    content: setFrontmatterField(text, "status", status),
-  });
-  return {
-    path: written.path,
-    status,
-    changed: true,
-    previous: before.status,
-    decision: parseDecision(hit.path, await vault.read({ path: hit.path })),
-  };
+  // The host's write takes whatever version is current, so re-read right before writing and start
+  // over when the note changed meanwhile; the window that is left is a few milliseconds.
+  for (let attempt = 0; attempt < MAX_NUMBER_ATTEMPTS; attempt++) {
+    const text = await vault.read({ path: hit.path });
+    const before = parseDecision(hit.path, text);
+    if (!before) throw new Error(`not_found: "${hit.path}" is not a decision record`);
+    if (before.status === status)
+      return { path: hit.path, status, changed: false, decision: before };
+    const next = setFrontmatterField(text, "status", status);
+    if ((await vault.read({ path: hit.path })) !== text) continue;
+    const written = await vault.write({ path: hit.path, content: next });
+    return {
+      path: written.path,
+      status,
+      changed: true,
+      previous: before.status,
+      decision: parseDecision(hit.path, await vault.read({ path: hit.path })),
+    };
+  }
+  throw new Error("version_conflict: the note keeps changing, try again");
 }
 
 globalThis.__plugin = {

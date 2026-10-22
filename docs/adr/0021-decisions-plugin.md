@@ -24,6 +24,12 @@ of the product kept the same records in core code with none of these limits.
   `Tree#0003` references need only the paths, so they cost one `vault.list` however many records
   exist. Only the two list tools read files, at most 150 per call, and report `truncated`; asking
   for one `tree` reads that tree first.
+- **New trees go to `decisions/<tree>/`.** Version 1 also chose `<tree>/decisions/` when a `<tree>/`
+  folder existed; a plugin that may only read decision folders cannot see that, so it is only used
+  for trees whose records already live there.
+- **Status changes re-read before writing.** The host's `vault.write` takes the current version, so
+  the plugin re-reads just before and starts over when the note changed; a few milliseconds of
+  window remain until the host offers a conditional write.
 - **No overwriting.** `record_decision` reads the target path first and moves to the next number
   when it exists. Two calls at the same instant can still pick the same number (the host offers no
   create-only write); different titles keep both files and the reply warns.

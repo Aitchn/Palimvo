@@ -251,6 +251,27 @@ describe("decisions plugin", () => {
     ).toBe("decisions/0014-decision-trees.md");
   });
 
+  it("keeps list values with commas, brackets and quotes, and finds a record by its tree: field", async () => {
+    const w = await world();
+    const odd = ["Doe, Jane", "a]b", 'say "hi"', "# not a comment", "[x]", "multi\nline"];
+    const r = await w.tool("record_decision", {
+      title: "Odd values",
+      decision: "x",
+      deciders: odd,
+      related: ["notes/a, b.md"],
+    });
+    expect(r.result.decision.deciders).toEqual(odd.map((o) => o.replace("\n", "\n")));
+    expect(r.result.decision.related).toEqual(["notes/a, b.md"]);
+    // Written by hand in a folder that does not name the tree.
+    await server.services.vaults.writeFile(
+      "a",
+      "misc/decisions/0001-x.md",
+      "---\nstatus: proposed\ntree: Elsewhere\n---\n# 0001 X\n",
+    );
+    const s = await w.tool("update_decision_status", { id: "Elsewhere#1", status: "accepted" });
+    expect(s.result).toMatchObject({ path: "misc/decisions/0001-x.md", status: "accepted" });
+  });
+
   it("refuses ambiguous or missing references and bad arguments", async () => {
     const w = await world();
     // 0005 exists in decisions/ and MoreMobs/decisions/, but a bare number prefers the top folder.
