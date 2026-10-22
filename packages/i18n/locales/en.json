@@ -633,6 +633,18 @@
     "views": {
       "title": "Plugin views",
       "missing": "This plugin view is not available."
+    },
+    "theme": {
+      "label": "Plugin theme",
+      "none": "None (app default)"
+    },
+    "slot": {
+      "failed": "The plugin {name} could not finish: {detail}",
+      "statusBar": "Plugin status"
+    },
+    "apps": {
+      "title": "Plugin apps",
+      "missing": "This plugin app is not available."
     }
   },
   "errors": {

@@ -1,0 +1,5 @@
+{
+  "title": "Hello from a plugin app",
+  "body": "This vault has {count} files. Open any file in the sidebar to leave this page.",
+  "open": "Open the first file"
+}

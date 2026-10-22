@@ -25,6 +25,8 @@ import { summarizePermissions, type PermissionSummary } from "./summary.ts";
 
 /** Where a vault keeps installed plugins, inside `.palimvo/`. */
 export const PLUGINS_DIR = "plugins";
+/** A folder of the official plugins directory that holds developer examples, not plugins to ship. */
+const EXAMPLES_DIR = "examples";
 
 /** Why an installed plugin is or is not running. */
 export type PluginState =
@@ -197,7 +199,7 @@ export class PluginManager implements PluginCatalog {
     const added: string[] = [];
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
     for (const e of entries
-      .filter((x) => x.isDirectory())
+      .filter((x) => x.isDirectory() && x.name !== EXAMPLES_DIR)
       .sort((a, b) => a.name.localeCompare(b.name))) {
       try {
         const files = await readTree(path.join(dir, e.name));

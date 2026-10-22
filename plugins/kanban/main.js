@@ -157,6 +157,18 @@ function mount(palimvo, container, initial, withBar) {
 
   const state = { notes: [], busy: new Set() };
 
+  // One input for new cards that survives every redraw, so a refresh never eats what is being typed.
+  let newColumn = DEFAULT_COLUMNS[0];
+  const newInput = h("input", "kb-new");
+  newInput.placeholder = t("newCard");
+  newInput.setAttribute("aria-label", t("newCard"));
+  newInput.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || !newInput.value.trim()) return;
+    const text = newInput.value.trim().replace(/[\\/:*?"<>|]/g, "-");
+    newInput.value = "";
+    createCard(text, newColumn).then(load, fail);
+  });
+
   if (withBar) {
     const bar = h("div", "kb-bar");
     const field = h("input");
@@ -232,6 +244,7 @@ function mount(palimvo, container, initial, withBar) {
       cols.replaceChildren(h("p", "kb-empty", t("empty", { field: options.field })));
       return;
     }
+    const typing = document.activeElement === newInput;
     cols.replaceChildren(
       ...columns.map((name, i) =>
         column(
@@ -243,6 +256,7 @@ function mount(palimvo, container, initial, withBar) {
         ),
       ),
     );
+    if (typing) newInput.focus();
   }
 
   /**
@@ -291,16 +305,8 @@ function mount(palimvo, container, initial, withBar) {
       if (path) move(path, name).catch(fail);
     });
     if (first) {
-      const input = h("input", "kb-new");
-      input.placeholder = t("newCard");
-      input.setAttribute("aria-label", t("newCard"));
-      input.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter" || !input.value.trim()) return;
-        const text = input.value.trim().replace(/[\\/:*?"<>|]/g, "-");
-        input.value = "";
-        createCard(text, name).then(load, fail);
-      });
-      col.append(input);
+      newColumn = name;
+      col.append(newInput);
     }
     return col;
   }

@@ -1,0 +1,42 @@
+{
+  "manifestVersion": 2,
+  "id": "slots-demo",
+  "version": "1.0.0",
+  "name": { "en": "Slots demo", "zh-TW": "插槽示範", "zh-CN": "插槽演示" },
+  "description": {
+    "en": "Adds one entry to every UI slot: toolbar, context menu, command palette, status bar and settings."
+  },
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"], "write": [], "network": false },
+  "contributes": {
+    "slots": [
+      {
+        "slot": "toolbar",
+        "id": "count",
+        "title": { "en": "Count notes", "zh-TW": "計算筆記數", "zh-CN": "统计笔记数" }
+      },
+      {
+        "slot": "context-menu",
+        "id": "size",
+        "title": { "en": "Show size", "zh-TW": "顯示大小", "zh-CN": "显示大小" }
+      },
+      {
+        "slot": "command-palette",
+        "id": "hello",
+        "title": { "en": "Say hello", "zh-TW": "打招呼", "zh-CN": "打招呼" }
+      },
+      {
+        "slot": "status-bar",
+        "id": "path",
+        "title": { "en": "Where am I", "zh-TW": "目前位置", "zh-CN": "当前位置" }
+      },
+      {
+        "slot": "settings",
+        "id": "about",
+        "title": { "en": "Slots demo", "zh-TW": "插槽示範", "zh-CN": "插槽演示" }
+      }
+    ]
+  },
+  "locales": { "en": "locales/en.json" },
+  "main": "main.js"
+}

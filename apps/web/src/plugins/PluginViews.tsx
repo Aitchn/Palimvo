@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalized } from "@palimvo/plugin-sdk";
+import { Icon, isIconName } from "../ui/index.ts";
 import { PluginFrame } from "./PluginFrame.tsx";
 import { usePluginRuntime } from "./PluginsProvider.tsx";
 
@@ -13,6 +14,11 @@ export interface PluginViewRef {
 export function pluginViewHref(vaultHref: string, ref: PluginViewRef): string {
   const query = new URLSearchParams({ plugin: ref.plugin, view: ref.view });
   return `${vaultHref}?${query}`;
+}
+
+/** `/v/<vault>?app=<id>`: the address of a plugin that takes over the main area. */
+export function pluginAppHref(vaultHref: string, plugin: string): string {
+  return `${vaultHref}?${new URLSearchParams({ app: plugin })}`;
 }
 
 /** Sidebar list of the pages plugins add; renders nothing when no plugin has one. */
@@ -45,6 +51,59 @@ export function PluginViewLinks({
         );
       })}
     </nav>
+  );
+}
+
+/** Sidebar list of whole-page applications; renders nothing when no plugin offers one. */
+export function PluginAppLinks({
+  active,
+  onOpen,
+}: {
+  active: string | null;
+  onOpen: (plugin: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const apps = usePluginRuntime()?.registry.apps ?? [];
+  if (apps.length === 0) return null;
+  return (
+    <nav className="plugin-views plugin-apps" aria-label={t("plugins.apps.title")}>
+      <h3 className="plugin-views-title">{t("plugins.apps.title")}</h3>
+      {apps.map((app) => (
+        <button
+          key={app.pluginId}
+          type="button"
+          className="plugin-view-link"
+          aria-current={active === app.pluginId ? "page" : undefined}
+          onClick={() => onOpen(app.pluginId)}
+        >
+          {isIconName(app.icon) && <Icon name={app.icon} />}
+          {resolveLocalized(app.name, i18n.language)}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * The main area when a plugin application is open: it fills the area, the app's own navigation
+ * and sign-in stay around it. Opening any file or page leaves it.
+ */
+export function PluginApp({ plugin }: { plugin: string }) {
+  const { t } = useTranslation();
+  const runtime = usePluginRuntime();
+  if (!runtime?.registry.app.has(plugin)) {
+    return (
+      <div className="state" role={runtime?.loaded ? "alert" : "status"}>
+        <p className="muted">
+          {runtime?.loaded ? t("plugins.apps.missing") : t("plugins.loading")}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="plugin-view plugin-app">
+      <PluginFrame pluginId={plugin} mode="app" target="@app" />
+    </div>
   );
 }
 

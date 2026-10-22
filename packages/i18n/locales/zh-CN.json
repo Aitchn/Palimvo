@@ -1151,6 +1151,18 @@
     "views": {
       "title": "插件视图",
       "missing": "这个插件视图无法使用。"
+    },
+    "theme": {
+      "label": "插件主题",
+      "none": "无（使用默认）"
+    },
+    "slot": {
+      "failed": "插件 {name} 未能完成：{detail}",
+      "statusBar": "插件状态"
+    },
+    "apps": {
+      "title": "插件应用",
+      "missing": "这个插件应用当前不可用。"
     }
   },
   "errors": {

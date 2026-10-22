@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 2,
+  "id": "theme-midnight",
+  "version": "1.0.0",
+  "name": { "en": "Midnight theme", "zh-TW": "午夜主題", "zh-CN": "午夜主题" },
+  "description": {
+    "en": "A deep blue colour theme. Example of a CSS-variable theme plugin."
+  },
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": [], "write": [], "network": false },
+  "contributes": {
+    "theme": {
+      "name": { "en": "Midnight", "zh-TW": "午夜", "zh-CN": "午夜" },
+      "css": "theme.css"
+    }
+  },
+  "main": "main.js"
+}

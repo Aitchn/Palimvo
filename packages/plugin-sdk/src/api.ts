@@ -114,9 +114,20 @@ export interface SlotContext {
   selection?: string;
 }
 
-export interface SlotHandler {
+/**
+ * What a plugin does for one `contributes.slots` entry. The host draws the frame (the button, the
+ * menu item, the palette row, the settings section); the plugin supplies what happens.
+ *
+ * - `toolbar`, `context-menu`, `command-palette`, `status-bar`: give `run`, called when the person
+ *   picks the entry.
+ * - `settings`: give `render`; its content is drawn in a sandboxed frame inside a settings section
+ *   titled with the entry's title.
+ */
+export interface SlotHandler<El = unknown> {
   /** Called when the user picks the entry. */
-  run(context: SlotContext): void | Promise<void>;
+  run?(context: SlotContext): void | Promise<void>;
+  /** `settings` entries: draws the content of the section. */
+  render?: Render<RenderContext<El>>;
   /** Return false to hide the entry for this context. */
   visible?(context: SlotContext): boolean;
 }
@@ -129,7 +140,7 @@ export interface UiApi<El = unknown> {
   registerViewer(id: string, render: Render<ViewerContext<El>>): Unsubscribe;
   registerBaseView(type: string, render: Render<BaseViewContext<El>>): Unsubscribe;
   registerHomeWidget(id: string, render: Render<RenderContext<El>>): Unsubscribe;
-  registerSlot(slot: string, id: string, handler: SlotHandler): Unsubscribe;
+  registerSlot(slot: string, id: string, handler: SlotHandler<El>): Unsubscribe;
   /** Draws the whole page of a `contributes.app` plugin. */
   registerApp(render: Render<RenderContext<El>>): Unsubscribe;
   showNotice(message: string, options?: { kind?: "info" | "success" | "error" }): void;

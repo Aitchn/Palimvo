@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 // Here their logic is checked in jsdom against a fake `palimvo`.
 
 // Vitest runs in apps/web.
-const dir = (id: string) => `${path.resolve(process.cwd(), "../../plugins", id)}${path.sep}`;
+// chart-pack and json-tree are developer examples, not shipped plugins.
+const EXAMPLES = new Set(["chart-pack", "json-tree"]);
+const dir = (id: string) =>
+  `${path.resolve(process.cwd(), "../../plugins", EXAMPLES.has(id) ? "examples" : "", id)}${path.sep}`;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Mod = any;
 const load = (id: string): Promise<Mod> => {

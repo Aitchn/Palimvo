@@ -8,14 +8,23 @@ Plugins shipped with the server (in the plugin library from the start; nothing i
 | `decisions`  | decision notes, status, timeline, 4 MCP tools | T36           |
 | `kanban`     | board view and `kanban` code block            | ready         |
 | `kanban-due` | due-date badges for the board                 | ready         |
-| `chart-pack` | radar, treemap and sparkline components       | ready         |
-| `json-tree`  | collapsible viewer for `.json`                | ready         |
 
 Each plugin folder has its own `README.md`, `main.js` and `locales/{en,zh-TW,zh-CN}.json`. The
 `decisions` folder still holds only its manifest; the loader skips a folder whose `main` file is
-missing until the code arrives (T36).
+missing until the code arrives (T36). `kanban` + `kanban-due` also show an extension point.
 
-They are also the examples to copy from: `kanban` + `kanban-due` show an extension point,
-`json-tree` a file viewer, `chart-pack` component types, and all four show how run-time strings
-are read with `palimvo.i18n.t`. Tests: `apps/web/src/plugins/official.test.ts` (logic) and
-`tests/e2e/official-plugins.spec.ts` (in a browser, in the real sandbox).
+## Examples
+
+`examples/` holds small plugins for plugin authors, one per kind of contribution. They are never
+seeded into the server library (`PluginManager.seedBuiltins` skips the folder, and a test locks it).
+
+| Folder                    | Shows                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `examples/theme-midnight` | a CSS-variable theme (`contributes.theme`)                                              |
+| `examples/slots-demo`     | an entry in every UI slot: toolbar, context menu, command palette, status bar, settings |
+| `examples/hello-app`      | a whole-page application (`contributes.app`)                                            |
+| `examples/chart-pack`     | component types for `component` blocks (radar, treemap, sparkline)                      |
+| `examples/json-tree`      | a file viewer (`contributes.viewers`) with search and folding                           |
+
+Tests: `apps/web/src/plugins/official.test.ts` (logic of the board, due dates and both examples)
+and `tests/e2e/official-plugins.spec.ts` (in a browser, in the real sandbox).

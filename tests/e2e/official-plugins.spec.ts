@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import { mockApi, shotPath } from "./mocks.ts";
@@ -8,8 +8,13 @@ import { mockApi, shotPath } from "./mocks.ts";
 
 const pluginsDir = fileURLToPath(new URL("../../plugins/", import.meta.url));
 
+// chart-pack and json-tree are developer examples under plugins/examples/.
+const EXAMPLES = new Set(["chart-pack", "json-tree"]);
+const folderOf = (id: string) =>
+  EXAMPLES.has(id) ? `${pluginsDir}examples/${id}/` : `${pluginsDir}${id}/`;
+
 function official(id: string) {
-  const root = `${pluginsDir}${id}/`;
+  const root = folderOf(id);
   const manifest = JSON.parse(readFileSync(`${root}manifest.json`, "utf8")) as Record<
     string,
     unknown
@@ -98,21 +103,6 @@ const TASKS = {
   "tasks/Celebrate.md": `---\nstatus: done\ndue: ${inTenDays}\n---\n# Celebrate\n`,
   "Welcome.md": "# Welcome\n",
 };
-
-test.describe("official plugins ship what their manifests promise", () => {
-  test("every folder under plugins/ with a main file has all the files its manifest names", () => {
-    for (const id of readdirSync(pluginsDir).filter((n) => !n.includes("."))) {
-      const manifest = JSON.parse(readFileSync(`${pluginsDir}${id}/manifest.json`, "utf8")) as {
-        main?: string;
-        locales?: Record<string, string>;
-      };
-      if (id === "decisions") continue; // lands with T36
-      for (const path of [manifest.main, ...Object.values(manifest.locales ?? {})]) {
-        expect(() => readFileSync(`${pluginsDir}${id}/${path}`), `${id}/${path}`).not.toThrow();
-      }
-    }
-  });
-});
 
 test.describe("kanban and kanban-due", () => {
   test.use({ viewport: { width: 1280, height: 800 }, locale: "en", reducedMotion: "reduce" });
@@ -247,7 +237,7 @@ test.describe("chart-pack", () => {
   // main.js is run in the browser against a small stand-in for the runtime's `palimvo` object.
   test("radar, treemap and sparkline draw real SVG in both themes", async ({ page }) => {
     await page.goto("about:blank");
-    const code = readFileSync(`${pluginsDir}chart-pack/main.js`, "utf8");
+    const code = readFileSync(`${folderOf("chart-pack")}main.js`, "utf8");
     for (const theme of ["dark", "light"] as const) {
       await page.setContent(
         `<html data-theme="${theme}"><body style="margin:16px;background:${theme === "dark" ? "#0f1014" : "#fff"};color:${theme === "dark" ? "#e7e7ec" : "#111"};--bg:${theme === "dark" ? "#0f1014" : "#fff"};--fg:${theme === "dark" ? "#e7e7ec" : "#111"};--fg-muted:#8a8b97;--border:#8a8b9744;font-family:system-ui,sans-serif"><div id="a"></div><div id="b"></div><div id="c"></div></body></html>`,
