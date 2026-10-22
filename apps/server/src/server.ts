@@ -4,6 +4,7 @@ import { serve } from "@hono/node-server";
 import pkg from "../package.json" with { type: "json" };
 import { createApp } from "./app.ts";
 import { AuthService } from "./auth/service.ts";
+import { SetupService } from "./auth/setup.ts";
 import { BackupService, type BackupOptions } from "./history/backup.ts";
 import { assertGit } from "./history/git.ts";
 import { SYSTEM_AUTHOR, VaultHistory, type HistoryOptions } from "./history/history.ts";
@@ -132,11 +133,26 @@ export async function startServer({
     });
     backup.start();
     const auth = new AuthService(openStore);
+    const setup = new SetupService(openStore, config.dataDir, {
+      devInsecure: config.devInsecure,
+      logger: log,
+    });
+    const pending = await setup.init();
+    if (pending)
+      log.warn("first-time setup required", {
+        setupCode: pending.code,
+        codeFile: setup.tokenFile,
+        hint: "Open the server in a browser on this machine (no code needed), or enter the code from anywhere else.",
+      });
+    else if (config.devInsecure && !auth.hasAccounts)
+      log.warn("--dev-insecure: the API is open until the first account exists");
     const app = createApp({
       webDir,
       logger: log,
       store: openStore,
       auth,
+      setup,
+      devInsecure: config.devInsecure,
       publicUrl: config.publicUrl,
       trustProxy: config.trustProxy,
       version: VERSION,

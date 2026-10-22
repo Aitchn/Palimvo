@@ -6,6 +6,8 @@ import type { VaultHistory } from "./history/history.ts";
 import { AppError, errorHandler } from "./errors.ts";
 import type { Logger } from "./log.ts";
 import type { Store } from "./store/index.ts";
+import { setupRoutes } from "./routes/setup.ts";
+import type { SetupService } from "./auth/setup.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { archiveRoutes } from "./routes/archive.ts";
 import { authRoutes } from "./routes/auth.ts";
@@ -23,6 +25,9 @@ export interface AppDeps {
   logger: Logger;
   store: Store;
   auth: AuthService;
+  setup: SetupService;
+  /** Keep the API open until the first account exists (development only). */
+  devInsecure?: boolean;
   /** Externally visible origin; decides the cookie's `Secure` flag and invite links. */
   publicUrl?: string | undefined;
   trustProxy?: boolean;
@@ -71,8 +76,27 @@ export function createApp(deps: AppDeps): Hono {
     );
   });
 
-  app.use("/api/*", principalMiddleware({ auth: deps.auth, publicUrl: deps.publicUrl }));
+  app.use(
+    "/api/*",
+    principalMiddleware({
+      auth: deps.auth,
+      publicUrl: deps.publicUrl,
+      devInsecure: deps.devInsecure ?? false,
+    }),
+  );
   app.use("/api/*", accessGate());
+  app.route(
+    "/",
+    setupRoutes({
+      auth: deps.auth,
+      setup: deps.setup,
+      vaults: deps.vaults,
+      history: deps.history,
+      trash: deps.trash,
+      publicUrl: deps.publicUrl,
+      trustProxy: deps.trustProxy ?? false,
+    }),
+  );
   app.route(
     "/",
     authRoutes({

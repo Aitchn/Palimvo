@@ -186,6 +186,7 @@
     "token_scope_denied": "This token does not cover that vault or folder.",
     "propose_only": "This token can only propose changes.",
     "setup_code_required": "The setup code is required.",
+    "setup_required": "Finish the first-time setup first.",
     "setup_complete": "Setup has already been completed.",
     "plugin_not_approved": "This plugin version has not been approved.",
     "not_found": "That item could not be found.",
