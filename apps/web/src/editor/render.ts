@@ -1,5 +1,5 @@
 import { Facet } from "@codemirror/state";
-import { mediaOf } from "@palimvo/core";
+import { mediaOf, type MediaKind } from "@palimvo/core";
 import type { SyntaxNode } from "@lezer/common";
 import { inlineParser } from "./syntax.ts";
 import type { WikiLinkHost } from "./wikilinks.ts";
@@ -20,14 +20,15 @@ export function isExternal(href: string): boolean {
 }
 
 /** The vault path a relative markdown link points to: `notes/My%20note.md#part` → `notes/My note.md`. */
-export function vaultTarget(href: string): string {
+export function vaultTarget(href: string, keepDot = false): string {
   let path = href.split("#")[0]!.split("?")[0]!;
   try {
     path = decodeURIComponent(path);
   } catch {
     // Keep the raw text when it is not valid percent-encoding.
   }
-  return path.replace(/^\.\//, "").replace(/^<|>$/g, "").trim();
+  // Media keep "./": it means "beside this note", not "anywhere with this name".
+  return (keepDot ? path : path.replace(/^\.\//, "")).replace(/^<|>$/g, "").trim();
 }
 
 /** Follows a [text](href) link: web links open in a new tab, vault paths open the note. */
@@ -48,9 +49,28 @@ export function openHref(host: WikiLinkHost | null, href: string): void {
 export function mediaSrc(host: WikiLinkHost | null, url: string): string | null {
   if (/^(https?:)?\/\//i.test(url) || /^data:image\//i.test(url)) return url;
   if (isExternal(url) || !host?.fileUrl) return null;
-  const target = vaultTarget(url);
-  const resolved = host.resolve(target);
+  const resolved = host.resolve(vaultTarget(url, true));
   return resolved && mediaOf(resolved)?.kind === "image" ? host.fileUrl(resolved) : null;
+}
+
+/**
+ * What `![alt](url)` points to: a vault image, sound or video, resolved against the note it is
+ * in (`./a.png`, `../img/a.png`, a bare name). Web and data URLs are images as they are.
+ */
+export function mediaTarget(
+  host: WikiLinkHost | null,
+  url: string,
+): { src: string; kind: MediaKind } | null {
+  const image = mediaSrc(host, url);
+  if (image) {
+    // A web address ending in .mp4 or .mp3 is a player, not a picture.
+    const kind = /^(https?:)?\/\//i.test(url) ? mediaOf(url.split(/[?#]/)[0]!)?.kind : undefined;
+    return { src: image, kind: kind ?? "image" };
+  }
+  if (isExternal(url) || !host?.fileUrl) return null;
+  const resolved = host.resolve(vaultTarget(url, true));
+  const media = resolved ? mediaOf(resolved) : undefined;
+  return resolved && media ? { src: host.fileUrl(resolved), kind: media.kind } : null;
 }
 
 /** `alt|300` or `alt|300x200`: Obsidian's way to size an image. */

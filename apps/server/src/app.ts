@@ -21,6 +21,7 @@ import { tokenRoutes } from "./routes/tokens.ts";
 import { memberRoutes } from "./routes/members.ts";
 import { roleRoutes } from "./routes/roles.ts";
 import { fileRoutes } from "./routes/files.ts";
+import { rawRoutes } from "./routes/raw.ts";
 import { historyRoutes } from "./routes/history.ts";
 import { proposalRoutes } from "./routes/proposals.ts";
 import { ProposalService } from "./proposals/proposals.ts";
@@ -134,6 +135,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", proposalRoutes(deps.vaults, proposals, deps.auth));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
+  app.route("/", rawRoutes(deps.vaults));
   app.route(
     "/",
     oauthRoutes({

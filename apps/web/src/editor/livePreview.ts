@@ -8,7 +8,7 @@ import {
   imageSize,
   isExternal,
   markdownHost,
-  mediaSrc,
+  mediaTarget,
   openHref,
   renderInline,
   renderMath,
@@ -179,6 +179,31 @@ class ImageWidget extends WidgetType {
     img.onload = () => view.requestMeasure();
     img.onerror = () => img.classList.add("cm-md-image-broken");
     return img;
+  }
+}
+
+/** A sound or video from the vault (`![](clip.mp4)`), played in place. */
+class MediaWidget extends WidgetType {
+  constructor(
+    readonly src: string,
+    readonly kind: "audio" | "video",
+  ) {
+    super();
+  }
+  eq(other: MediaWidget): boolean {
+    return other.src === this.src && other.kind === this.kind;
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const el = document.createElement(this.kind);
+    el.className = `cm-embed-media cm-embed-${this.kind}`;
+    el.controls = true;
+    el.preload = "metadata";
+    el.src = this.src;
+    el.onloadedmetadata = () => view.requestMeasure();
+    return el;
+  }
+  ignoreEvent(): boolean {
+    return true;
   }
 }
 
@@ -647,10 +672,13 @@ function build(state: EditorState): DecorationSet {
           const url = node.getChild("URL");
           const marks = node.getChildren("LinkMark");
           if (!url || marks.length < 2) break;
-          const src = mediaSrc(host, state.sliceDoc(url.from, url.to));
-          if (!src) break;
+          const media = mediaTarget(host, state.sliceDoc(url.from, url.to));
+          if (!media) break;
           const { alt, width, height } = imageSize(state.sliceDoc(marks[0]!.to, marks[1]!.from));
-          const widget = new ImageWidget(src, alt, width, height);
+          const widget =
+            media.kind === "image"
+              ? new ImageWidget(media.src, alt, width, height)
+              : new MediaWidget(media.src, media.kind);
           if (isActive(node.from, node.to))
             decos.push(Decoration.widget({ widget, side: 1 }).range(node.to));
           else decos.push(Decoration.replace({ widget }).range(node.from, node.to));
