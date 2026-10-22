@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import { AppError, errorHandler } from "./errors.ts";
 import type { Logger } from "./log.ts";
+import type { Store } from "./store/index.ts";
 
 export interface AppDeps {
   logger: Logger;
+  store: Store;
   version: string;
   /** False once shutdown has begun, so load balancers stop sending traffic. */
   ready: () => boolean;
