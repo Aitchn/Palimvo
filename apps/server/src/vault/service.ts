@@ -762,6 +762,14 @@ export class VaultService {
     });
   }
 
+  /** Removes a `.palimvo/` file; nothing happens if it is not there. */
+  async deleteMeta(vaultId: string, name: string): Promise<void> {
+    const abs = await this.metaPath(vaultId, name);
+    await this.queueFileWrite(vaultId, `\0${name}`, async () => {
+      await rm(abs, { force: true });
+    });
+  }
+
   private async metaPath(vaultId: string, name: string): Promise<string> {
     if (
       !/^[a-z0-9_-][a-z0-9_.-]*(\/[a-z0-9_.-]+)*$/i.test(name) ||

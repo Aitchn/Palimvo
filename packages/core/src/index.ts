@@ -14,3 +14,4 @@ export * from "./file-types.ts";
 export * from "./base-expr.ts";
 export * from "./bases.ts";
 export * from "./search.ts";
+export * from "./collab.ts";

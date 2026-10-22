@@ -16,8 +16,9 @@ export type SaveStatus =
   "loading" | "saved" | "saving" | "unsaved" | "offline" | "conflict" | "error";
 
 /**
- * What the editor needs from whatever keeps a note in sync. Live editing (Yjs, T16) provides the
- * same shape with a `collab` source and real `peers`; until then this REST session stands in.
+ * What the editor needs from whatever keeps a note in sync. Live editing (`useCollabNote`)
+ * provides the same shape with a `collab` source and real `peers`; this REST session is the
+ * fallback for places that have no live connection.
  */
 export interface NoteSession {
   source: SurfaceSource | null;
@@ -25,7 +26,7 @@ export interface NoteSession {
   /** People and AIs with the note open, including this tab. */
   peers: number;
   /** A message about something that happened on its own, e.g. unsent text that was recovered. */
-  notice: "recovered" | "reloaded" | null;
+  notice: "recovered" | "reloaded" | "savedCopy" | null;
   error: unknown;
   /** Text typed here that the server does not have yet. */
   unsent: boolean;

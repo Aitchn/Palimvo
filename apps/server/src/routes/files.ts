@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { AppError } from "@palimvo/core";
 import { z } from "zod";
+import type { CollabHub } from "../collab/hub.ts";
 import type { VaultHistory } from "../history/history.ts";
 import { MAX_TEXT_BYTES } from "../vault/fsutil.ts";
 import { MAX_BATCH_BYTES, type VaultService } from "../vault/service.ts";
@@ -46,10 +47,12 @@ function notModified(c: Context, tag: string): boolean {
 
 /**
  * File tree, reading, writing, moving and deleting inside a vault: `/api/vaults/:vault/…`.
- * Every change is recorded with `history` (who made it and why) while the vault's write queue
- * is still held, so a commit never separates a change from its author.
+ * Every change is recorded in the version history (who made it and why) while the vault's write
+ * queue is still held, so a commit never separates a change from its author. A note or canvas
+ * that people have open is read from and written through its live document (`hub`), so a write
+ * merges into what they are typing.
  */
-export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
+export function fileRoutes(vaults: VaultService, history: VaultHistory, hub: CollabHub): Hono {
   const app = new Hono();
 
   app.get("/api/vaults/:vault/files", async (c) => {
@@ -62,7 +65,7 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
   });
 
   app.get("/api/vaults/:vault/files/*", async (c) => {
-    const file = await vaults.readFile(c.req.param("vault"), filePathOf(c));
+    const file = await hub.readFile(c.req.param("vault"), filePathOf(c));
     const tag = `"${file.version}"`;
     c.header("ETag", tag);
     c.header("Cache-Control", "no-cache");
@@ -78,9 +81,10 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
       const vault = c.req.param("vault");
       const author = requestAuthor(c);
       const note = requestNote(c);
-      const file = await vaults.writeFile(vault, filePathOf(c), content, {
+      const file = await hub.writeFile(vault, filePathOf(c), content, {
         baseVersion,
-        onWritten: (written) => history.record(vault, [written.path], author, note),
+        author,
+        note,
       });
       return c.json({ path: file.path, version: file.version, mtime: file.mtime });
     },
@@ -91,7 +95,9 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
     const target = filePathOf(c);
     const author = requestAuthor(c);
     const note = requestNote(c, `Delete ${target}`);
-    await vaults.deleteFile(vault, target, (paths) => history.record(vault, paths, author, note));
+    await hub.mutate(vault, target, "deleted", () =>
+      vaults.deleteFile(vault, target, (paths) => history.record(vault, paths, author, note)),
+    );
     return c.body(null, 204);
   });
 
@@ -112,8 +118,8 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
     const author = requestAuthor(c);
     const note = requestNote(c, `Move ${from} to ${to}`);
     return c.json(
-      await vaults.move(vault, from, to, (moved) =>
-        history.record(vault, moved.flat(), author, note),
+      await hub.mutate(vault, from, "moved", () =>
+        vaults.move(vault, from, to, (moved) => history.record(vault, moved.flat(), author, note)),
       ),
     );
   });
@@ -126,15 +132,7 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory): Hono {
       const vault = c.req.param("vault");
       const author = requestAuthor(c);
       const note = requestNote(c);
-      const files = await vaults.writeBatch(vault, writes, {
-        onWritten: (results) =>
-          history.record(
-            vault,
-            results.map((r) => r.path),
-            author,
-            note,
-          ),
-      });
+      const files = await hub.applyBatch(vault, writes, { author, note });
       return c.json({ files });
     },
   );

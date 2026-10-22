@@ -1,6 +1,7 @@
 import { Hono } from "hono";
-import { AppError, normalizeVaultPath } from "@palimvo/core";
+import { AppError, collabKind, normalizeVaultPath } from "@palimvo/core";
 import { z } from "zod";
+import type { CollabHub } from "../collab/hub.ts";
 import type { BackupService } from "../history/backup.ts";
 import type { VaultHistory } from "../history/history.ts";
 import type { VaultService } from "../vault/service.ts";
@@ -11,6 +12,7 @@ export interface HistoryRouteDeps {
   vaults: VaultService;
   history: VaultHistory;
   backup: BackupService;
+  collab: CollabHub;
 }
 
 const restoreBody = z.object({
@@ -26,7 +28,7 @@ const backupBody = z.object({
 });
 
 /** Version history, restore, checkpoints and off-site backup: `/api/vaults/:vault/…`. */
-export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Hono {
+export function historyRoutes({ vaults, history, backup, collab }: HistoryRouteDeps): Hono {
   const app = new Hono();
 
   /** Fails with `vault_not_found` before git is asked about a vault that does not exist. */
@@ -71,6 +73,11 @@ export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Ho
     const bytes = await history.blob(vault, commit, from ? normalizePath(from) : dest);
     const author = requestAuthor(c);
     const note = requestNote(c, `Restore ${dest} to ${commit.slice(0, 7)}`);
+    if (collabKind(dest)) {
+      // A note people have open takes the old text as an edit, so nobody loses what they are typing.
+      const written = await collab.writeFile(vault, dest, bytes.toString("utf8"), { author, note });
+      return c.json({ path: written.path, version: written.version, mtime: written.mtime });
+    }
     const written = await vaults.writeBytes(vault, dest, bytes, {
       onWritten: (r) => history.record(vault, [r.path], author, note),
     });
@@ -85,6 +92,8 @@ export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Ho
   app.post("/api/vaults/:vault/checkpoints", async (c) => {
     const vault = await known(c.req.param("vault"));
     const { message, tag } = await readJson(c, checkpointBody);
+    // Text people are still typing goes into the checkpoint.
+    await collab.flushVault(vault);
     return c.json(await history.checkpoint(vault, { message, tag, author: requestAuthor(c) }), 201);
   });
 

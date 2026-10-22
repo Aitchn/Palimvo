@@ -33,6 +33,7 @@ async function open(
       onOpen={onOpen}
       onCreate={onCreate}
       readOnly={readOnly}
+      live={false}
     />,
   );
   await waitFor(() => expect(document.querySelector(".cm-content")).not.toBeNull());
@@ -210,7 +211,14 @@ describe("NoteEditor", () => {
   it("shows an error with a retry when the note cannot be read", async () => {
     mockRoutes({});
     await renderWithProviders(
-      <NoteEditor vault="v" path="Gone.md" paths={[]} onOpen={vi.fn()} onCreate={vi.fn()} />,
+      <NoteEditor
+        vault="v"
+        path="Gone.md"
+        paths={[]}
+        onOpen={vi.fn()}
+        onCreate={vi.fn()}
+        live={false}
+      />,
     );
     expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
   });

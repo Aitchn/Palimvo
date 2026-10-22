@@ -167,8 +167,10 @@
     },
     "notice": {
       "recovered": "Unsent text from earlier was restored",
-      "reloaded": "Updated to the latest version"
-    }
+      "reloaded": "Updated to the latest version",
+      "savedCopy": "Edits made while offline could not be merged and were saved as a separate note next to this one"
+    },
+    "guestName": "Guest {number}"
   },
   "errors": {
     "unknown": "Something went wrong.",

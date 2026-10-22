@@ -7,6 +7,7 @@ import { Button, Skeleton } from "../ui/index.ts";
 import { EditorHeader } from "./EditorHeader.tsx";
 import { MarkdownSurface } from "./MarkdownSurface.tsx";
 import { useEditorLabels } from "./useEditorLabels.ts";
+import { useCollabNote } from "./useCollabNote.ts";
 import { useNoteSession, type NoteSession } from "./useNoteSession.ts";
 import type { WikiLinkHost } from "./wikilinks.ts";
 
@@ -23,12 +24,32 @@ interface Props {
   readOnly?: boolean;
   /** Put the cursor in the text when the note opens. */
   autoFocus?: boolean;
-  /** Another source of the note's text, e.g. live editing; by default the note is read and saved over HTTP. */
+  /** Another source of the note's text; by default it comes from the server's live document. */
   session?: NoteSession;
+  /** False reads and saves the note over plain HTTP, one writer at a time (no live connection). */
+  live?: boolean;
 }
 
-/** A markdown note: live-preview editing, a reading view, and a calm save indicator. */
-export function NoteEditor({
+/**
+ * A markdown note: live-preview editing, a reading view, and a calm save indicator. Edits merge
+ * with everyone else's through the server's live document (`useCollabNote`).
+ */
+export function NoteEditor({ session, live = true, ...props }: Props) {
+  if (session) return <NoteView {...props} note={session} />;
+  return live ? <LiveNote {...props} /> : <HttpNote {...props} />;
+}
+
+type ViewProps = Omit<Props, "session" | "live">;
+
+function LiveNote(props: ViewProps) {
+  return <NoteView {...props} note={useCollabNote(props.vault, props.path)} />;
+}
+
+function HttpNote(props: ViewProps) {
+  return <NoteView {...props} note={useNoteSession(props.vault, props.path)} />;
+}
+
+function NoteView({
   vault,
   path,
   paths,
@@ -36,12 +57,10 @@ export function NoteEditor({
   onCreate,
   readOnly = false,
   autoFocus = false,
-  session,
-}: Props) {
+  note,
+}: ViewProps & { note: NoteSession }) {
   const { t } = useTranslation();
   const labels = useEditorLabels();
-  const own = useNoteSession(vault, path);
-  const note = session ?? own;
   const [reading, setReading] = useState(false);
 
   const frozen = useMemo(() => Object.freeze([...paths]), [paths]);

@@ -5,6 +5,12 @@ import { POLL_MS } from "../files/useVaultTree.ts";
 import { initTheme } from "../theme/theme.ts";
 import { mockMatchMedia, mockRoutes, renderRoute, type RecordedCall } from "../test/render.tsx";
 
+// These tests are about the file tree and tabs, which have no live server here: notes open over HTTP.
+vi.mock("../editor/useCollabNote.ts", async () => {
+  const { useNoteSession } = await import("../editor/useNoteSession.ts");
+  return { useCollabNote: useNoteSession };
+});
+
 const FILES = {
   tree: [
     {

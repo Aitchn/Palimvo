@@ -167,8 +167,10 @@
     },
     "notice": {
       "recovered": "已找回先前沒送出的內容",
-      "reloaded": "已更新為最新版本"
-    }
+      "reloaded": "已更新為最新版本",
+      "savedCopy": "離線時的修改無法自動合併，已另存為旁邊的另一則筆記"
+    },
+    "guestName": "訪客 {number}"
   },
   "errors": {
     "unknown": "發生未知的錯誤。",

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { CollabHub } from "./collab/hub.ts";
 import type { BackupService } from "./history/backup.ts";
 import type { VaultHistory } from "./history/history.ts";
 import { AppError, errorHandler } from "./errors.ts";
@@ -26,6 +27,7 @@ export interface AppDeps {
   history: VaultHistory;
   indexes: VaultIndexes;
   backup: BackupService;
+  collab: CollabHub;
   /** Folder with the built web app; leave out to serve the API only. */
   webDir?: string;
 }
@@ -63,7 +65,7 @@ export function createApp(deps: AppDeps): Hono {
   });
 
   app.route("/", vaultRoutes(deps));
-  app.route("/", fileRoutes(deps.vaults, deps.history));
+  app.route("/", fileRoutes(deps.vaults, deps.history, deps.collab));
   app.route("/", historyRoutes(deps));
   app.route("/", searchRoutes(deps.vaults, deps.indexes));
   app.route("/", archiveRoutes(deps.vaults));

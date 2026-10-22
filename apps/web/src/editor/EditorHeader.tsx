@@ -6,7 +6,7 @@ interface Props {
   path: string;
   status: SaveStatus;
   peers: number;
-  notice: "recovered" | "reloaded" | null;
+  notice: "recovered" | "reloaded" | "savedCopy" | null;
   readOnly: boolean;
   reading: boolean;
   onToggleReading: () => void;

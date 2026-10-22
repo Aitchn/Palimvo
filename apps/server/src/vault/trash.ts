@@ -7,6 +7,13 @@ import type { VaultService } from "./service.ts";
 /** `<vault-id>-<UTC timestamp>`, with `-2`, `-3`… if two removals share a second. */
 const TRASH_NAME = /^(.+)-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z(?:-\d+)?$/;
 
+export interface TrashHooks {
+  /** Before the vault stops being served: write out anything still held in memory. */
+  beforeRemove?(id: string): Promise<void>;
+  /** The vault is no longer served; release what points into its folder. */
+  removing?(id: string): Promise<void>;
+}
+
 /**
  * Removing a vault moves its whole folder (files, history, settings) to `trash/vaults/`, where
  * the app no longer serves it. It can be put back under its old id until someone deletes the
@@ -17,6 +24,7 @@ export class VaultTrash {
     private readonly vaults: VaultService,
     /** `<data dir>/trash/vaults` */
     readonly dir: string,
+    private readonly hooks: TrashHooks = {},
   ) {}
 
   async remove(id: string, now: Date = new Date()): Promise<RemovedVault> {
@@ -25,9 +33,11 @@ export class VaultTrash {
     }
     // File names carry whole seconds, so the reported time does too.
     now = new Date(Math.floor(now.getTime() / 1000) * 1000);
+    await this.hooks.beforeRemove?.(id);
     if (!this.vaults.beginRemoval(id))
       throw new AppError("vault_not_found", undefined, { vault: id });
     try {
+      await this.hooks.removing?.(id);
       const stamp = now
         .toISOString()
         .replace(/[-:]/g, "")

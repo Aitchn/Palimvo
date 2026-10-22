@@ -108,7 +108,9 @@
     "editor.status.conflict",
     "editor.status.error",
     "editor.notice.recovered",
-    "editor.notice.reloaded"
+    "editor.notice.reloaded",
+    "editor.guestName",
+    "editor.notice.savedCopy"
   ],
   "common": {
     "appName": "Palimvo",
@@ -278,8 +280,10 @@
     },
     "notice": {
       "recovered": "已找回之前没有发送的内容",
-      "reloaded": "已更新为最新版本"
-    }
+      "reloaded": "已更新为最新版本",
+      "savedCopy": "离线时的修改无法自动合并，已另存为旁边的另一则笔记"
+    },
+    "guestName": "访客 {number}"
   },
   "errors": {
     "unknown": "发生未知的错误。",

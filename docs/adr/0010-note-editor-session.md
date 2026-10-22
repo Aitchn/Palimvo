@@ -11,7 +11,7 @@ The build plan (T17) binds the Markdown editor to the live Yjs document that the
 
 `MarkdownSurface` accepts one of two sources: a plain string with an `onChange` callback, or a shared `Y.Text` with an `Awareness` (y-codemirror.next: merged typing, per-user undo, remote cursors with names and colours). `NoteEditor` gets its source from a `NoteSession` (`source`, `status`, `peers`, `notice`, `resolve`, `retry`). Until T16 lands, the default session reads the note over HTTP and saves after a 0.8 s pause with `baseVersion`, so a newer version is never overwritten: a `version_conflict` stops saving and shows a choice (use theirs, keep mine). Text that was typed but not saved is kept in `localStorage` (`palimvo.unsent:<vault>:<path>`) and restored on the next open, and closing the page with unsaved text asks first.
 
-T16 adds a second session (`useCollabNote`) that returns a `collab` source; `NoteEditor` already accepts it through its `session` prop, and cursor identity helpers (`collab/presence.ts`) exist for it.
+T16 adds a second session (`useCollabNote`, see ADR 0011) that returns a `collab` source; `NoteEditor` uses it by default and keeps this HTTP session for `live={false}`.
 
 Widgets that CodeMirror draws outside React (copy button, embed placeholder, diagram messages, the properties toggle) read their text from an `editorLabels` facet that React fills from i18next, so they follow the interface language.
 

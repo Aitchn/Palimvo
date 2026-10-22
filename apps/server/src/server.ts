@@ -3,6 +3,8 @@ import path from "node:path";
 import { serve } from "@hono/node-server";
 import pkg from "../package.json" with { type: "json" };
 import { createApp } from "./app.ts";
+import { CollabHub, type CollabOptions } from "./collab/hub.ts";
+import { attachCollab } from "./collab/socket.ts";
 import { BackupService, type BackupOptions } from "./history/backup.ts";
 import { assertGit } from "./history/git.ts";
 import { SYSTEM_AUTHOR, VaultHistory, type HistoryOptions } from "./history/history.ts";
@@ -35,7 +37,12 @@ export interface RunningServer {
    */
   onShutdown(name: string, hook: ShutdownHook): void;
   /** The services behind the API, for code that runs inside the server process (and tests). */
-  services: { vaults: VaultService; history: VaultHistory; backup: BackupService };
+  services: {
+    vaults: VaultService;
+    history: VaultHistory;
+    backup: BackupService;
+    collab: CollabHub;
+  };
   /** Idempotent. Resolves when everything has stopped. */
   close(): Promise<void>;
 }
@@ -49,6 +56,11 @@ export interface StartOptions {
   /** Commit timing (tests make it short). */
   history?: Pick<HistoryOptions, "commitDelayMs" | "commitMaxDelayMs" | "maxFileBytes">;
   backup?: Pick<BackupOptions, "tickMs" | "allowLocalRemotes" | "credentials">;
+  /** Live-editing timing (tests make it short). */
+  collab?: Pick<
+    CollabOptions,
+    "persistDelayMs" | "persistMaxDelayMs" | "unloadDelayMs" | "diskCheckMs" | "pingMs"
+  >;
 }
 
 export async function startServer({
@@ -58,6 +70,7 @@ export async function startServer({
   vaultHooks,
   history: historyOptions,
   backup: backupOptions,
+  collab: collabOptions,
 }: StartOptions): Promise<RunningServer> {
   const { config } = loaded;
   const log = logger ?? createLogger({ level: config.logLevel });
@@ -108,7 +121,11 @@ export async function startServer({
       if (change.type === "removed") history.forget(change.vault);
       else if (change.external) history.noteUnrecorded(change.vault);
     });
-    const trash = new VaultTrash(vaults, path.join(config.dataDir, "trash", "vaults"));
+    const collab = new CollabHub(vaults, { logger: log, recorder: history, ...collabOptions });
+    const trash = new VaultTrash(vaults, path.join(config.dataDir, "trash", "vaults"), {
+      beforeRemove: (id) => collab.flushVault(id),
+      removing: (id) => collab.closeVault(id),
+    });
     // Registered first, so it runs last: after the server stopped taking requests, queued writes finish.
     hooks.push({
       name: "vaults",
@@ -127,6 +144,14 @@ export async function startServer({
         await history.flushAll();
       },
     });
+    // Registered after the history hook, so it runs before it: live edits are written, then committed.
+    hooks.push({
+      name: "collab",
+      hook: async () => {
+        await collab.flushAll();
+        await collab.closeAll();
+      },
+    });
     backup.start();
     const app = createApp({
       webDir,
@@ -140,9 +165,15 @@ export async function startServer({
       history: history,
       indexes: createVaultIndexes(vaults),
       backup,
+      collab,
     });
 
     const server = await listen(app.fetch, config.host, config.port);
+    const sockets = attachCollab(server, collab, {
+      logger: log,
+      ready: () => !closing,
+      trustProxy: config.trustProxy,
+    });
     const address = server.address();
     const port = typeof address === "object" && address ? address.port : config.port;
     const url = `http://${config.host.includes(":") ? `[${config.host}]` : config.host}:${port}`;
@@ -156,6 +187,7 @@ export async function startServer({
         const deadline = Date.now() + shutdownTimeoutMs;
         const force = setTimeout(() => server.closeAllConnections(), shutdownTimeoutMs);
         force.unref();
+        sockets.close();
         const stopped = new Promise<void>((resolve) => server.close(() => resolve()));
         server.closeIdleConnections();
         for (const { name, hook } of hooks.toReversed()) {
@@ -177,7 +209,7 @@ export async function startServer({
       port,
       logger: log,
       store: openStore,
-      services: { vaults, history: history, backup },
+      services: { vaults, history: history, backup, collab },
       onShutdown: (name, hook) => void hooks.push({ name, hook }),
       close,
     };

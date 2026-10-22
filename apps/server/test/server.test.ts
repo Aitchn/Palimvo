@@ -36,7 +36,8 @@ describe("server", () => {
     const s = await start();
     const res = await s.fetch("/api/nope");
     expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ code: "not_found", message: "Not found" });
+    // Same answer with or without a built web app next to the server (the wording differs).
+    expect(await res.json()).toEqual({ code: "not_found", message: expect.any(String) });
   });
 
   it("logs the effective configuration at startup", async () => {
