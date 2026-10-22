@@ -26,7 +26,8 @@ interface Options {
 
 /** A note without an extension is a Markdown note. */
 export function withExtension(name: string): string {
-  return name.includes(".") ? name : `${name}.md`;
+  // Only the last segment counts: `projects.v2/Plan` is still a note.
+  return (name.split("/").pop() ?? name).includes(".") ? name : `${name}.md`;
 }
 
 /**

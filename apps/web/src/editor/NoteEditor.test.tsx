@@ -141,6 +141,38 @@ describe("NoteEditor", () => {
     expect(localStorage.length).toBe(0);
   });
 
+  it("treats typing back to the saved text as saved, with nothing kept for later", async () => {
+    const { calls } = await open();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    act(() => view().dispatch({ changes: { from: 0, insert: "x" } }));
+    expect(localStorage.getItem("palimvo.unsent:v:Plan.md")).toBe("x# Plan\nhello");
+    act(() => view().dispatch({ changes: { from: 0, to: 1 } }));
+    expect(screen.getByText("Saved")).toBeInTheDocument();
+    expect(localStorage.length).toBe(0);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS + 10);
+    });
+    expect(puts(calls)).toHaveLength(0);
+  });
+
+  it("retries a failed save every few seconds, not on every keystroke pause", async () => {
+    const { calls } = await open({ [`PUT ${URL}`]: () => Response.error() });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    act(() => view().dispatch({ changes: { from: 0, insert: "x" } }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS + 10);
+    });
+    expect(puts(calls)).toHaveLength(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(puts(calls)).toHaveLength(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(puts(calls)).toHaveLength(2);
+  });
+
   it("switches to a reading view where nothing can be typed", async () => {
     await open();
     expect(view().state.facet(EditorView.editable)).toBe(true);

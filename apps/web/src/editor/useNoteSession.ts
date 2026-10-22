@@ -78,18 +78,19 @@ export function useNoteSession(vault: string, path: string): NoteSession {
     if (saving.current || conflicted.current || !dirty.current || version.current === null) return;
     saving.current = true;
     const body = draft.current;
+    let failed = false;
     setStatus("saving");
     try {
       const result = await writeFile(vault, path, body, version.current);
       version.current = result.version;
       sent.current = body;
-      if (draft.current === body) {
-        dirty.current = false;
-        writeBackup(vault, path, null);
-      }
+      // Typing (or undoing back to the saved text) may have gone on during the request.
+      dirty.current = draft.current !== sent.current;
+      if (!dirty.current) writeBackup(vault, path, null);
       if (alive.current) setStatus(dirty.current ? "unsaved" : "saved");
     } catch (cause) {
       if (!alive.current) return;
+      failed = true;
       if (cause instanceof ApiError && cause.code === "version_conflict") {
         conflicted.current = true;
         setStatus("conflict");
@@ -100,8 +101,8 @@ export function useNoteSession(vault: string, path: string): NoteSession {
     } finally {
       saving.current = false;
     }
-    // Typing went on during the request.
-    if (alive.current && dirty.current && !conflicted.current) schedule();
+    // Typing went on during the request (a failed one retries on its own timer).
+    if (alive.current && dirty.current && !conflicted.current && !failed) schedule();
   }, [vault, path]);
 
   const schedule = useCallback(() => {
@@ -113,9 +114,15 @@ export function useNoteSession(vault: string, path: string): NoteSession {
     (value: string) => {
       draft.current = value;
       dirty.current = value !== sent.current;
-      if (!dirty.current) return;
-      writeBackup(vault, path, value);
       setText(value);
+      if (!dirty.current) {
+        // Back to exactly what the server has: nothing left to keep or send.
+        clearTimeout(timer.current);
+        writeBackup(vault, path, null);
+        if (!saving.current) setStatus((s) => (s === "conflict" ? s : "saved"));
+        return;
+      }
+      writeBackup(vault, path, value);
       setStatus((s) => (s === "conflict" || s === "offline" ? s : "unsaved"));
       if (!saving.current) schedule();
     },
