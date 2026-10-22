@@ -712,6 +712,7 @@
     "rate_limited": "Too many requests. Try again later.",
     "git_unavailable": "Git is not available on the server.",
     "invalid_backup_remote": "That backup location is not valid.",
+    "effort_unsupported": "This model does not support that reasoning level.",
     "invalid_tag": "That is not a usable checkpoint name.",
     "internal": "Something went wrong on the server.",
     "not_implemented": "This is not supported yet.",
