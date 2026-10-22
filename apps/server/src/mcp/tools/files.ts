@@ -36,7 +36,7 @@ export const uploadFile = mcpTool({
         },
       );
     const b64 = args.content_base64.replace(/\s+/g, "");
-    if (!BASE64.test(b64) || b64.length % 4 === 1)
+    if (!BASE64.test(b64) || Buffer.from(b64, "base64").toString("base64") !== b64)
       throw invalid("content_base64 is not valid base64.");
     const size =
       Math.floor((b64.length * 3) / 4) - (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);

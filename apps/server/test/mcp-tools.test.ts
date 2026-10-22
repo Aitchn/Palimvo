@@ -424,6 +424,9 @@ describe("files", () => {
       (await call("upload_file", { path: "x.md", content_base64: "AAAA", reason: "r" })).error.code,
     ).toBe("invalid_request");
     expect(
+      (await call("upload_file", { path: "x.png", content_base64: "A==", reason: "r" })).error.code,
+    ).toBe("invalid_request");
+    expect(
       (await call("upload_file", { path: "x.weird", content_base64: "AAAA", reason: "r" })).error
         .code,
     ).toBe("unsupported_type");
@@ -474,6 +477,27 @@ describe("permissions", () => {
     expect((await call("get_diff", { commit: "abcdef123456" })).error.code).toBe("invalid_request");
     const history = await call("get_history", {});
     expect(JSON.stringify(history)).not.toContain("secret");
+  });
+
+  it("pages through listings", async () => {
+    const { call } = await ai("Claude Code");
+    for (const n of ["a", "b", "c"]) await call("create_note", { path: `${n}.md`, reason: "r" });
+    const first = await call("list_files", { recursive: true, limit: 2 });
+    expect(first.next_offset).toBe(2);
+    const rest = await call("list_files", { recursive: true, limit: 2, offset: first.next_offset });
+    expect(rest.next_offset).toBeUndefined();
+    expect([...first.files, ...rest.files].sort()).toEqual(
+      ["Welcome.md", "a.md", "b.md", "c.md"].sort(),
+    );
+  });
+
+  it("hides what a mixed change says about files outside the token's folders", async () => {
+    const { call: full } = await ai("Full");
+    await full("create_note", { path: "design/a.md", reason: "r" });
+    await full("create_note", { path: "secret/b.md", reason: "r" });
+    const { call } = await ai("Designer", { folders: ["design"] });
+    const commits = (await call("get_history", {})).commits as Json[];
+    expect(JSON.stringify(commits)).not.toContain("secret");
   });
 
   it("a member without write permission cannot change notes", async () => {

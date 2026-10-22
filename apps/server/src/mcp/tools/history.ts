@@ -25,17 +25,24 @@ export const getHistory = mcpTool({
       ...(path ? { path } : {}),
       limit: args.limit ?? 20,
     });
+    // A change that touched files this token may not read shows only the readable ones: its
+    // subject, reasons and co-authors can name the others.
     const shown = commits
-      .map((c) => ({ ...c, files: c.files.filter((f) => guard.can(f)) }))
+      .map((c) => {
+        const files = c.files.filter((f) => guard.can(f));
+        return { ...c, files, partial: files.length < c.files.length };
+      })
       .filter((c) => !guard.limited || c.files.length > 0);
     return {
       commits: shown.map((c) => ({
         id: c.id.slice(0, 12),
         date: c.date,
         author: { name: c.author.name, kind: c.author.kind },
-        ...(c.coAuthors.length > 0 ? { co_authors: c.coAuthors.map((a) => a.name) } : {}),
-        subject: c.subject,
-        ...(c.reasons.length > 0 ? { reasons: c.reasons } : {}),
+        ...(c.coAuthors.length > 0 && !c.partial
+          ? { co_authors: c.coAuthors.map((a) => a.name) }
+          : {}),
+        subject: c.partial ? `Changed ${c.files.length} file(s) you can read` : c.subject,
+        ...(c.reasons.length > 0 && !c.partial ? { reasons: c.reasons } : {}),
         ...(c.checkpoint ? { checkpoint: true } : {}),
         files: c.files,
       })),

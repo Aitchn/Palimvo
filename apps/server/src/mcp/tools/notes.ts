@@ -56,6 +56,7 @@ export const listFiles = mcpTool({
     folder: z.string().optional().describe("Folder to list; default the vault root."),
     recursive: z.boolean().optional().describe("List every file below it, as a flat list."),
     limit: z.number().int().min(1).max(2000).optional().describe("Default 200."),
+    offset: z.number().int().min(0).optional().describe("Skip this many (see next_offset)."),
   }),
   description:
     "List files and folders of a vault. Example: {folder:'Projects'} lists one level; {recursive:true} lists every file path.",
@@ -65,6 +66,7 @@ export const listFiles = mcpTool({
     if (!level) throw new AppError("not_found", undefined, { path: folder });
     const guard = readableIn(ctx);
     const limit = args.limit ?? 200;
+    const offset = args.offset ?? 0;
     if (args.recursive) {
       const files: { path: string; kind: string | undefined }[] = [];
       flatten(level, files);
@@ -72,8 +74,8 @@ export const listFiles = mcpTool({
       return {
         folder,
         total: shown.length,
-        files: shown.slice(0, limit).map((f) => f.path),
-        ...(shown.length > limit ? { truncated: true } : {}),
+        files: shown.slice(offset, offset + limit).map((f) => f.path),
+        ...(shown.length > offset + limit ? { next_offset: offset + limit } : {}),
       };
     }
     // A folder is listed when anything readable is inside it (a folder-limited token sees only its folders).
@@ -93,7 +95,7 @@ export const listFiles = mcpTool({
             ? { path: n.path, type: "folder" }
             : { path: n.path, type: "file", kind: n.kind },
         ),
-      ...(entries.length > limit ? { truncated: true } : {}),
+      ...(entries.length > offset + limit ? { next_offset: offset + limit } : {}),
     };
   },
 });
@@ -309,7 +311,7 @@ export const moveNote = mcpTool({
   name: "move_note",
   tier: "native",
   scope: "vault",
-  permission: "note.write",
+  permission: ["note.write", "note.delete"],
   writes: true,
   input: z.object({
     from: pathArg("Existing file or folder."),
