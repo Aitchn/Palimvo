@@ -1,5 +1,5 @@
 import { Facet } from "@codemirror/state";
-import { mediaOf } from "@palimvo/core";
+import { mediaOf, type MediaKind } from "@palimvo/core";
 import type { SyntaxNode } from "@lezer/common";
 import { inlineParser } from "./syntax.ts";
 import type { WikiLinkHost } from "./wikilinks.ts";
@@ -51,6 +51,26 @@ export function mediaSrc(host: WikiLinkHost | null, url: string): string | null 
   const target = vaultTarget(url);
   const resolved = host.resolve(target);
   return resolved && mediaOf(resolved)?.kind === "image" ? host.fileUrl(resolved) : null;
+}
+
+/**
+ * What `![alt](url)` points to: a vault image, sound or video, resolved against the note it is
+ * in (`./a.png`, `../img/a.png`, a bare name). Web and data URLs are images as they are.
+ */
+export function mediaTarget(
+  host: WikiLinkHost | null,
+  url: string,
+): { src: string; kind: MediaKind } | null {
+  const image = mediaSrc(host, url);
+  if (image) {
+    // A web address ending in .mp4 or .mp3 is a player, not a picture.
+    const kind = /^(https?:)?\/\//i.test(url) ? mediaOf(url.split(/[?#]/)[0]!)?.kind : undefined;
+    return { src: image, kind: kind ?? "image" };
+  }
+  if (isExternal(url) || !host?.fileUrl) return null;
+  const resolved = host.resolve(vaultTarget(url));
+  const media = resolved ? mediaOf(resolved) : undefined;
+  return resolved && media ? { src: host.fileUrl(resolved), kind: media.kind } : null;
 }
 
 /** `alt|300` or `alt|300x200`: Obsidian's way to size an image. */

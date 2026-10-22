@@ -57,6 +57,24 @@ export function resolveWikiLink(
   return linkResolver(paths).resolve(target, fromPath);
 }
 
+/**
+ * `target` (with "." and ".." segments) followed from the folder of the note at `fromPath`;
+ * undefined when it climbs out of the vault.
+ */
+function joinRelative(target: string, fromPath: string | undefined): string | undefined {
+  const parts = fromPath?.includes("/")
+    ? fromPath.slice(0, fromPath.lastIndexOf("/")).split("/")
+    : [];
+  for (const segment of target.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (parts.length === 0) return undefined;
+      parts.pop();
+    } else parts.push(segment);
+  }
+  return parts.length > 0 ? parts.join("/") : undefined;
+}
+
 /** Wikilink resolution over one fixed list of paths, with O(1) lookups instead of a scan per link. */
 export class LinkResolver {
   /** Lower-cased path -> path (the last one wins, as a Map built in order would). */
@@ -78,6 +96,12 @@ export class LinkResolver {
   resolve(target: string, fromPath?: string): string | undefined {
     const clean = target.trim().replace(/^\/+/, "");
     if (clean === "") return undefined;
+    // "./a.png" and "../img/a.png" name a place relative to the note, as in any Markdown file.
+    if (/(^|\/)\.\.?(\/|$)/.test(clean)) {
+      const joined = joinRelative(clean, fromPath);
+      if (joined === undefined) return undefined;
+      return this.byLower.get(pathKey(joined)) ?? this.byLower.get(pathKey(`${joined}.md`));
+    }
     const candidates = [clean, `${clean}.md`].map(pathKey);
     for (const c of candidates) {
       const hit = this.byLower.get(c);

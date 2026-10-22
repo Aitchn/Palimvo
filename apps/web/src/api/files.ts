@@ -37,6 +37,11 @@ export function archiveUrl(vault: string, folder: string): string {
   return `${base(vault)}/archive${folder ? `?path=${encodeURIComponent(folder)}` : ""}`;
 }
 
+/** Address of a file's bytes (images, sound, video). The browser loads it directly, with range requests. */
+export function rawUrl(vault: string, path: string): string {
+  return `${base(vault)}/raw/${encodePath(path)}`;
+}
+
 export function readFile(vault: string, path: string, options: Signal = {}): Promise<FileContent> {
   return request<FileContent>(`${base(vault)}/files/${encodePath(path)}`, options);
 }
