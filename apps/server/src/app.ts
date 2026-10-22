@@ -29,6 +29,8 @@ import { UploadLinks } from "./files/links.ts";
 import { uploadRoutes } from "./routes/uploads.ts";
 import { uploadLinkRoutes } from "./routes/uploadLinks.ts";
 import { historyRoutes } from "./routes/history.ts";
+import { homeRoutes } from "./routes/home.ts";
+import { HomeService } from "./home/home.ts";
 import { proposalRoutes } from "./routes/proposals.ts";
 import { ProposalService } from "./proposals/proposals.ts";
 import { publicRoutes } from "./routes/public.ts";
@@ -166,6 +168,7 @@ export function createApp(deps: AppDeps): Hono {
   const proposals = new ProposalService({ vaults: deps.vaults, history: deps.history });
   app.route("/", historyRoutes(deps));
   app.route("/", proposalRoutes(deps.vaults, proposals, deps.auth));
+  app.route("/", homeRoutes(deps.vaults, new HomeService(deps.vaults, deps.history), deps.auth));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
   app.route("/", rawRoutes(deps.vaults, deps.auth, transfers.policy));

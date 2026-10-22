@@ -205,6 +205,70 @@
     "accepted": "已接受的修改：{count}。",
     "rejected": "已退回的修改：{count}。"
   },
+  "home": {
+    "title": "首頁",
+    "open": "筆記庫首頁",
+    "customize": "自訂",
+    "startHere": "從這裡開始",
+    "emptyPage": "這個頁面還沒有任何區塊。",
+    "pinCommand": "把這篇筆記釘到筆記庫首頁",
+    "unpinCommand": "從筆記庫首頁取消釘選這篇筆記",
+    "pinDone": "已釘到筆記庫首頁。",
+    "unpinDone": "已從筆記庫首頁移除。",
+    "activity": {
+      "title": "最近活動",
+      "filterLabel": "顯示誰的修改",
+      "filter": {
+        "all": "所有人",
+        "human": "人",
+        "ai": "AI"
+      },
+      "empty": "還沒有任何修改。",
+      "changes": "修改：{count}",
+      "entriesOf": "{name} 的修改",
+      "showAll": "顯示全部 {count} 筆",
+      "showFewer": "收合"
+    },
+    "proposals": {
+      "title": "等待審查",
+      "more": "提案清單還有 {count} 筆"
+    },
+    "pinned": {
+      "title": "釘選的筆記",
+      "empty": "還沒有釘選任何筆記。",
+      "missing": "{path}（找不到）"
+    },
+    "base": {
+      "title": "資料庫：{name}"
+    },
+    "plugin": {
+      "unavailable": "插件 {plugin} 的檢視 {view} 會在插件功能就緒後顯示。"
+    },
+    "settings": {
+      "blocks": "這個頁面的區塊",
+      "block": {
+        "activity": "最近活動",
+        "proposals": "等待審查",
+        "pinned": "釘選的筆記"
+      },
+      "blockBase": "資料庫：{path}",
+      "blockPlugin": "插件：{plugin}",
+      "moveUp": "把 {name} 上移",
+      "moveDown": "把 {name} 下移",
+      "remove": "移除 {name}",
+      "chooseBase": "選擇資料庫",
+      "addBase": "加入資料庫",
+      "pinned": "釘選的筆記",
+      "unpin": "取消釘選 {name}",
+      "choosePin": "選擇筆記",
+      "pin": "釘選",
+      "startHere": "「從這裡開始」的筆記",
+      "startNone": "不設定",
+      "startHereHelp": "顯示在頁面最上方；筆記公開時，訪客也看得到。",
+      "saved": "已儲存首頁。",
+      "conflict": "有人剛改過這個頁面。請關閉此視窗後重新開啟。"
+    }
+  },
   "backlinks": {
     "title": "連結",
     "linkedFrom": "反向連結（{count}）",
@@ -584,6 +648,7 @@
     "rate_limited": "請求過於頻繁，請稍後再試。",
     "git_unavailable": "伺服器上找不到 Git。",
     "invalid_backup_remote": "這個備份位置無效。",
+    "effort_unsupported": "這個模型不支援該推理程度。",
     "invalid_tag": "這不是可用的檢查點名稱。",
     "internal": "伺服器發生未預期的錯誤。",
     "not_implemented": "目前尚不支援。",

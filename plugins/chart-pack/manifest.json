@@ -1,0 +1,31 @@
+{
+  "manifestVersion": 2,
+  "id": "chart-pack",
+  "version": "1.0.0",
+  "name": { "en": "Chart pack", "zh-TW": "圖表包", "zh-CN": "图表包" },
+  "description": {
+    "en": "More component types for charts: radar, treemap and sparkline.",
+    "zh-TW": "更多圖表元件：雷達圖、樹狀圖與迷你趨勢圖。",
+    "zh-CN": "更多图表组件：雷达图、树状图与迷你趋势图。"
+  },
+  "author": "Palimvo",
+  "license": "Apache-2.0",
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"] },
+  "contributes": {
+    "components": [
+      { "type": "radar", "name": { "en": "Radar chart", "zh-TW": "雷達圖", "zh-CN": "雷达图" } },
+      { "type": "treemap", "name": { "en": "Treemap", "zh-TW": "樹狀圖", "zh-CN": "树状图" } },
+      {
+        "type": "sparkline",
+        "name": { "en": "Sparkline", "zh-TW": "迷你趨勢圖", "zh-CN": "迷你趋势图" }
+      }
+    ]
+  },
+  "main": "main.js",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-TW": "locales/zh-TW.json",
+    "zh-CN": "locales/zh-CN.json"
+  }
+}

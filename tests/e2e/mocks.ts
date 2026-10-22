@@ -30,6 +30,26 @@ export async function mockApi(page: Page): Promise<void> {
   await page.route("**/api/vaults", (route) =>
     route.fulfill({ json: { vaults: [{ id: "sample", name: "sample" }] } }),
   );
+  await page.route("**/api/vaults/sample/home", (route) =>
+    route.fulfill({
+      json: {
+        config: {
+          schemaVersion: 1,
+          widgets: [
+            { id: "proposals", type: "proposals" },
+            { id: "activity", type: "activity" },
+            { id: "pinned", type: "pinned" },
+          ],
+          pinned: [],
+          publicNote: null,
+        },
+        version: null,
+      },
+    }),
+  );
+  await page.route("**/api/vaults/sample/home/activity**", (route) =>
+    route.fulfill({ json: { filter: "all", entries: [], authors: [] } }),
+  );
   await page.route("**/api/vaults/sample/files", (route) =>
     route.fulfill({
       json: {

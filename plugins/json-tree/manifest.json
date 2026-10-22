@@ -1,0 +1,30 @@
+{
+  "manifestVersion": 2,
+  "id": "json-tree",
+  "version": "1.0.0",
+  "name": { "en": "JSON tree viewer", "zh-TW": "JSON 樹狀檢視", "zh-CN": "JSON 树状查看" },
+  "description": {
+    "en": "Open .json files as a collapsible tree.",
+    "zh-TW": "把 .json 檔案以可收合的樹狀顯示。",
+    "zh-CN": "把 .json 文件以可折叠的树状显示。"
+  },
+  "author": "Palimvo",
+  "license": "Apache-2.0",
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"] },
+  "contributes": {
+    "viewers": [
+      {
+        "id": "tree",
+        "name": { "en": "JSON tree", "zh-TW": "JSON 樹狀", "zh-CN": "JSON 树状" },
+        "extensions": ["json"]
+      }
+    ]
+  },
+  "main": "main.js",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-TW": "locales/zh-TW.json",
+    "zh-CN": "locales/zh-CN.json"
+  }
+}

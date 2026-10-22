@@ -19,6 +19,8 @@ export interface VaultCan {
   propose: boolean;
   /** Accept or reject proposed changes (each folder may still say no). */
   review: boolean;
+  /** Change the vault's settings, including its home page. */
+  settings: boolean;
 }
 
 const NOTHING: VaultCan = {
@@ -31,6 +33,7 @@ const NOTHING: VaultCan = {
   checkpoint: false,
   propose: false,
   review: false,
+  settings: false,
 };
 const EVERYTHING: VaultCan = {
   write: true,
@@ -42,6 +45,7 @@ const EVERYTHING: VaultCan = {
   checkpoint: true,
   propose: true,
   review: true,
+  settings: true,
 };
 
 /**
@@ -83,5 +87,6 @@ export function useVaultPermissions(vault: string, folder = ""): VaultCan {
     checkpoint: names.has("history.view") && names.has("note.write"),
     propose: names.has("proposal.create") || names.has("proposal.review"),
     review: names.has("proposal.review"),
+    settings: names.has("vault.settings"),
   };
 }
