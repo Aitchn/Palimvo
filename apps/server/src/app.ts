@@ -164,6 +164,8 @@ export function createApp(deps: AppDeps): Hono {
         vaults: deps.vaults,
         history: deps.history,
         indexes: deps.indexes,
+        trash: deps.trash,
+        access: deps.auth.access,
         proposals,
         ...(deps.plugins ? { plugins: deps.plugins } : {}),
       },

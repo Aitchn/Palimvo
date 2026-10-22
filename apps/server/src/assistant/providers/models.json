@@ -1,0 +1,31 @@
+{
+  "//": "Known models and what they can do. Unknown models get no effort levels and tools=null. Admin overrides win (see catalog.ts). Prices are left null until an admin sets them: T48 shows 'unknown' rather than a guess.",
+  "models": [
+    {
+      "id": "claude-opus-5-5",
+      "provider": "anthropic",
+      "label": "Claude Opus 5.5",
+      "tools": true,
+      "vision": true,
+      "efforts": ["low", "medium", "high", "xhigh", "max"]
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "provider": "anthropic",
+      "label": "Claude Sonnet 5.5",
+      "tools": true,
+      "vision": true,
+      "efforts": ["low", "medium", "high", "xhigh", "max"],
+      "off": "between_tools"
+    },
+    {
+      "id": "claude-opus-5",
+      "provider": "anthropic",
+      "label": "Claude Opus 5",
+      "tools": true,
+      "vision": true,
+      "efforts": ["low", "medium", "high", "xhigh", "max"],
+      "off": "disabled"
+    }
+  ]
+}

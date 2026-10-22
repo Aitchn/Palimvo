@@ -210,13 +210,13 @@ export class OAuthService {
   }
 
   /** The person said yes: records the grant and returns the one-time code to give the client. */
-  approve(account: Account, request: AuthorizeRequest, access: TokenAccess): string {
+  approve(account: Account, request: AuthorizeRequest, access: TokenAccess, admin = false): string {
     const code = newCredential(KIND_TAG.code);
     this.store.tx(() => {
       const grant = this.store.oauth.createGrant({
         clientId: request.client.clientId,
         accountId: account.id,
-        scope: scopeOfAccess(access),
+        scope: scopeOfAccess(access, admin),
       });
       this.store.oauth.issueToken({
         grantId: grant.id,
@@ -233,7 +233,7 @@ export class OAuthService {
         action: "oauth.grant_created",
         targetType: "oauth_grant",
         targetId: grant.id,
-        detail: { client: request.client.clientName, access },
+        detail: { client: request.client.clientName, access, admin },
       });
     });
     return code;

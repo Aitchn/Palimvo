@@ -1,5 +1,5 @@
 import { isInside } from "../paths.ts";
-import { maskOf, type PermissionMask } from "./catalog.ts";
+import { maskOf, type PermissionMask, type PermissionName } from "./catalog.ts";
 import type { PermissionScope } from "./resolve.ts";
 
 /** What an MCP token may do, from its access level (the `access` column of `api_tokens`). */
@@ -17,8 +17,22 @@ export const TOKEN_ACCESS_PERMISSIONS: Readonly<Record<TokenAccess, PermissionMa
   propose: READ | maskOf(["proposal.create"]),
 };
 
+/**
+ * The only server-level permissions an OAuth grant can carry, and only when the person ticked
+ * "administer" on the consent page. Accounts, roles, provider keys and the audit log stay out of
+ * reach of every AI client.
+ */
+export const ADMIN_GRANT_PERMISSIONS: readonly PermissionName[] = [
+  "vaults.create",
+  "library.publish",
+];
+
+const ADMIN_GRANT_MASK = maskOf(ADMIN_GRANT_PERMISSIONS);
+
 export interface TokenScope {
   access: TokenAccess;
+  /** An OAuth grant the person allowed to administer; needs `access: "write"`. API tokens never have it. */
+  admin?: boolean | undefined;
   /** Undefined means every vault the creator can reach. */
   vaultId?: string | undefined;
   /** Empty or undefined means the whole vault. */
@@ -35,7 +49,8 @@ function limitMask(limit: PermissionLimit): PermissionMask {
   if (typeof limit === "number") return limit;
   const { token, scope } = limit;
   const mask = TOKEN_ACCESS_PERMISSIONS[token.access];
-  if (scope.kind === "server") return 0;
+  if (scope.kind === "server")
+    return token.admin === true && token.access === "write" ? ADMIN_GRANT_MASK : 0;
   if (token.vaultId !== undefined && token.vaultId !== scope.vaultId) return 0;
   const folders = token.folders ?? [];
   if (scope.kind === "folder" && folders.length > 0) {

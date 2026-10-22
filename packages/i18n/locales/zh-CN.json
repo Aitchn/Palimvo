@@ -1,5 +1,8 @@
 {
   "// review": [
+    "oauth.adminLabel",
+    "oauth.adminOption",
+    "oauth.adminHint",
     "errors.git_unavailable",
     "errors.weak_password",
     "errors.account_disabled",
@@ -455,7 +458,8 @@
     "proposals.hunk.accepted",
     "proposals.hunk.rejected",
     "errors.proposal_stale",
-    "errors.proposal_changed"
+    "errors.proposal_changed",
+    "errors.effort_unsupported"
   ],
   "common": {
     "appName": "Palimvo",
@@ -1004,6 +1008,9 @@
     "allow": "允许",
     "deny": "拒绝",
     "revokeHint": "你随时可以在“AI 连接”中断开它。",
+    "adminLabel": "管理",
+    "adminOption": "同时允许此应用管理服务器",
+    "adminHint": "让它创建笔记库、把插件发布到插件库，并在你可以更改设置的笔记库把笔记库移到回收站（可还原）。它永远不能管理账号、身份组、密钥或审计日志。需要选“读取与写入”。",
     "errorTitle": "无法开始这个连接",
     "errorClient": "把你带到这里的应用尚未注册，或它的返回地址不符。",
     "errorRequest": "连接请求不完整，或使用了 Palimvo 不支持的内容。",
@@ -1039,6 +1046,7 @@
     "rate_limited": "请求过于频繁，请稍后再试。",
     "git_unavailable": "服务器上找不到 Git。",
     "invalid_backup_remote": "这个备份位置无效。",
+    "effort_unsupported": "这个模型不支持该推理程度。",
     "invalid_tag": "这不是可用的检查点名称。",
     "internal": "服务器发生未预期的错误。",
     "not_implemented": "目前尚不支持。",
