@@ -15,6 +15,7 @@ beforeEach(() => {
 const commit = (over: Partial<CommitInfo> & Pick<CommitInfo, "id" | "author">): CommitInfo => ({
   date: "2026-10-20T09:30:00+00:00",
   coAuthors: [],
+  approvedBy: [],
   subject: "Update",
   body: "",
   reasons: [],

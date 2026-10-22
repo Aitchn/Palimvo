@@ -164,7 +164,46 @@
     "checkpointMessage": "這個存檔點是什麼？",
     "checkpointTag": "簡短名稱（可不填）",
     "checkpointNameEmpty": "請先描述這個存檔點。",
-    "checkpointSaved": "已建立存檔點。"
+    "checkpointSaved": "已建立存檔點。",
+    "approvedBy": "由 {names} 核准"
+  },
+  "proposals": {
+    "title": "提案",
+    "listLabel": "提出的修改",
+    "none": "沒有等待決定的提案。",
+    "noneAtAll": "還沒有人提出修改。",
+    "showAll": "也顯示已決定的",
+    "refresh": "重新整理",
+    "open": "審核 {title}",
+    "stale": "已過期",
+    "staleHelp": "提案之後有筆記被改動，這些修改無法再接受。你仍可退回，並請對方重新提案。",
+    "fileChanged": "之後已被改動",
+    "fileMissing": "已刪除或搬移",
+    "viewOnly": "你可以閱讀這份提案，但接受或退回修改需要審核權限。",
+    "sources": "來源",
+    "change": "修改",
+    "hunkLabel": "{path} 的第 {n} 項修改",
+    "selectFile": "選取這個檔案的所有修改",
+    "selectAll": "選取所有可接受的",
+    "selectNone": "全部取消選取",
+    "blockedHelp": "筆記在提案之後被改動，其中的修改無法接受，只能退回。",
+    "acceptSelected": "接受所選（{count}）",
+    "rejectSelected": "退回所選（{count}）",
+    "state": {
+      "pending": "待決定",
+      "partial": "部分已決定",
+      "accepted": "已接受",
+      "rejected": "已退回",
+      "resolved": "已決定"
+    },
+    "hunk": {
+      "accepted": "已接受",
+      "rejected": "已退回"
+    },
+    "changesWaiting": "待決定的修改：{count}",
+    "waitingBadge": "待審提案：{count}",
+    "accepted": "已接受的修改：{count}。",
+    "rejected": "已退回的修改：{count}。"
   },
   "backlinks": {
     "title": "連結",
@@ -546,6 +585,8 @@
     "internal": "伺服器發生未預期的錯誤。",
     "not_implemented": "目前尚不支援。",
     "unavailable": "服務暫時無法使用。",
-    "public_url_required": "OAuth 需要伺服器的公開網址。請管理員設定 PALIMVO_PUBLIC_URL。"
+    "public_url_required": "OAuth 需要伺服器的公開網址。請管理員設定 PALIMVO_PUBLIC_URL。",
+    "proposal_stale": "提案之後有筆記被改動，這項修改無法套用。",
+    "proposal_changed": "這份提案已被更動或已決定過，請重新載入後再試。"
   }
 }

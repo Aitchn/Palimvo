@@ -164,7 +164,46 @@
     "checkpointMessage": "What is this checkpoint?",
     "checkpointTag": "Short name (optional)",
     "checkpointNameEmpty": "Describe the checkpoint first.",
-    "checkpointSaved": "Checkpoint saved."
+    "checkpointSaved": "Checkpoint saved.",
+    "approvedBy": "Approved by {names}"
+  },
+  "proposals": {
+    "title": "Proposals",
+    "listLabel": "Proposed changes",
+    "none": "Nothing is waiting for a decision.",
+    "noneAtAll": "No one has proposed a change yet.",
+    "showAll": "Show decided ones too",
+    "refresh": "Refresh",
+    "open": "Review {title}",
+    "stale": "Out of date",
+    "staleHelp": "A note changed after this was proposed, so those changes cannot be accepted any more. You can still reject them, and ask for a new proposal.",
+    "fileChanged": "Changed since",
+    "fileMissing": "Deleted or moved",
+    "viewOnly": "You can read this proposal, but accepting or rejecting changes needs the review permission.",
+    "sources": "Sources",
+    "change": "Change",
+    "hunkLabel": "Change {n} in {path}",
+    "selectFile": "Select this file's changes",
+    "selectAll": "Select all that can be accepted",
+    "selectNone": "Select none",
+    "blockedHelp": "Changes in a note that has changed since cannot be accepted. Reject them instead.",
+    "acceptSelected": "Accept selected ({count})",
+    "rejectSelected": "Reject selected ({count})",
+    "state": {
+      "pending": "Waiting",
+      "partial": "Partly decided",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "resolved": "Decided"
+    },
+    "hunk": {
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "changesWaiting": "Changes waiting: {count}",
+    "waitingBadge": "Proposals waiting: {count}",
+    "accepted": "Accepted changes: {count}.",
+    "rejected": "Rejected changes: {count}."
   },
   "backlinks": {
     "title": "Links",
@@ -546,6 +585,8 @@
     "internal": "Something went wrong on the server.",
     "not_implemented": "This is not supported yet.",
     "unavailable": "The service is temporarily unavailable.",
-    "public_url_required": "OAuth needs the server's public address. Ask an administrator to set PALIMVO_PUBLIC_URL."
+    "public_url_required": "OAuth needs the server's public address. Ask an administrator to set PALIMVO_PUBLIC_URL.",
+    "proposal_stale": "A note changed after this was proposed, so the change cannot be applied.",
+    "proposal_changed": "This proposal changed or was already decided. Reload it and try again."
   }
 }

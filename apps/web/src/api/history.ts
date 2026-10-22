@@ -9,6 +9,8 @@ export interface CommitInfo {
   date: string;
   author: Author;
   coAuthors: Author[];
+  /** Who accepted the change, when someone else proposed it. */
+  approvedBy: Author[];
   subject: string;
   body: string;
   /** Why each part of the change was made, in the author's words. */

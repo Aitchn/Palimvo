@@ -29,6 +29,14 @@ export const ERROR_CODES = {
   already_exists: { status: 409, message: "Something with that name already exists." },
   invite_invalid: { status: 410, message: "This invite link is not valid or has expired." },
   version_conflict: { status: 409, message: "The file changed since it was read." },
+  proposal_stale: {
+    status: 409,
+    message: "A file changed after this was proposed, so the change cannot be applied.",
+  },
+  proposal_changed: {
+    status: 409,
+    message: "The proposal changed or was already decided. Reload it and try again.",
+  },
   schema_too_new: { status: 409, message: "The data was written by a newer version of Palimvo." },
   vault_busy: { status: 423, message: "The vault is busy with another operation." },
   payload_too_large: { status: 413, message: "The content is too large." },
