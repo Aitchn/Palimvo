@@ -14,6 +14,10 @@ interface Props {
   inspector: ReactNode;
   /** The tab strip shown in the top bar; leave out for the page title only. */
   tabs?: ReactNode;
+  /** Extra buttons in the top bar, before the details toggle (plugin toolbar entries). */
+  toolbar?: ReactNode;
+  /** A bar under the main area; leave out for none (plugin status-bar entries). */
+  statusBar?: ReactNode;
   /** Increase to make sure the sidebar is showing (e.g. when search was asked for). */
   sidebarRequest?: number;
   children: ReactNode;
@@ -23,7 +27,15 @@ interface Props {
  * Layout v2: icon rail, collapsible sidebar, top bar with tabs, main area, details panel.
  * Up to 900px the sidebar and details panel become drawers and the top bar gets menu buttons.
  */
-export function Shell({ sidebar, inspector, tabs, sidebarRequest = 0, children }: Props) {
+export function Shell({
+  sidebar,
+  inspector,
+  tabs,
+  toolbar,
+  statusBar,
+  sidebarRequest = 0,
+  children,
+}: Props) {
   const { t } = useTranslation();
   const layout = useLayout();
   const online = useOnline();
@@ -116,6 +128,7 @@ export function Shell({ sidebar, inspector, tabs, sidebarRequest = 0, children }
             onClick={layout.toggleSidebar}
           />
           <div className="topbar-tabs">{tabs}</div>
+          {toolbar}
           <Button
             variant="ghost"
             icon="inspector"
@@ -127,6 +140,7 @@ export function Shell({ sidebar, inspector, tabs, sidebarRequest = 0, children }
         <main id="main" className="main" tabIndex={-1}>
           {children}
         </main>
+        {statusBar}
       </div>
       {!layout.isMobile && layout.inspectorOpen && (
         <aside className="inspector" aria-label={t("shell.inspectorTitle")}>

@@ -4,6 +4,8 @@ import { ThemeChoice } from "../theme/ThemeChoice.tsx";
 import { Link } from "react-router";
 import { AccountBar } from "../auth/AccountBar.tsx";
 import { useSession } from "../auth/session.tsx";
+import { PluginThemeChoice } from "../plugins/pluginTheme.tsx";
+import { PluginSettingsSections } from "../plugins/SlotViews.tsx";
 import { Dialog } from "../ui/index.ts";
 
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -15,6 +17,8 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
         <AccountBar />
         <LanguageSelect />
         <ThemeChoice />
+        <PluginThemeChoice />
+        <PluginSettingsSections />
         {session.status === "account" && (
           <Link to="/settings" onClick={onClose}>
             {t("settings.allSettings")}

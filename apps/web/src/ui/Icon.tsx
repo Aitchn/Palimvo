@@ -41,6 +41,11 @@ const paths = {
 
 export type IconName = keyof typeof paths;
 
+/** Whether `name` is one of the built-in icons (plugins name theirs by string). */
+export function isIconName(name: string | undefined): name is IconName {
+  return name !== undefined && Object.hasOwn(paths, name);
+}
+
 /** Small native SVG family: stroked outlines in `currentColor`, decorative unless the button around them is labelled. */
 export function Icon({ name, style }: { name: IconName; style?: CSSProperties }) {
   return (

@@ -35,6 +35,19 @@ export interface SlotEntry {
   icon?: string;
 }
 
+export interface ThemeEntry {
+  pluginId: string;
+  name: LocalizedText;
+  /** The plugin's stylesheet as delivered; run it through `sanitizeThemeCss` before use. */
+  css: string;
+}
+
+export interface AppEntry {
+  pluginId: string;
+  name: LocalizedText;
+  icon?: string;
+}
+
 /**
  * What the running plugins add, as plain lists the interface can draw from. A code block
  * language, component type or base view that two plugins both claim has no renderer: a quiet
@@ -52,6 +65,8 @@ export class ContributionRegistry {
   /** type → plugin id */
   readonly baseViews: ReadonlyMap<string, string>;
   readonly app: ReadonlyMap<string, { name: LocalizedText; icon?: string }>;
+  readonly apps: readonly AppEntry[];
+  readonly themes: readonly ThemeEntry[];
   /** Human-readable clashes, for the plugin settings. */
   readonly conflicts: readonly string[];
 
@@ -61,6 +76,7 @@ export class ContributionRegistry {
     const homeWidgets: HomeWidgetEntry[] = [];
     const slots: SlotEntry[] = [];
     const app = new Map<string, { name: LocalizedText; icon?: string }>();
+    const themes: ThemeEntry[] = [];
     const owners = {
       codeBlocks: new Map<string, string[]>(),
       components: new Map<string, string[]>(),
@@ -93,6 +109,8 @@ export class ContributionRegistry {
       for (const x of c.components) claim(owners.components, x.type, id);
       for (const b of c.baseViews) claim(owners.baseViews, b.type, id);
       if (c.app) app.set(id, { name: c.app.name, ...(c.app.icon ? { icon: c.app.icon } : {}) });
+      if (c.theme && plugin.themeCss !== undefined)
+        themes.push({ pluginId: id, name: c.theme.name, css: plugin.themeCss });
     }
 
     const conflicts: string[] = [];
@@ -112,6 +130,8 @@ export class ContributionRegistry {
     this.homeWidgets = homeWidgets;
     this.slots = slots;
     this.app = app;
+    this.apps = [...app].map(([pluginId, a]) => ({ pluginId, ...a }));
+    this.themes = themes;
     this.conflicts = conflicts;
   }
 
@@ -135,6 +155,11 @@ export class ContributionRegistry {
 
   view(pluginId: string, id: string): ViewEntry | undefined {
     return this.views.find((v) => v.pluginId === pluginId && v.id === id);
+  }
+
+  /** Slot entries of one slot, in plugin order. */
+  slotEntries(slot: SlotName): SlotEntry[] {
+    return this.slots.filter((entry) => entry.slot === slot);
   }
 }
 

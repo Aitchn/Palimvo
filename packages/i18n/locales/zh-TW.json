@@ -633,6 +633,18 @@
     "views": {
       "title": "插件視圖",
       "missing": "這個插件視圖無法使用。"
+    },
+    "theme": {
+      "label": "插件主題",
+      "none": "無（使用預設）"
+    },
+    "slot": {
+      "failed": "插件 {name} 沒有完成：{detail}",
+      "statusBar": "插件狀態"
+    },
+    "apps": {
+      "title": "插件應用",
+      "missing": "這個插件應用目前無法使用。"
     }
   },
   "errors": {

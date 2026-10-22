@@ -156,9 +156,16 @@
         registerHomeWidget: (id, render) =>
           register(homeWidgets, "home widget", id, declared.homeWidgets, render),
         registerSlot: (slot, id, handler) => {
-          if (!handler || typeof handler.run !== "function")
-            throw new Error("A slot handler needs a run function");
-          return register(slots, "slot", slot + "/" + id, declared.slots, handler);
+          if (
+            !handler ||
+            (typeof handler.run !== "function" && typeof handler.render !== "function")
+          )
+            throw new Error("A slot handler needs a run or render function");
+          const key = slot + "/" + id;
+          if (!declared.slots.includes(key)) throw new Error("Undeclared slot: " + key);
+          if (slots.has(key)) throw new Error("Duplicate slot: " + key);
+          slots.set(key, handler);
+          return () => slots.delete(key);
         },
         registerApp: (render) => {
           if (!declared.app) throw new Error("Undeclared app");
@@ -233,6 +240,13 @@
       baseView: [baseViews, "base view"],
       homeWidget: [homeWidgets, "home widget"],
     };
+    if (mode === "slot") {
+      // Only settings sections draw; the target is "<slot>/<id>".
+      const handler = slots.get(target);
+      if (!handler || typeof handler.render !== "function")
+        throw new Error('The slot entry "' + target + '" has no render function');
+      return (context) => handler.render(context);
+    }
     const entry = maps[mode];
     if (!entry) throw new Error("Unknown mode: " + mode);
     const key = mode === "app" ? "@app" : target;
@@ -380,7 +394,9 @@
             ? typeof handler.visible === "function"
               ? handler.visible(message.context || {}) !== false
               : true
-            : handler.run(message.context || {}),
+            : typeof handler.run === "function"
+              ? handler.run(message.context || {})
+              : Promise.reject(new Error("Slot entry cannot be run")),
         )
         .then(
           (result) =>
