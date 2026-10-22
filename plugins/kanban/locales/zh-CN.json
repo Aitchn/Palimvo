@@ -1,0 +1,11 @@
+{
+  "field": "属性",
+  "folder": "文件夹",
+  "allFolders": "所有文件夹",
+  "newCard": "＋ 新卡片（Enter）",
+  "moveTo": "移到栏位",
+  "empty": "还没有笔记带有“{field}”属性。请在笔记属性中加上它，或在上方输入文件夹。",
+  "column.todo": "待办",
+  "column.doing": "进行中",
+  "column.done": "完成"
+}

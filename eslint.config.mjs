@@ -58,6 +58,21 @@ export default tseslint.config(
     },
   },
   {
+    // Official plugins: ES modules that run in the plugin sandbox iframe (a browser).
+    files: ["plugins/*/main.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: {
+        document: "readonly",
+        console: "readonly",
+        Intl: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        Event: "readonly",
+      },
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-unused-vars": [

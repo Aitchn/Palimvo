@@ -1,0 +1,5 @@
+{
+  "search": "Search keys or values",
+  "invalid": "Cannot read this JSON: {message}",
+  "more": "… {count} more"
+}

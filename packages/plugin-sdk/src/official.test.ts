@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { validateManifest } from "./validate.ts";
@@ -38,5 +38,48 @@ describe("official plugin manifests", () => {
       "update_decision_status",
       "list_decision_trees",
     ]);
+  });
+});
+
+describe("official plugin files", () => {
+  const withCode = folders.filter((f) => existsSync(`${root}${f}/main.js`));
+
+  it("ships code for everything except decisions", () => {
+    expect(withCode.sort()).toEqual(["chart-pack", "json-tree", "kanban", "kanban-due"]);
+  });
+
+  it.each(withCode)(
+    "%s has every file its manifest names and the same keys in each locale",
+    (folder) => {
+      const manifest = JSON.parse(readFileSync(`${root}${folder}/manifest.json`, "utf8")) as {
+        locales: Record<string, string>;
+      };
+      const keys = Object.entries(manifest.locales).map(([locale, file]) => {
+        expect(existsSync(`${root}${folder}/${file}`), `${folder}/${file}`).toBe(true);
+        const strings = JSON.parse(readFileSync(`${root}${folder}/${file}`, "utf8")) as Record<
+          string,
+          string
+        >;
+        return [locale, Object.keys(strings).sort()] as const;
+      });
+      expect(keys.map(([locale]) => locale).sort()).toEqual(["en", "zh-CN", "zh-TW"]);
+      for (const [locale, k] of keys) expect(k, `${folder} ${locale}`).toEqual(keys[0]![1]);
+      expect(existsSync(`${root}${folder}/README.md`)).toBe(true);
+    },
+  );
+
+  it("kanban-due contributes to a point kanban declares", () => {
+    const read = (f: string) =>
+      JSON.parse(readFileSync(`${root}${f}/manifest.json`, "utf8")) as {
+        contributes: {
+          extensionPoints?: Array<{ id: string }>;
+          extensions?: Array<{ plugin: string; point: string }>;
+        };
+      };
+    const points = read("kanban").contributes.extensionPoints?.map((p) => p.id);
+    expect(read("kanban-due").contributes.extensions).toEqual([
+      { plugin: "kanban", point: "card-badge" },
+    ]);
+    expect(points).toContain("card-badge");
   });
 });

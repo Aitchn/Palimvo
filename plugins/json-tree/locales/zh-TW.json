@@ -1,0 +1,5 @@
+{
+  "search": "搜尋鍵或值",
+  "invalid": "無法解析 JSON：{message}",
+  "more": "…還有 {count} 項"
+}

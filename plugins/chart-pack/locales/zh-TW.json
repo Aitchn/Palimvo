@@ -1,0 +1,8 @@
+{
+  "radar.name": "雷達圖",
+  "radar.empty": "雷達圖至少需要三個軸與一組數列。",
+  "treemap.name": "樹狀圖",
+  "treemap.empty": "樹狀圖需要數值大於 0 的項目。",
+  "sparkline.name": "迷你趨勢圖",
+  "sparkline.empty": "迷你趨勢圖需要在 values 放一串數字。"
+}

@@ -104,7 +104,7 @@ export class PluginManager implements PluginCatalog {
     files: readonly PluginFile[],
     by: { accountId?: string; label?: string; builtin?: boolean },
   ): Promise<LibraryPlugin> {
-    const pkg = await inspectPackage(files, { palimvoVersion: this.deps.palimvoVersion });
+    const pkg = await inspectPackage(files, this.compatibility());
     const { manifest } = pkg;
     if (this.store.library.get(manifest.id, manifest.version)) {
       throw new AppError("already_exists", 409, undefined, {
@@ -182,6 +182,16 @@ export class PluginManager implements PluginCatalog {
     return path.join(this.deps.libraryDir, id, version);
   }
 
+  /**
+   * What `minPalimvo` is checked against. A build that still reports 0.0.0 (a checkout before the
+   * first release) accepts every plugin, otherwise the official ones, which ask for the version
+   * they ship with, could never be installed from a development tree.
+   */
+  private compatibility(): { palimvoVersion?: string } {
+    const version = this.deps.palimvoVersion;
+    return version === "0.0.0" ? {} : { palimvoVersion: version };
+  }
+
   /** Adds the official plugins found in `dir` to the library. A folder that fails the checks is skipped with a warning. */
   async seedBuiltins(dir: string): Promise<string[]> {
     const added: string[] = [];
@@ -191,7 +201,7 @@ export class PluginManager implements PluginCatalog {
       .sort((a, b) => a.name.localeCompare(b.name))) {
       try {
         const files = await readTree(path.join(dir, e.name));
-        const pkg = await inspectPackage(files, { palimvoVersion: this.deps.palimvoVersion });
+        const pkg = await inspectPackage(files, this.compatibility());
         const existing = this.store.library.get(pkg.manifest.id, pkg.manifest.version);
         if (existing) {
           if (existing.sha256 !== pkg.sha256)
@@ -223,7 +233,7 @@ export class PluginManager implements PluginCatalog {
     actor: Actor,
   ): Promise<{ plugin: InstalledPlugin; warnings: InspectedPackage["warnings"] }> {
     await this.deps.vaults.assertVault(vault);
-    const pkg = await inspectPackage(files, { palimvoVersion: this.deps.palimvoVersion });
+    const pkg = await inspectPackage(files, this.compatibility());
     const { manifest } = pkg;
     const folder = `${PLUGINS_DIR}/${manifest.id}`;
     const previous = await this.deps.vaults.listMetaFiles(vault, folder);

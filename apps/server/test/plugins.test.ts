@@ -132,6 +132,23 @@ describe("plugin library", () => {
   });
 });
 
+describe("the official plugins of this repository", () => {
+  it("pass the package checks on a development build and install in a vault, except the one whose code is not written yet", async () => {
+    const { root } = await world();
+    const dir = path.resolve(import.meta.dirname, "../../../plugins");
+    expect((await server.services.plugins.seedBuiltins(dir)).sort()).toEqual([
+      "chart-pack@1.0.0",
+      "json-tree@1.0.0",
+      "kanban-due@1.0.0",
+      "kanban@1.0.0",
+    ]);
+    const res = await root.client.post("/api/vaults/a/plugins", {
+      library: { id: "kanban-due" },
+    });
+    expect(res.status).toBe(201);
+  });
+});
+
 describe("installing and approving in a vault", () => {
   it("installs switched off, runs only after a person approves the exact hash", async () => {
     const { root, mia } = await world();
