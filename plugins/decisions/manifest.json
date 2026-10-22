@@ -2,7 +2,11 @@
   "manifestVersion": 2,
   "id": "decisions",
   "version": "0.1.0",
-  "name": { "en": "Decisions", "zh-TW": "決策紀錄", "zh-CN": "决策记录" },
+  "name": {
+    "en": "Decisions",
+    "zh-TW": "決策紀錄",
+    "zh-CN": "决策记录"
+  },
   "description": {
     "en": "Record decisions as notes, follow their status and see them on a timeline.",
     "zh-TW": "把決策記成筆記、追蹤狀態，並用時間軸檢視。",
@@ -11,56 +15,112 @@
   "author": "Palimvo",
   "license": "Apache-2.0",
   "minPalimvo": "0.1.0",
-  "permissions": { "read": ["decisions"], "write": ["decisions"] },
+  "permissions": {
+    "read": ["**/decisions/**"],
+    "write": ["**/decisions/**"]
+  },
   "contributes": {
-    "views": [
-      {
-        "id": "timeline",
-        "name": { "en": "Decision timeline", "zh-TW": "決策時間軸", "zh-CN": "决策时间轴" },
-        "icon": "git-branch"
-      }
-    ],
-    "homeWidgets": [
-      {
-        "id": "recent",
-        "name": { "en": "Recent decisions", "zh-TW": "最近的決策", "zh-CN": "最近的决策" },
-        "size": "medium"
-      }
-    ],
     "tools": [
       {
         "name": "record_decision",
-        "description": "Record a decision as a note in decisions/. Use status \"proposed\" unless a person agreed.",
+        "description": "Record a decision as NNNN-title.md (context, options considered, decision, consequences). Without a tree it goes in decisions/; with one, in that tree's decisions folder (numbered per folder). Use status \"proposed\" unless a person agreed.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "title": { "type": "string" },
-            "context": { "type": "string" },
-            "decision": { "type": "string" },
-            "status": { "enum": ["proposed", "accepted"] },
-            "tree": { "type": "string" },
-            "requires": { "type": "array", "items": { "type": "string" } }
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "tree": {
+              "type": "string",
+              "description": "Decision tree, e.g. a project name like \"Prism\" (see list_decision_trees); omit for records in no tree."
+            },
+            "branch": {
+              "type": "string",
+              "maxLength": 80,
+              "description": "A line of decisions that runs next to the main one, like a git branch (e.g. \"4.x\"). Omit for the main line; a record that supersedes one on a branch stays on it."
+            },
+            "context": {
+              "type": "string"
+            },
+            "options": {
+              "type": "string"
+            },
+            "decision": {
+              "type": "string"
+            },
+            "consequences": {
+              "type": "string"
+            },
+            "status": {
+              "enum": ["proposed", "accepted", "superseded", "rejected"]
+            },
+            "deciders": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "related": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Related notes or commits."
+            },
+            "supersedes": {
+              "type": "string",
+              "description": "The record this one replaces: its number (\"0003\", looked up in the same tree first), a path or Tree#number."
+            },
+            "requires": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Records this one needs, possibly in other trees: \"Prism#0003\" (tree#number), a path, or a number in the same tree."
+            },
+            "language": {
+              "enum": ["en", "zh-TW", "zh-CN"],
+              "description": "Language of the section headings (default en)."
+            }
           },
           "required": ["title", "decision"]
         }
       },
       {
         "name": "list_decisions",
-        "description": "List decisions, optionally filtered by status or tree.",
+        "description": "List decision records (NNNN-title.md in any decisions/ folder) with number, title, status, date, deciders, tree, folder; supersedesPath, requiresPaths and requiredBy link records across trees. At most 150 records are read; truncated says when there were more.",
         "inputSchema": {
           "type": "object",
-          "properties": { "status": { "type": "string" }, "tree": { "type": "string" } }
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": ["proposed", "accepted", "superseded", "rejected"]
+            },
+            "tree": {
+              "type": "string",
+              "description": "Only this tree (\"\" = records in no tree)."
+            }
+          }
         },
         "readOnly": true
       },
       {
         "name": "update_decision_status",
-        "description": "Change the status of a decision (accepted, rejected, superseded).",
+        "description": "Change the status of a decision (proposed, accepted, superseded, rejected).",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "id": { "type": "string" },
-            "status": { "enum": ["proposed", "accepted", "rejected", "superseded"] }
+            "id": {
+              "type": "string",
+              "description": "The record: its path, \"Tree#0003\", or a number when only one record has it."
+            },
+            "status": {
+              "enum": ["proposed", "accepted", "superseded", "rejected"]
+            }
           },
           "required": ["id", "status"]
         }
@@ -68,7 +128,11 @@
       {
         "name": "list_decision_trees",
         "description": "List the decision trees (one per project or area) and how many decisions each holds.",
-        "inputSchema": { "type": "object", "properties": {} },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
         "readOnly": true
       }
     ]

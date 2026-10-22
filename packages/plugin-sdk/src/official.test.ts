@@ -27,6 +27,16 @@ describe("official plugin manifests", () => {
     expect(typeof name === "object" && name["zh-TW"] && name["zh-CN"]).toBeTruthy();
   });
 
+  it("keeps the decisions plugin to its own folders and its server entry", () => {
+    const json: unknown = JSON.parse(readFileSync(`${root}decisions/manifest.json`, "utf8"));
+    const r = validateManifest(json, { palimvoVersion: "0.1.0" });
+    expect(r.ok && r.manifest.permissions).toMatchObject({
+      read: ["**/decisions/**"],
+      write: ["**/decisions/**"],
+    });
+    expect(r.ok && r.manifest.server).toBe("server.js");
+  });
+
   it("declares the four decision tools", () => {
     const json: unknown = JSON.parse(readFileSync(`${root}decisions/manifest.json`, "utf8"));
     const r = validateManifest(json);
@@ -68,8 +78,9 @@ describe("official plugin files", () => {
     ...["chart-pack", "json-tree"].map((f) => `examples/${f}`),
   ].filter((f) => existsSync(`${root}${f}/main.js`));
 
-  it("ships code for everything except decisions", () => {
+  it("ships code for every official plugin", () => {
     expect(withCode.sort()).toEqual([
+      "decisions",
       "examples/chart-pack",
       "examples/json-tree",
       "kanban",

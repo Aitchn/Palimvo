@@ -133,16 +133,17 @@ describe("plugin library", () => {
 });
 
 describe("the official plugins of this repository", () => {
-  it("pass the package checks on a development build and install in a vault, except the one whose code is not written yet", async () => {
+  it("pass the package checks on a development build and install in a vault", async () => {
     const { root } = await world();
     const dir = path.resolve(import.meta.dirname, "../../../plugins");
     // plugins/examples/ (chart-pack, json-tree and the UI-layer demos) is for plugin authors.
     expect((await server.services.plugins.seedBuiltins(dir)).sort()).toEqual([
+      "decisions@0.1.0",
       "kanban-due@1.0.0",
       "kanban@1.0.0",
     ]);
     const library = await json<{ plugins: Json[] }>(await root.client.get("/api/plugin-library"));
-    expect(library.plugins.map((p) => p.id).sort()).toEqual(["kanban", "kanban-due"]);
+    expect(library.plugins.map((p) => p.id).sort()).toEqual(["decisions", "kanban", "kanban-due"]);
     // In the library, but not installed anywhere until a person picks one.
     const before = await json<{ plugins: Json[] }>(await root.client.get("/api/vaults/a/plugins"));
     expect(before.plugins).toEqual([]);
