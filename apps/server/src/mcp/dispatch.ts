@@ -5,7 +5,9 @@ import type { Author } from "@palimvo/core";
 import { accessOf } from "../auth/access.ts";
 import { principalOf } from "../auth/principal.ts";
 import { requestAuthor, requestNote } from "../routes/author.ts";
+import type { VaultHistory } from "../history/history.ts";
 import type { Logger } from "../log.ts";
+import type { VaultIndexes } from "../search/index.ts";
 import type { Store } from "../store/index.ts";
 import type { VaultService } from "../vault/service.ts";
 import {
@@ -27,7 +29,16 @@ export interface McpDeps {
   logger: Logger;
   store: Store;
   vaults: VaultService;
+  history: VaultHistory;
+  indexes: VaultIndexes;
+  /** Which plugins are enabled in a vault; `list_vaults` shows them. Absent until the plugin platform exists. */
+  plugins?: PluginCatalog;
   [key: string]: unknown;
+}
+
+/** What the MCP tools need to know about plugins (the plugin platform supplies it). */
+export interface PluginCatalog {
+  enabled(vaultId: string): readonly { id: string; version?: string }[];
 }
 
 export interface Dispatcher {

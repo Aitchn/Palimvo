@@ -1,7 +1,6 @@
 import { z } from "zod";
+import { mcpTool } from "./shared.ts";
 import { vaultScope } from "@palimvo/core";
-import type { McpDeps } from "../dispatch.ts";
-import { defineTool } from "../registry.ts";
 
 /** What the caller may do in a vault, in the words an AI needs to pick its tools. */
 export const accessLevel = (
@@ -9,7 +8,7 @@ export const accessLevel = (
 ): "write" | "propose" | "read" =>
   can("note.write") ? "write" : can("proposal.create") ? "propose" : "read";
 
-export const listVaults = defineTool<z.ZodObject, McpDeps>({
+export const listVaults = mcpTool({
   name: "list_vaults",
   tier: "native",
   scope: "server",
@@ -17,15 +16,19 @@ export const listVaults = defineTool<z.ZodObject, McpDeps>({
   endpoints: ["all"],
   input: z.object({}),
   description:
-    "The vaults this connection can use, with what you may do in each (read, propose or write). Pass one as `vault` to the other tools.",
+    "The vaults this connection can use, with what you may do in each (read, propose or write) and the plugins enabled there (their tools are behind list_tools). Pass a vault id as `vault` to the other tools.",
   handler: async (_args, ctx) => {
-    const { vaults } = ctx.deps;
+    const { vaults, plugins } = ctx.deps;
     const ids = ctx.access.visibleVaults((await vaults.listVaults()).map((v) => v.id));
     return {
-      vaults: ids.map((id) => ({
-        id,
-        access: accessLevel((n) => ctx.access.can(n, vaultScope(id))),
-      })),
+      vaults: ids.map((id) => {
+        const enabled = plugins?.enabled(id) ?? [];
+        return {
+          id,
+          access: accessLevel((n) => ctx.access.can(n, vaultScope(id))),
+          ...(enabled.length > 0 ? { plugins: enabled } : {}),
+        };
+      }),
     };
   },
 });
