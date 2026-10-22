@@ -772,6 +772,32 @@ export class VaultService {
     });
   }
 
+  /**
+   * Read-modify-write of a `.palimvo/` file as one step in the file's write queue, so two
+   * changes to the same file (backup and plugin-tool settings share `config.json`) cannot lose
+   * each other's edit. `change` gets the current text (null when missing) and returns the new one.
+   */
+  async modifyMeta(
+    vaultId: string,
+    name: string,
+    change: (current: string | null) => string,
+    onWritten?: () => void,
+  ): Promise<void> {
+    const abs = await this.metaPath(vaultId, name);
+    await this.queueFileWrite(vaultId, `\0${name}`, async () => {
+      let current: string | null = null;
+      try {
+        current = (await readIfExists(abs, name))?.content ?? null;
+      } catch (err) {
+        if (!isMissing(err)) throw err;
+      }
+      const next = change(current);
+      await mkdir(path.dirname(abs), { recursive: true });
+      await atomicWrite(abs, next);
+      onWritten?.();
+    });
+  }
+
   /** Like `readMeta` but the exact bytes; plugin packages are hashed as stored. */
   async readMetaBytes(vaultId: string, name: string): Promise<Uint8Array | null> {
     const abs = await this.metaPath(vaultId, name);

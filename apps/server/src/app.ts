@@ -25,6 +25,7 @@ import { historyRoutes } from "./routes/history.ts";
 import { homeRoutes } from "./routes/home.ts";
 import { HomeService } from "./home/home.ts";
 import { pluginRoutes } from "./routes/plugins.ts";
+import type { PluginToolSettingsStore } from "./plugins/toolSettings.ts";
 import type { PluginManager } from "./plugins/manager.ts";
 import { proposalRoutes } from "./routes/proposals.ts";
 import { ProposalService } from "./proposals/proposals.ts";
@@ -65,6 +66,8 @@ export interface AppDeps {
   plugins?: PluginCatalog;
   /** Plugin installation, approval and the plugin library. */
   pluginManager?: PluginManager;
+  /** Per-vault settings for plugin tools (listing them in `tools/list`). */
+  pluginToolSettings?: PluginToolSettingsStore;
 }
 
 /** Builds the HTTP application. Domain routers are mounted here as they are added. */
@@ -139,7 +142,8 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", historyRoutes(deps));
   app.route("/", proposalRoutes(deps.vaults, proposals, deps.auth));
   app.route("/", homeRoutes(deps.vaults, new HomeService(deps.vaults, deps.history), deps.auth));
-  if (deps.pluginManager) app.route("/", pluginRoutes(deps.pluginManager, deps.vaults));
+  if (deps.pluginManager)
+    app.route("/", pluginRoutes(deps.pluginManager, deps.vaults, deps.pluginToolSettings));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
   app.route(

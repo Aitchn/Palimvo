@@ -45,6 +45,19 @@ history as a listed tool). They appear only when the caller may use them.
 Still to come with the services they need: components (`add_component`...), chunked
 uploads and upload links (T22), vault settings.
 
+### Plugin tools
+
+A plugin that runs in a vault can add MCP tools (`contributes.tools`, code in its `server.js`). They
+are named `<plugin-id>.<tool>`, are found with `list_tools` (pass `vault` on `/mcp`) and run with
+`call_tool`, and exist only in vaults where the plugin is switched on, approved and its
+dependencies run. Their code runs in a QuickJS sandbox on a worker pool; what it may read and write
+is its manifest's folders limited to what the caller may do, and its changes are credited to the
+plugin acting for the AI client. A tool that is not `readOnly` needs a `reason`. A vault
+administrator can list a vault's plugin tools in `tools/list` of `/mcp/<vault>` as well
+(`PUT /api/vaults/:vault/plugin-tools`, `{ "listed": true }`); `/mcp` keeps its short list. The
+number of workers is `PALIMVO_PLUGIN_WORKERS` (default 4). See
+[plugins](plugins.md#serverjs-mcp-tools) and [ADR 0003](../adr/0003-plugin-tool-sandbox.md).
+
 ### Plugin management
 
 Anyone who can view a vault can list its plugins, list the server's plugin library and read an
@@ -93,7 +106,7 @@ export const readNote = mcpTool({
 `args` is typed from `input`. Register it in `tools/index.ts`. Return any JSON value, or `toolContent([...])` for MCP content
 blocks. Throw `AppError` for expected failures; the AI sees its code and message.
 
-Plugin tools: implement `ToolProvider.toolsFor(vaultId)` and pass it in `AppDeps.toolProviders`.
+Plugin tools: implement `ToolProvider.toolsFor(vaultId)` (and `prepare(vaultId)` when it needs async data) and pass it in `AppDeps.toolProviders`; `PluginToolProvider` is the one that serves plugins.
 
 `test/mcp.test.ts` shows how to drive the server with the official SDK client; keep
 `tools/list` under `TOOLS_LIST_BUDGET_BYTES`.

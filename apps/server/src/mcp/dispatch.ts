@@ -133,13 +133,16 @@ export function createDispatcher(opts: {
     target,
     endpoint,
     async list() {
+      await registry.prepare(target.endpoint === "vault" ? target.vault : undefined);
       return visibleTools(registry, access, target, await visibleVaults(), "native");
     },
     async advanced(vault) {
+      await registry.prepare(target.endpoint === "vault" ? target.vault : vault);
       return visibleTools(registry, access, target, await visibleVaults(), "advanced", vault);
     },
     async describe(name, vault) {
       const inVault = target.endpoint === "vault" ? target.vault : vault;
+      await registry.prepare(inVault);
       const def = registry.find(name, inVault);
       if (!def || !onEndpoint(def, endpoint)) return undefined;
       if (def.scope === "server") return mayUse(access, def) ? def : undefined;
@@ -163,6 +166,7 @@ export function createDispatcher(opts: {
           message: `This connection is for vault "${target.vault}"; use /mcp for several vaults.`,
         });
       const vaultArg = target.endpoint === "vault" ? target.vault : given.vault;
+      if (typeof vaultArg === "string") await registry.prepare(vaultArg);
 
       const def = registry.find(name, vaultArg);
       if (!def || !onEndpoint(def, endpoint)) throw notFound(name);

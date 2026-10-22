@@ -16,11 +16,13 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
     "@hono/node-server": "^2.1.5",
+    "@jitl/quickjs-singlefile-mjs-release-sync": "0.32.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@palimvo/core": "workspace:*",
     "@palimvo/i18n": "workspace:*",
     "@palimvo/plugin-sdk": "workspace:*",
     "hono": "^4.13.13",
+    "quickjs-emscripten-core": "0.32.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

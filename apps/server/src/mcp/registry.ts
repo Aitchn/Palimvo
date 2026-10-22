@@ -71,6 +71,17 @@ export interface ToolDef<S extends z.ZodObject = z.ZodObject, Deps = unknown> {
   adminGrant?: boolean;
   /** Defaults to both. `list_vaults` only makes sense on `/mcp`. */
   endpoints?: readonly Endpoint[];
+  /**
+   * An advanced tool that `tools/list` also shows on these endpoints (a vault's setting for
+   * plugin tools). It stays reachable through `list_tools` and `call_tool` as well.
+   */
+  listedOn?: readonly Endpoint[];
+  /**
+   * JSON Schema of the arguments, for tools whose `input` cannot say it (plugin tools bring their
+   * own schema and are checked by their handler). `describe_tool` and `tools/list` show this one,
+   * with `vault` and `reason` added.
+   */
+  argumentSchema?: Record<string, unknown>;
   handler(args: z.infer<S>, ctx: ToolContext<Deps>): unknown | Promise<unknown>;
 }
 
@@ -96,6 +107,8 @@ export function defineTool<S extends z.ZodObject, Deps = unknown>(def: ToolDef<S
 /** Tools a plugin (or any other module) supplies per vault; they are always advanced and cannot shadow core tools. */
 export interface ToolProvider {
   toolsFor(vaultId: string): readonly AnyTool[];
+  /** Loads whatever `toolsFor` needs but cannot get synchronously; the dispatcher awaits it first. */
+  prepare?(vaultId: string): Promise<void>;
 }
 
 export const permissionsOf = (def: AnyTool): readonly PermissionName[] =>
@@ -125,10 +138,36 @@ export function argumentsOf(def: AnyTool, endpoint: Endpoint, reasonOptional = f
 
 /** JSON Schema of the arguments, as `tools/list` and `describe_tool` show it. */
 export function jsonSchemaOf(def: AnyTool, endpoint: Endpoint): Record<string, unknown> {
+  if (def.argumentSchema) return withRegistryArguments(def, endpoint);
   const schema = z.toJSONSchema(argumentsOf(def, endpoint), { io: "input" }) as Record<
     string,
     unknown
   >;
+  delete schema.$schema;
+  delete schema.additionalProperties;
+  return schema;
+}
+
+/** A tool's own JSON Schema plus the `vault` and `reason` arguments the registry adds. */
+function withRegistryArguments(def: AnyTool, endpoint: Endpoint): Record<string, unknown> {
+  const own = def.argumentSchema ?? {};
+  const properties: Record<string, unknown> = {
+    ...(own.properties as Record<string, unknown> | undefined),
+  };
+  const required = new Set<string>(Array.isArray(own.required) ? (own.required as string[]) : []);
+  const extra = argumentsOf(def, endpoint, false);
+  const added = z.toJSONSchema(extra, { io: "input" }) as {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  for (const key of ["vault", "reason"])
+    if (added.properties?.[key] !== undefined) {
+      properties[key] = added.properties[key];
+      required.add(key);
+    }
+  const schema: Record<string, unknown> = { ...own, type: "object", properties };
+  if (required.size > 0) schema.required = [...required];
+  else delete schema.required;
   delete schema.$schema;
   delete schema.additionalProperties;
   return schema;
@@ -162,6 +201,12 @@ export class ToolRegistry {
         if (!this.core.has(t.name) && !out.some((o) => o.name === t.name))
           out.push({ ...t, tier: "advanced" });
     return out;
+  }
+
+  /** Lets providers load what they need for `vault` before its tools are listed or found. */
+  async prepare(vault?: string): Promise<void> {
+    if (vault === undefined) return;
+    await Promise.all(this.providers.map((p) => p.prepare?.(vault)));
   }
 
   find(name: string, vault?: string): AnyTool | undefined {
@@ -206,7 +251,12 @@ export function visibleTools(
 ): AnyTool[] {
   const inVault = target.endpoint === "vault" ? target.vault : vault;
   return registry.all(inVault).filter((def) => {
-    if (tier && def.tier !== tier) return false;
+    if (
+      tier &&
+      def.tier !== tier &&
+      !(tier === "native" && def.listedOn?.includes(target.endpoint))
+    )
+      return false;
     if (!onEndpoint(def, target.endpoint)) return false;
     if (def.scope === "server") return mayUse(access, def);
     if (inVault !== undefined) return mayUse(access, def, inVault);
