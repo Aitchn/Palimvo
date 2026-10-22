@@ -63,6 +63,12 @@ export interface ToolDef<S extends z.ZodObject = z.ZodObject, Deps = unknown> {
   writes?: boolean;
   /** Cannot be undone from the history (deletes). Only changes the hint shown to the AI. */
   destructive?: boolean;
+  /**
+   * Administration (ADR 0015): only an OAuth grant the person allowed to administer can use the
+   * tool; API tokens never see it. Its permissions are then the person's own, not cut down to the
+   * token's access level (which never includes `vault.settings`).
+   */
+  adminGrant?: boolean;
   /** Defaults to both. `list_vaults` only makes sense on `/mcp`. */
   endpoints?: readonly Endpoint[];
   handler(args: z.infer<S>, ctx: ToolContext<Deps>): unknown | Promise<unknown>;
@@ -177,6 +183,12 @@ export function mayUse(access: RequestAccess, def: AnyTool, vault?: string): boo
   if (!scope) return false;
   // Seeing the vault is the baseline for every vault-scoped tool, whatever it declares.
   if (def.scope === "vault" && !access.can("vault.view", scope)) return false;
+  if (def.adminGrant) {
+    if (!access.adminGrant) return false;
+    return permissionsOf(def).every((p) =>
+      def.scope === "vault" ? access.personCan(p, scope) : access.can(p, scope),
+    );
+  }
   return permissionsOf(def).every((p) => access.can(p, scope));
 }
 

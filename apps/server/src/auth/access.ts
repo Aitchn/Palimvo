@@ -106,6 +106,12 @@ export class RequestAccess {
       : undefined;
   }
 
+  /** Whether this call comes from an OAuth grant the person allowed to administer. */
+  get adminGrant(): boolean {
+    const b = this.bearer;
+    return b?.source === "oauth" && b.scope.admin === true && b.scope.access === "write";
+  }
+
   /** Tokens never count as administrators, whatever their owner is: they are cut down on every call. */
   get isServerAdmin(): boolean {
     return this.isOpen || (this.principal.kind === "account" && this.principal.account.serverAdmin);
@@ -190,7 +196,8 @@ export class RequestAccess {
     const person = this.personMask(scope);
     const { bearer } = this;
     if (!bearer) return person;
-    if (!hasPermission(person, "mcp.connect")) return 0;
+    // At server scope there is no vault to connect to; the token's own limit (an admin grant) decides.
+    if (scope.kind !== "server" && !hasPermission(person, "mcp.connect")) return 0;
     return intersect(person, { token: bearer.scope, scope });
   }
 
@@ -208,6 +215,24 @@ export class RequestAccess {
    */
   require(name: PermissionName, scope: PermissionScope): void {
     if (this.can(name, scope)) return;
+    throw this.denial(name, scope);
+  }
+
+  /**
+   * What the person behind the request holds, ignoring token limits. Only for the few tools that
+   * an admin grant (see `adminGrant`) lifts out of the token's access level, such as `remove_vault`.
+   */
+  personCan(name: PermissionName, scope: PermissionScope): boolean {
+    const person = this.personMask(scope);
+    // Like every AI call, only where the person may still connect AI.
+    if (this.bearer && scope.kind !== "server" && !hasPermission(person, "mcp.connect"))
+      return false;
+    return hasPermission(person, name);
+  }
+
+  /** Throws unless the person holds `name`, as `require` would for them without a token. */
+  requirePerson(name: PermissionName, scope: PermissionScope): void {
+    if (this.personCan(name, scope)) return;
     throw this.denial(name, scope);
   }
 

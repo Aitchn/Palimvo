@@ -58,6 +58,29 @@ describe("intersect", () => {
     expect(intersect(ALL_MASK, { token: any, scope: vaultScope("other") })).not.toBe(0);
   });
 
+  it("gives an admin grant only vaults.create and library.publish, and only with write access", () => {
+    const grant = (access: "read" | "write" | "propose", admin?: boolean) => ({
+      token: { access, admin },
+      scope: serverScope,
+    });
+    expect(namesOf(intersect(ALL_MASK, grant("write", true)))).toEqual([
+      "vaults.create",
+      "library.publish",
+    ]);
+    // Never more than the person holds.
+    expect(namesOf(intersect(maskOf(["vaults.create"]), grant("write", true)))).toEqual([
+      "vaults.create",
+    ]);
+    expect(intersect(ALL_MASK, grant("write"))).toBe(0);
+    expect(intersect(ALL_MASK, grant("write", false))).toBe(0);
+    expect(intersect(ALL_MASK, grant("read", true))).toBe(0);
+    expect(intersect(ALL_MASK, grant("propose", true))).toBe(0);
+    // The flag adds nothing inside vaults.
+    const inVault = (admin: boolean) =>
+      intersect(ALL_MASK, { token: { access: "write" as const, admin }, scope: vaultScope("v") });
+    expect(inVault(true)).toBe(inVault(false));
+  });
+
   it("confines a folder-limited token to those folders", () => {
     const t = { access: "write" as const, vaultId: "v", folders: ["design", "Docs/api"] };
     const at = (folder: string) =>

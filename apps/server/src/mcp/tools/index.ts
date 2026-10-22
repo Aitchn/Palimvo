@@ -1,5 +1,14 @@
 import type { AnyTool } from "../registry.ts";
 import { entryTools } from "../entry.ts";
+import { createVault, removeVault } from "./admin.ts";
+import {
+  createBase,
+  createCheckpoint,
+  createFolder,
+  getGraph,
+  listFileTypes,
+  restoreVersion,
+} from "./advanced.ts";
 import { queryBaseTool } from "./bases.ts";
 import { editCanvas, readCanvas } from "./canvas.ts";
 import { downloadFile, uploadFile } from "./files.ts";
@@ -18,8 +27,10 @@ import {
 import { listVaults } from "./vaults.ts";
 
 /**
- * Every tool the server ships that appears in `tools/list` (about 20 with the entry tools).
- * Advanced tools (T29) and `create_edit_proposal` (needs the proposal store, T25) are added later.
+ * Every tool the server ships: the ones in `tools/list` (about 20 with the entry tools) and the
+ * advanced ones reached through `call_tool`. Advanced tools that need services which do not exist
+ * yet (plugins, components, proposals, chunked uploads, vault settings) are added with those
+ * services; `create_edit_proposal` waits for the proposal store (T25).
  */
 export function coreTools(): AnyTool[] {
   return [
@@ -41,5 +52,13 @@ export function coreTools(): AnyTool[] {
     downloadFile,
     queryBaseTool,
     ...entryTools(),
+    createFolder,
+    getGraph,
+    createCheckpoint,
+    restoreVersion,
+    createBase,
+    listFileTypes,
+    createVault,
+    removeVault,
   ];
 }
