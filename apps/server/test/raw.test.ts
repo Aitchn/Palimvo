@@ -116,3 +116,24 @@ describe("raw files", () => {
     expect((await server.fetch(url("escape/palimvo.db"))).status).toBe(404);
   });
 });
+
+describe("raw files in a vault called raw", () => {
+  it("takes the path after the route, not after the first /raw/", async () => {
+    const server = await startTestServer();
+    try {
+      await server.fetch("/api/vaults", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: "raw" }),
+      });
+      const dir = path.join(server.dataDir, "vaults", "raw");
+      await mkdir(path.join(dir, "raw"), { recursive: true });
+      await writeFile(path.join(dir, "img.png"), "root");
+      await writeFile(path.join(dir, "raw", "img.png"), "nested");
+      expect(await (await server.fetch("/api/vaults/raw/raw/img.png")).text()).toBe("root");
+      expect(await (await server.fetch("/api/vaults/raw/raw/raw/img.png")).text()).toBe("nested");
+    } finally {
+      await server.dispose();
+    }
+  });
+});

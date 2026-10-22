@@ -14,10 +14,10 @@ function disposition(kind: "inline" | "attachment", name: string): string {
   return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 }
 
-/** The part of the path after `/raw/`, percent-decoded exactly once. */
+/** The part of the path after `/api/vaults/<vault>/raw/`, percent-decoded exactly once. */
 function rawPathOf(c: Context): string {
-  const pathname = new URL(c.req.url).pathname;
-  const rest = pathname.slice(pathname.indexOf("/raw/") + "/raw/".length);
+  // By position, not by searching for "/raw/": a vault may itself be called "raw".
+  const rest = new URL(c.req.url).pathname.split("/").slice(5).join("/");
   try {
     return decodeURIComponent(rest);
   } catch {

@@ -186,6 +186,17 @@ describe("helpers", () => {
     expect(calloutKind("FAQ")).toBe("question");
     expect(calloutKind("custom")).toBe("note");
   });
+  it("keeps ./ so media resolve beside the note, not anywhere with that name", () => {
+    const seen: string[] = [];
+    const spy = {
+      ...links,
+      resolve: (t: string) => (seen.push(t), "img/cat.png"),
+    };
+    mediaSrc(spy, "./cat.png");
+    mediaTarget(spy, "./cat.png");
+    mediaSrc(spy, "cat.png");
+    expect(seen).toEqual(["./cat.png", "./cat.png", "cat.png"]);
+  });
   it("cuts a note section for ![[note#heading]]", () => {
     expect(noteSection("# A\na\n## B\nb\n### C\nc\n## D\nd", "B")).toBe("## B\nb\n### C\nc");
   });

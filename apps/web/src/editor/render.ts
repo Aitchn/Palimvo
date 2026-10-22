@@ -20,14 +20,15 @@ export function isExternal(href: string): boolean {
 }
 
 /** The vault path a relative markdown link points to: `notes/My%20note.md#part` → `notes/My note.md`. */
-export function vaultTarget(href: string): string {
+export function vaultTarget(href: string, keepDot = false): string {
   let path = href.split("#")[0]!.split("?")[0]!;
   try {
     path = decodeURIComponent(path);
   } catch {
     // Keep the raw text when it is not valid percent-encoding.
   }
-  return path.replace(/^\.\//, "").replace(/^<|>$/g, "").trim();
+  // Media keep "./": it means "beside this note", not "anywhere with this name".
+  return (keepDot ? path : path.replace(/^\.\//, "")).replace(/^<|>$/g, "").trim();
 }
 
 /** Follows a [text](href) link: web links open in a new tab, vault paths open the note. */
@@ -48,8 +49,7 @@ export function openHref(host: WikiLinkHost | null, href: string): void {
 export function mediaSrc(host: WikiLinkHost | null, url: string): string | null {
   if (/^(https?:)?\/\//i.test(url) || /^data:image\//i.test(url)) return url;
   if (isExternal(url) || !host?.fileUrl) return null;
-  const target = vaultTarget(url);
-  const resolved = host.resolve(target);
+  const resolved = host.resolve(vaultTarget(url, true));
   return resolved && mediaOf(resolved)?.kind === "image" ? host.fileUrl(resolved) : null;
 }
 
@@ -68,7 +68,7 @@ export function mediaTarget(
     return { src: image, kind: kind ?? "image" };
   }
   if (isExternal(url) || !host?.fileUrl) return null;
-  const resolved = host.resolve(vaultTarget(url));
+  const resolved = host.resolve(vaultTarget(url, true));
   const media = resolved ? mediaOf(resolved) : undefined;
   return resolved && media ? { src: host.fileUrl(resolved), kind: media.kind } : null;
 }
