@@ -13,8 +13,9 @@ const examples = readdirSync(`${root}examples/`, { withFileTypes: true })
   .map((e) => e.name);
 
 describe("official plugin manifests", () => {
-  it("ships the five planned plugins", () => {
+  it("ships the planned plugins", () => {
     expect(folders.sort()).toEqual([
+      "calendar",
       "chart-pack",
       "decisions",
       "json-tree",
@@ -42,6 +43,18 @@ describe("official plugin manifests", () => {
       "update_decision_status",
       "list_decision_trees",
     ]);
+  });
+
+  it("calendar ships the files it names, with the same locale keys in every language", () => {
+    const read = (file: string) => readFileSync(`${root}calendar/${file}`, "utf8");
+    const r = validateManifest(JSON.parse(read("manifest.json")), { palimvoVersion: "0.1.0" });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    for (const file of referencedFiles(r.manifest)) expect(() => read(file), file).not.toThrow();
+    const keys = (locale: string) =>
+      Object.keys(JSON.parse(read(`locales/${locale}.json`)) as object).sort();
+    expect(keys("zh-TW")).toEqual(keys("en"));
+    expect(keys("zh-CN")).toEqual(keys("en"));
   });
 
   it("keeps one example per UI layer in plugins/examples", () => {

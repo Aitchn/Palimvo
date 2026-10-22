@@ -3,15 +3,16 @@
 Plugins shipped with the server (disabled by default) live here, one folder per plugin with a
 `manifest.json` ([manifest v2](../docs/dev/plugins.md)).
 
-| Folder       | Does                                          | Code lands in |
-| ------------ | --------------------------------------------- | ------------- |
-| `decisions`  | decision notes, status, timeline, 4 MCP tools | T36           |
-| `kanban`     | board view and `kanban` code block            | T35           |
-| `kanban-due` | due-date badges for the board                 | T35           |
-| `chart-pack` | radar, treemap and sparkline components       | T35           |
-| `json-tree`  | collapsible viewer for `.json`                | T35           |
+| Folder       | Does                                                   | Code lands in |
+| ------------ | ------------------------------------------------------ | ------------- |
+| `decisions`  | decision notes, status, timeline, 4 MCP tools          | T36           |
+| `kanban`     | board view and `kanban` code block                     | T35           |
+| `kanban-due` | due-date badges for the board                          | T35           |
+| `calendar`   | month and week calendar, `calendar` block, home widget | T54           |
+| `chart-pack` | radar, treemap and sparkline components                | T35           |
+| `json-tree`  | collapsible viewer for `.json`                         | T35           |
 
-For now these folders hold only the manifests (validated by the plugin SDK tests); the loader must
+`calendar` ships its code; see [its README](calendar/README.md). The others hold only the manifests (validated by the plugin SDK tests); the loader must
 skip a folder whose `main` file is missing until the code arrives.
 
 ## Examples

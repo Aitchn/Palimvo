@@ -1,0 +1,17 @@
+{
+  "field": "Date property",
+  "folder": "New notes in",
+  "template": "Template note",
+  "today": "Today",
+  "prev": "Previous",
+  "next": "Next",
+  "month": "Month",
+  "week": "Week",
+  "more": "+{count} more",
+  "count": "{count} dated notes",
+  "add": "New note on {date}",
+  "created": "Created {path}",
+  "moved": "Moved {path} to {date}",
+  "truncated": "Only the first {count} notes were read.",
+  "templateMissing": "Template note not found: {path}"
+}

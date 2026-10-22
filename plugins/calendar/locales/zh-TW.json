@@ -1,0 +1,17 @@
+{
+  "field": "日期屬性",
+  "folder": "新筆記資料夾",
+  "template": "範本筆記",
+  "today": "今天",
+  "prev": "上一頁",
+  "next": "下一頁",
+  "month": "月",
+  "week": "週",
+  "more": "還有 {count} 則",
+  "count": "{count} 篇有日期的筆記",
+  "add": "在 {date} 建立筆記",
+  "created": "已建立 {path}",
+  "moved": "已把 {path} 移到 {date}",
+  "truncated": "只讀取了前 {count} 篇筆記。",
+  "templateMissing": "找不到範本筆記：{path}"
+}
