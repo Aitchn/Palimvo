@@ -146,6 +146,7 @@ describe("the official plugins of this repository", () => {
     ]);
     const library = await json<{ plugins: Json[] }>(await root.client.get("/api/plugin-library"));
     expect(library.plugins.map((p) => p.id).sort()).toEqual([
+      "calendar",
       "decisions",
       "graph",
       "kanban",
