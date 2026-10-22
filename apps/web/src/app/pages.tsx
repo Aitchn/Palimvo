@@ -4,6 +4,7 @@ import { describeError } from "../api/errors.ts";
 import { listVaults } from "../api/vaults.ts";
 import { LanguageSelect } from "../i18n/LanguageSelect.tsx";
 import { ThemeMenu } from "../theme/ThemeMenu.tsx";
+import { AccountBar } from "../auth/AccountBar.tsx";
 import { Button, Icon, Skeleton } from "../ui/index.ts";
 import { useAsync } from "./useAsync.ts";
 
@@ -28,7 +29,10 @@ export function HomePage() {
           <img src="/icons/palimvo.svg" alt="" width="28" height="28" />
           {t("common.appName")}
         </span>
-        <ThemeMenu placement="below" />
+        <span className="page-bar-end">
+          <ThemeMenu placement="below" />
+          <AccountBar />
+        </span>
       </header>
       <main className="page-main">
         <h1>{t("shell.vaultsTitle")}</h1>

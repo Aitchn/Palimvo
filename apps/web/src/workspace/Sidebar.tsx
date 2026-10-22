@@ -9,6 +9,7 @@ import { SearchPanel } from "../search/SearchPanel.tsx";
 import { Button, ContextMenu, Skeleton, type MenuItem } from "../ui/index.ts";
 import type { TreeState } from "../files/useVaultTree.ts";
 import { VaultSwitcher } from "./VaultSwitcher.tsx";
+import type { VaultCan } from "./useVaultPermissions.ts";
 
 type Operations = ReturnType<typeof useFileOperations>;
 
@@ -20,6 +21,8 @@ interface Props {
   expanded: ReadonlySet<string>;
   activePath: string | null;
   operations: Operations;
+  /** What the signed-in person may change; the rest is not offered. */
+  can: VaultCan;
   onToggle: (folder: string) => void;
   onOpen: (path: string) => void;
   onQuickOpen: () => void;
@@ -47,6 +50,7 @@ export function Sidebar({
   expanded,
   activePath,
   operations,
+  can,
   onToggle,
   onOpen,
   onQuickOpen,
@@ -69,24 +73,32 @@ export function Sidebar({
   const itemsFor = (node: TreeNode | null): MenuItem[] => {
     if (node === null) {
       return [
-        {
-          id: "note",
-          label: t("files.newNote"),
-          icon: "add",
-          onSelect: () => operations.openPrompt({ kind: "note", folder: "" }),
-        },
-        {
-          id: "folder",
-          label: t("files.newFolder"),
-          icon: "folderAdd",
-          onSelect: () => operations.openPrompt({ kind: "folder", folder: "" }),
-        },
-        {
-          id: "import",
-          label: t("files.import"),
-          icon: "upload",
-          onSelect: () => pickFilesFor(""),
-        },
+        ...(can.write
+          ? [
+              {
+                id: "note",
+                label: t("files.newNote"),
+                icon: "add" as const,
+                onSelect: () => operations.openPrompt({ kind: "note", folder: "" }),
+              },
+              {
+                id: "folder",
+                label: t("files.newFolder"),
+                icon: "folderAdd" as const,
+                onSelect: () => operations.openPrompt({ kind: "folder", folder: "" }),
+              },
+            ]
+          : []),
+        ...(can.upload
+          ? [
+              {
+                id: "import",
+                label: t("files.import"),
+                icon: "upload" as const,
+                onSelect: () => pickFilesFor(""),
+              },
+            ]
+          : []),
         {
           id: "zip",
           label: t("files.downloadVaultZip"),
@@ -108,40 +120,48 @@ export function Sidebar({
       danger: true,
       onSelect: () => operations.askDelete(node),
     };
+    const editing = [...(can.write && can.delete ? [rename] : []), ...(can.delete ? [remove] : [])];
     if (node.type === "file") {
       return [
         { id: "open", label: t("files.open"), icon: "note", onSelect: () => onOpen(node.path) },
-        rename,
-        remove,
+        ...editing,
       ];
     }
     return [
-      {
-        id: "note",
-        label: t("files.newNote"),
-        icon: "add",
-        onSelect: () => operations.openPrompt({ kind: "note", folder: node.path }),
-      },
-      {
-        id: "folder",
-        label: t("files.newFolder"),
-        icon: "folderAdd",
-        onSelect: () => operations.openPrompt({ kind: "folder", folder: node.path }),
-      },
-      {
-        id: "import",
-        label: t("files.import"),
-        icon: "upload",
-        onSelect: () => pickFilesFor(node.path),
-      },
-      rename,
+      ...(can.write
+        ? [
+            {
+              id: "note",
+              label: t("files.newNote"),
+              icon: "add" as const,
+              onSelect: () => operations.openPrompt({ kind: "note", folder: node.path }),
+            },
+            {
+              id: "folder",
+              label: t("files.newFolder"),
+              icon: "folderAdd" as const,
+              onSelect: () => operations.openPrompt({ kind: "folder", folder: node.path }),
+            },
+          ]
+        : []),
+      ...(can.upload
+        ? [
+            {
+              id: "import",
+              label: t("files.import"),
+              icon: "upload" as const,
+              onSelect: () => pickFilesFor(node.path),
+            },
+          ]
+        : []),
+      ...(can.write && can.delete ? [rename] : []),
       {
         id: "zip",
         label: t("files.downloadZip"),
         icon: "download",
         onSelect: () => download(vault, node.path),
       },
-      remove,
+      ...(can.delete ? [remove] : []),
     ];
   };
 
@@ -179,27 +199,33 @@ export function Sidebar({
       ) : (
         <>
           <div className="sidebar-toolbar" role="toolbar" aria-label={t("files.toolbar")}>
-            <Button
-              variant="ghost"
-              icon="add"
-              aria-label={t("files.newNote")}
-              title={t("files.newNote")}
-              onClick={() => operations.openPrompt({ kind: "note", folder: here })}
-            />
-            <Button
-              variant="ghost"
-              icon="folderAdd"
-              aria-label={t("files.newFolder")}
-              title={t("files.newFolder")}
-              onClick={() => operations.openPrompt({ kind: "folder", folder: here })}
-            />
-            <Button
-              variant="ghost"
-              icon="upload"
-              aria-label={t("files.import")}
-              title={t("files.import")}
-              onClick={() => pickFilesFor(here)}
-            />
+            {can.write && (
+              <>
+                <Button
+                  variant="ghost"
+                  icon="add"
+                  aria-label={t("files.newNote")}
+                  title={t("files.newNote")}
+                  onClick={() => operations.openPrompt({ kind: "note", folder: here })}
+                />
+                <Button
+                  variant="ghost"
+                  icon="folderAdd"
+                  aria-label={t("files.newFolder")}
+                  title={t("files.newFolder")}
+                  onClick={() => operations.openPrompt({ kind: "folder", folder: here })}
+                />
+              </>
+            )}
+            {can.upload && (
+              <Button
+                variant="ghost"
+                icon="upload"
+                aria-label={t("files.import")}
+                title={t("files.import")}
+                onClick={() => pickFilesFor(here)}
+              />
+            )}
             <span className="toolbar-spacer" />
             <Button
               variant="ghost"
@@ -243,10 +269,18 @@ export function Sidebar({
                 onToggle={onToggle}
                 onOpen={(file) => onOpen(file.path)}
                 onMenu={setMenu}
-                onRename={(node) => operations.openPrompt({ kind: "rename", node })}
-                onDelete={operations.askDelete}
-                onMove={(from, into) => void operations.move(from, into)}
-                onDropFiles={(data, into) => void operations.dropFiles(data, into)}
+                onRename={(node) => {
+                  if (can.write && can.delete) operations.openPrompt({ kind: "rename", node });
+                }}
+                onDelete={(node) => {
+                  if (can.delete) operations.askDelete(node);
+                }}
+                onMove={(from, into) => {
+                  if (can.write && can.delete) void operations.move(from, into);
+                }}
+                onDropFiles={(data, into) => {
+                  if (can.upload) void operations.dropFiles(data, into);
+                }}
               />
             )}
           </div>

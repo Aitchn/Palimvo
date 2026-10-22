@@ -16,17 +16,26 @@ interface Props {
   onOpen: (path: string) => void;
   /** A link to a note that does not exist yet. */
   onCreate: (target: string) => void;
+  /** Viewers read and follow links but cannot type. */
+  readOnly?: boolean;
 }
 
 /** Extensions that are plain text even though the app has no dedicated view for them. */
 const TEXT = /\.(txt|json|ya?ml|csv|log|toml|ini|js|ts|css|html?)$/i;
 
 /** The main area for an open file: notes are edited; other text files are shown read-only for now. */
-export function FileView({ vault, path, kind, paths, onOpen, onCreate }: Props) {
+export function FileView({ vault, path, kind, paths, onOpen, onCreate, readOnly = false }: Props) {
   if (kind === "markdown") {
     return (
       <article className="file-view note-view" aria-label={basename(path)}>
-        <NoteEditor vault={vault} path={path} paths={paths} onOpen={onOpen} onCreate={onCreate} />
+        <NoteEditor
+          vault={vault}
+          path={path}
+          paths={paths}
+          onOpen={onOpen}
+          onCreate={onCreate}
+          readOnly={readOnly}
+        />
       </article>
     );
   }

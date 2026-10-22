@@ -48,13 +48,36 @@ export async function renderRoute(path: string, locale: Locale = "en") {
   };
 }
 
+/** Every page asks who is using it first; unless a test says otherwise, someone administrator is. */
+const SIGNED_IN: Record<string, () => Response> = {
+  "/api/auth/me": () =>
+    Response.json({
+      state: "account",
+      account: {
+        id: "a1",
+        username: "ada",
+        displayName: "Ada",
+        serverAdmin: true,
+        disabled: false,
+        createdAt: 1,
+      },
+      csrfToken: "csrf",
+    }),
+  "/api/me/permissions": () =>
+    Response.json({
+      server: ["server.manage", "users.manage", "roles.manage", "vaults.create"],
+      vault: ["vault.view", "note.read", "note.write", "note.delete", "file.upload"],
+    }),
+};
+
 /** Replaces `fetch` with a router of `path -> handler`; unmatched paths answer 404 JSON. */
 export function mockFetch(handlers: Record<string, () => Response | Promise<Response>>) {
+  handlers = { ...SIGNED_IN, ...handlers };
   const calls: { url: string; init?: RequestInit }[] = [];
   const fake = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
     calls.push({ url, init });
-    const handler = handlers[url];
+    const handler = handlers[url] ?? handlers[url.split("?")[0]!];
     return handler
       ? handler()
       : Response.json({ code: "not_found", message: "Not found." }, { status: 404 });
@@ -77,6 +100,10 @@ export interface RecordedCall {
 export function mockRoutes(
   handlers: Record<string, (call: RecordedCall) => Response | Promise<Response>>,
 ) {
+  handlers = {
+    ...Object.fromEntries(Object.entries(SIGNED_IN).map(([k, v]) => [`GET ${k}`, v])),
+    ...handlers,
+  };
   const calls: RecordedCall[] = [];
   const fake = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
@@ -88,7 +115,7 @@ export function mockRoutes(
       body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
     };
     calls.push(call);
-    const handler = handlers[`${method} ${url}`];
+    const handler = handlers[`${method} ${url}`] ?? handlers[`${method} ${url.split("?")[0]}`];
     return handler
       ? handler(call)
       : Response.json({ code: "not_found", message: "Not found." }, { status: 404 });
