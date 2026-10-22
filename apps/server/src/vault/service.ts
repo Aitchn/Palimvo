@@ -46,7 +46,7 @@ export interface VaultChange {
   type: "changed" | "deleted" | "moved" | "removed";
   path: string;
   from?: string;
-  /** True when the change was made outside the app (an editor, git, a sync tool). */
+  /** Reported by the file watcher: a change made outside the app (an editor, git, a sync tool), or the echo of the app's own write. */
   external?: boolean;
 }
 

@@ -29,8 +29,9 @@ invalidated after every write the service makes and by a file watcher for change
 the app (an editor, git, a sync tool). On Linux each visible folder gets its own inotify watcher;
 if the system runs out (`fs.inotify.max_user_watches`) the log says so and the vault is read
 from the disk until the watcher can start again. A safety sweep every minute catches changes
-the watcher missed. External changes are announced through `VaultService.onChange` with
-`external: true`; a folder path means anything below it may have changed.
+the watcher missed. Changes seen by the watcher are announced through `VaultService.onChange` with
+`external: true`. That includes the echo of the app's own writes, so listeners must tolerate a
+second "changed" for a write they made. A folder path means anything below it may have changed.
 
 Names starting with a dot never appear in the tree. `.git`, `.palimvo` and the previous
 product's `.aivault` cannot be reached through the file API.
