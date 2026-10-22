@@ -47,6 +47,26 @@ export default tseslint.config(
     },
   },
   {
+    // The graph plugin draws on a canvas in its sandbox frame (and its pure parts run in tests).
+    files: ["plugins/graph/**/*.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: {
+        document: "readonly",
+        window: "readonly",
+        performance: "readonly",
+        getComputedStyle: "readonly",
+        matchMedia: "readonly",
+        requestAnimationFrame: "readonly",
+        cancelAnimationFrame: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        ResizeObserver: "readonly",
+        Path2D: "readonly",
+      },
+    },
+  },
+  {
     // Runs inside the plugin sandbox iframe, as a raw string; it is a browser script.
     files: ["apps/web/src/plugins/runtime.js"],
     languageOptions: {

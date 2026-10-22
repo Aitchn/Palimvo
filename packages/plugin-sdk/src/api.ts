@@ -56,6 +56,37 @@ export interface BaseQueryResult {
   rows: Array<Record<string, unknown>>;
 }
 
+/** One file of the link graph: a note, a canvas or a database. */
+export interface VaultGraphNode {
+  path: string;
+  /** The file name without its extension. */
+  title: string;
+  kind: "markdown" | "canvas" | "base";
+  /** Tags of a note without `#`; only there when `graph` was called with `tags: true`. */
+  tags?: string[];
+}
+
+/** A link from one file to another (`embed`: `![[...]]`; false when a plain link also exists). */
+export interface VaultGraphEdge {
+  from: string;
+  to: string;
+  embed: boolean;
+}
+
+export interface VaultGraph {
+  nodes: VaultGraphNode[];
+  edges: VaultGraphEdge[];
+}
+
+export interface VaultGraphOptions {
+  /** Only the files within `depth` links of this file, in either direction. */
+  around?: string;
+  /** How far `around` reaches, 1 to 6; default 1. */
+  depth?: number;
+  /** Put each note's tags on its node. */
+  tags?: boolean;
+}
+
 /** `palimvo.vault`: limited to the folders in `permissions.read` / `permissions.write`. */
 export interface VaultApi {
   read(path: string): Promise<string>;
@@ -63,6 +94,8 @@ export interface VaultApi {
   list(dir?: string, options?: { recursive?: boolean }): Promise<VaultListEntry[]>;
   search(query: string, options?: { limit?: number; folder?: string }): Promise<VaultSearchHit[]>;
   queryBase(path: string, options?: { view?: string }): Promise<BaseQueryResult>;
+  /** The links between the files the plugin may read; links to or from other files are left out. */
+  graph(options?: VaultGraphOptions): Promise<VaultGraph>;
   /** Writes a file (needs `permissions.write`); returns the new revision. */
   write(path: string, content: string, options?: WriteOptions): Promise<{ revision: string }>;
   /** Suggests a change a person reviews instead of writing it. */
@@ -108,6 +141,11 @@ export interface BaseViewContext<El = unknown> extends RenderContext<El> {
 /** A render function may return a cleanup, run when the host removes the element. */
 export type Render<Ctx> = (context: Ctx) => void | (() => void) | Promise<void | (() => void)>;
 
+export interface SlotRenderContext<El = unknown> extends RenderContext<El> {
+  /** `inspector` entries: the open file, left out when the plugin may not read it. */
+  path?: string;
+}
+
 export interface SlotContext {
   /** The note or file the user is acting on, when there is one. */
   path?: string;
@@ -122,12 +160,14 @@ export interface SlotContext {
  *   picks the entry.
  * - `settings`: give `render`; its content is drawn in a sandboxed frame inside a settings section
  *   titled with the entry's title.
+ * - `inspector`: give `render` (and usually `visible`); its content is drawn in a sandboxed frame
+ *   in the right-hand panel, redrawn with the new `path` each time another file is opened.
  */
 export interface SlotHandler<El = unknown> {
   /** Called when the user picks the entry. */
   run?(context: SlotContext): void | Promise<void>;
-  /** `settings` entries: draws the content of the section. */
-  render?: Render<RenderContext<El>>;
+  /** `settings` and `inspector` entries: draws the content of the section. */
+  render?: Render<SlotRenderContext<El>>;
   /** Return false to hide the entry for this context. */
   visible?(context: SlotContext): boolean;
 }

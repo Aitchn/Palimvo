@@ -8,3 +8,5 @@ LICENSE
 CHANGELOG.md
 tests/fixtures/
 apps/server/test/fixtures/
+tests/e2e/results
+tests/e2e/report

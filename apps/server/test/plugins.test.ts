@@ -139,11 +139,17 @@ describe("the official plugins of this repository", () => {
     // plugins/examples/ (chart-pack, json-tree and the UI-layer demos) is for plugin authors.
     expect((await server.services.plugins.seedBuiltins(dir)).sort()).toEqual([
       "decisions@0.1.0",
+      "graph@1.0.0",
       "kanban-due@1.0.0",
       "kanban@1.0.0",
     ]);
     const library = await json<{ plugins: Json[] }>(await root.client.get("/api/plugin-library"));
-    expect(library.plugins.map((p) => p.id).sort()).toEqual(["decisions", "kanban", "kanban-due"]);
+    expect(library.plugins.map((p) => p.id).sort()).toEqual([
+      "decisions",
+      "graph",
+      "kanban",
+      "kanban-due",
+    ]);
     // In the library, but not installed anywhere until a person picks one.
     const before = await json<{ plugins: Json[] }>(await root.client.get("/api/vaults/a/plugins"));
     expect(before.plugins).toEqual([]);
