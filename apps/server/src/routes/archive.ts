@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import { Hono } from "hono";
 import { AppError, basename, isInside, normalizeVaultPath, type TreeNode } from "@palimvo/core";
+import { accessOf } from "../auth/access.ts";
 import type { VaultService } from "../vault/service.ts";
 import { zipStream, type ZipEntry } from "../zip.ts";
 
@@ -30,6 +31,7 @@ export function archiveRoutes(vaults: VaultService): Hono {
 
   app.get("/api/vaults/:vault/archive", async (c) => {
     const vault = c.req.param("vault");
+    accessOf(c).requireVault("note.read", vault);
     const raw = c.req.query("path") ?? "";
     let folder = "";
     if (raw !== "") {

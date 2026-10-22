@@ -1,10 +1,11 @@
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { AppError } from "@palimvo/core";
+import { AppError, normalizeVaultPath } from "@palimvo/core";
 import { z } from "zod";
 import type { VaultHistory } from "../history/history.ts";
 import { MAX_TEXT_BYTES } from "../vault/fsutil.ts";
 import { MAX_BATCH_BYTES, type VaultService } from "../vault/service.ts";
+import { accessOf } from "../auth/access.ts";
 import { guestPolicy } from "../auth/principal.ts";
 import type { AuthService } from "../auth/service.ts";
 import { requestAuthor, requestNote } from "./author.ts";
@@ -56,6 +57,7 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
 
   app.get("/api/vaults/:vault/files", async (c) => {
     const vault = c.req.param("vault");
+    accessOf(c).requireVault("note.read", vault);
     const policy = guestPolicy(auth, c, vault);
     if (policy) {
       // Guests get a filtered tree; no ETag, since the public set can change without the tree changing.
@@ -74,6 +76,7 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
   app.get("/api/vaults/:vault/files/*", async (c) => {
     const vault = c.req.param("vault");
     const target = filePathOf(c);
+    accessOf(c).requireVault("note.read", vault);
     const policy = guestPolicy(auth, c, vault);
     if (policy && (!policy.covers(target) || !(await vaults.isDirectPath(vault, target))))
       throw new AppError("not_found");
@@ -92,9 +95,11 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
     async (c) => {
       const { content, baseVersion } = await readJson(c, putBody);
       const vault = c.req.param("vault");
+      const target = filePathOf(c);
+      accessOf(c).requireTree("note.write", vault, treePath(target));
       const author = requestAuthor(c);
       const note = requestNote(c);
-      const file = await vaults.writeFile(vault, filePathOf(c), content, {
+      const file = await vaults.writeFile(vault, target, content, {
         baseVersion,
         onWritten: (written) => history.record(vault, [written.path], author, note),
       });
@@ -105,6 +110,7 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
   app.delete("/api/vaults/:vault/files/*", async (c) => {
     const vault = c.req.param("vault");
     const target = filePathOf(c);
+    accessOf(c).requireTree("note.delete", vault, treePath(target));
     const author = requestAuthor(c);
     const note = requestNote(c, `Delete ${target}`);
     await vaults.deleteFile(vault, target, (paths) => history.record(vault, paths, author, note));
@@ -114,6 +120,7 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
   app.post("/api/vaults/:vault/folders", async (c) => {
     const { path } = await readJson(c, folderBody);
     const vault = c.req.param("vault");
+    accessOf(c).requireTree("note.write", vault, treePath(path));
     const author = requestAuthor(c);
     const note = requestNote(c, `Create folder ${path}`);
     const created = await vaults.createFolder(vault, path, (placeholder) =>
@@ -125,6 +132,10 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
   app.post("/api/vaults/:vault/move", async (c) => {
     const { from, to } = await readJson(c, moveBody);
     const vault = c.req.param("vault");
+    // Moving takes a thing out of one place and puts it in another: both must allow it.
+    const access = accessOf(c);
+    access.requireTree("note.delete", vault, treePath(from));
+    access.requireTree("note.write", vault, treePath(to));
     const author = requestAuthor(c);
     const note = requestNote(c, `Move ${from} to ${to}`);
     return c.json(
@@ -140,6 +151,9 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
     async (c) => {
       const { writes } = await readJson(c, batchBody);
       const vault = c.req.param("vault");
+      const access = accessOf(c);
+      access.requireVault("note.write", vault);
+      for (const w of writes) access.requireTree("note.write", vault, treePath(w.path));
       const author = requestAuthor(c);
       const note = requestNote(c);
       const files = await vaults.writeBatch(vault, writes, {
@@ -156,6 +170,16 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
   );
 
   return app;
+}
+
+/** A request path as the permission checks want it: normalized, so `a//b/../c` cannot dodge a folder rule. */
+function treePath(raw: string): string {
+  if (raw === "") return "";
+  try {
+    return normalizeVaultPath(raw);
+  } catch {
+    throw new AppError("invalid_path", undefined, { path: raw });
+  }
 }
 
 function tooLarge(): never {

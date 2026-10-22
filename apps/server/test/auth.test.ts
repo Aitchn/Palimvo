@@ -596,15 +596,16 @@ describe("guests", () => {
   it("lets only administrators of the vault decide what is public", async () => {
     const { admin } = await setup();
     const { client: dana, id } = await member(admin, "dana");
-    expect((await dana.put("/api/vaults/site/public", { paths: ["docs"] })).status).toBe(403);
-    server.store.accounts.setMember("site", id, "member");
+    // Not a member: the vault is invisible, not merely forbidden.
+    expect((await dana.put("/api/vaults/site/public", { paths: ["docs"] })).status).toBe(404);
+    server.store.joinVault("site", id, "member");
     expect((await dana.put("/api/vaults/site/public", { paths: ["docs"] })).status).toBe(403);
     expect((await dana.get("/api/vaults/site/public")).status).toBe(403);
-    server.store.accounts.setMember("site", id, "admin");
+    server.store.joinVault("site", id, "admin");
     expect((await dana.put("/api/vaults/site/public", { paths: ["docs"] })).status).toBe(200);
     expect(await body(await dana.get("/api/vaults/site/public"))).toEqual({ paths: ["docs"] });
     // Not the other vault.
-    expect((await dana.put("/api/vaults/secret/public", { paths: [""] })).status).toBe(403);
+    expect((await dana.put("/api/vaults/secret/public", { paths: [""] })).status).toBe(404);
   });
 
   it("validates public paths", async () => {
@@ -629,10 +630,11 @@ describe("guests", () => {
 describe("signed-in people", () => {
   it("can create content and is credited by name", async () => {
     const admin = await adminClient();
-    const { client } = await member(admin, "dana");
-    // Ordinary accounts cannot create or remove vaults before roles exist (T52).
+    const { client, id } = await member(admin, "dana");
+    // Creating a vault needs the `vaults.create` permission, which ordinary accounts lack.
     expect((await client.post("/api/vaults", { id: "x" })).status).toBe(403);
     expect((await admin.post("/api/vaults", { id: "notes" })).status).toBe(201);
+    server.store.joinVault("notes", id, "member");
     const res = await client.put("/api/vaults/notes/files/a.md", { content: "hi" });
     expect(res.status).toBe(200);
     await server.services.history.flushAll();

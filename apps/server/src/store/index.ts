@@ -1,5 +1,5 @@
 import path from "node:path";
-import { AccountsRepo } from "./accounts.ts";
+import { AccountsRepo, type VaultMember, type VaultPosition } from "./accounts.ts";
 import { AuditRepo } from "./audit.ts";
 import { Db, DB_FILE, type BackupResult } from "./db.ts";
 import { InvitesRepo } from "./invites.ts";
@@ -7,7 +7,7 @@ import { LibraryRepo } from "./library.ts";
 import { MIGRATIONS } from "./migrations.ts";
 import { OAuthRepo } from "./oauth.ts";
 import { PublicAccessRepo } from "./publicAccess.ts";
-import { RolesRepo } from "./roles.ts";
+import { RolesRepo, type Role } from "./roles.ts";
 import { SessionsRepo } from "./sessions.ts";
 import { SettingsRepo } from "./settings.ts";
 import { TokensRepo } from "./tokens.ts";
@@ -74,6 +74,46 @@ export class Store {
   /** Opens `palimvo.db` inside the server's data directory. */
   static openInDataDir(dataDir: string, options: Omit<StoreOptions, "file"> = {}): Promise<Store> {
     return Store.open({ ...options, file: path.join(dataDir, DB_FILE) });
+  }
+
+  /**
+   * Adds a person to a vault (or changes their position) and gives the vault the join defaults of
+   * every role they hold, such as the Reader deny. Use this instead of `accounts.setMember`.
+   */
+  joinVault(vaultId: string, accountId: string, position: VaultPosition): VaultMember {
+    return this.db.tx(() => {
+      const member = this.accounts.setMember(vaultId, accountId, position);
+      for (const role of this.rolesWithEveryone(accountId)) this.applyJoinDefaults(role, vaultId);
+      return member;
+    });
+  }
+
+  /** Gives a role to a person and the vaults they already belong to its join defaults. */
+  grantRole(roleId: string, accountId: string): void {
+    this.db.tx(() => {
+      this.roles.assign(roleId, accountId);
+      const role = this.roles.require(roleId);
+      for (const m of this.accounts.listMemberships(accountId))
+        this.applyJoinDefaults(role, m.vaultId);
+    });
+  }
+
+  private rolesWithEveryone(accountId: string): Role[] {
+    const everyone = this.roles.getEveryone();
+    return [...(everyone ? [everyone] : []), ...this.roles.rolesOf(accountId)];
+  }
+
+  /** Writes the role's join deny into the vault the first time; later edits by admins stay. */
+  private applyJoinDefaults(role: Role, vaultId: string): void {
+    if (role.joinDeny === 0) return;
+    const target = {
+      scope: "vault",
+      vaultId,
+      subjectType: "role",
+      subjectId: role.id,
+    } as const;
+    if (this.roles.getOverride(target)) return;
+    this.roles.setOverride(target, { allow: 0, deny: role.joinDeny });
   }
 
   /** Runs `fn` in one write transaction; see `Db.tx`. Use it to change several repositories atomically. */

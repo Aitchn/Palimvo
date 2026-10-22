@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { AppError, InvalidPathError, normalizeVaultPath } from "@palimvo/core";
 import { z } from "zod";
+import { accessOf } from "../auth/access.ts";
 import { guestPolicy } from "../auth/principal.ts";
 import type { AuthService } from "../auth/service.ts";
 import type { VaultIndexes } from "../search/index.ts";
@@ -56,6 +57,7 @@ export function searchRoutes(vaults: VaultService, indexes: VaultIndexes, auth: 
 
   app.get("/api/vaults/:vault/search", async (c) => {
     const vault = c.req.param("vault");
+    accessOf(c).requireVault("note.read", vault);
     await vaults.assertVault(vault);
     const { q, limit, offset, path } = parse(searchQuery, c.req.query());
     const folder = path === undefined || path.trim() === "" ? undefined : normalize(path);
@@ -71,6 +73,7 @@ export function searchRoutes(vaults: VaultService, indexes: VaultIndexes, auth: 
 
   app.get("/api/vaults/:vault/backlinks", async (c) => {
     const vault = c.req.param("vault");
+    accessOf(c).requireVault("note.read", vault);
     await vaults.assertVault(vault);
     return c.json({
       backlinks: await indexes.links.backlinks(vault, pathParam(c.req.query("path"))),
@@ -79,12 +82,14 @@ export function searchRoutes(vaults: VaultService, indexes: VaultIndexes, auth: 
 
   app.get("/api/vaults/:vault/links", async (c) => {
     const vault = c.req.param("vault");
+    accessOf(c).requireVault("note.read", vault);
     await vaults.assertVault(vault);
     return c.json({ links: await indexes.links.outlinks(vault, pathParam(c.req.query("path"))) });
   });
 
   app.get("/api/vaults/:vault/graph", async (c) => {
     const vault = c.req.param("vault");
+    accessOf(c).requireVault("note.read", vault);
     await vaults.assertVault(vault);
     return c.json(await indexes.links.graph(vault));
   });
