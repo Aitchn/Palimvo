@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { defaultConfig, type Config } from "../src/config/index.ts";
 import { createLogger, type LogLevel } from "../src/log.ts";
-import { startServer, type RunningServer } from "../src/server.ts";
+import { startServer, type RunningServer, type StartOptions } from "../src/server.ts";
 
 export interface TestServer extends RunningServer {
   dataDir: string;
@@ -16,7 +16,10 @@ export interface TestServer extends RunningServer {
 }
 
 /** Starts a server on a random port with a throwaway data directory. */
-export async function startTestServer(overrides: Partial<Config> = {}): Promise<TestServer> {
+export async function startTestServer(
+  overrides: Partial<Config> = {},
+  options: Pick<StartOptions, "history" | "backup"> = {},
+): Promise<TestServer> {
   const dataDir = overrides.dataDir ?? (await mkdtemp(path.join(tmpdir(), "palimvo-test-")));
   const config: Config = {
     ...defaultConfig(),
@@ -35,6 +38,9 @@ export async function startTestServer(overrides: Partial<Config> = {}): Promise<
     loaded: { config, sources },
     logger,
     shutdownTimeoutMs: 2000,
+    // Long enough that tests decide when to commit; no credentials from the developer's environment.
+    history: { commitDelayMs: 60_000, commitMaxDelayMs: 60_000, ...options.history },
+    backup: { credentials: null, ...options.backup },
   });
   return {
     ...running,

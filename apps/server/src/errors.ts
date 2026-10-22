@@ -1,5 +1,6 @@
 import type { ErrorHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { isAppError as isCoreAppError } from "@palimvo/core";
 import type { Logger } from "./log.ts";
 
 /**
@@ -36,6 +37,11 @@ export function errorBody(err: AppError): ErrorBody {
 export function errorHandler(logger: Logger): ErrorHandler {
   return (err, c) => {
     if (err instanceof AppError) return c.json(errorBody(err), err.status);
+    if (isCoreAppError(err)) {
+      if (err.httpStatus >= 500)
+        logger.error("request failed", { path: c.req.path, ...errorFields(err.cause ?? err) });
+      return c.json(err.toJSON(), err.httpStatus as ContentfulStatusCode);
+    }
     logger.error("unhandled request error", { path: c.req.path, ...errorFields(err) });
     return c.json<ErrorBody>({ code: "internal_error", message: "Internal server error" }, 500);
   };

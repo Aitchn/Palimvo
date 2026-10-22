@@ -2,11 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1014" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta
+      name="description"
+      content="A self-hosted knowledge base where people and AI write together."
+    />
+    <!-- Installed to the home screen: full screen, the page draws under the status bar (safe areas in shell.css). -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Palimvo" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icons/palimvo.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Palimvo</title>
+    <script>
+      // Pick the theme before the first paint so a light-theme reload never flashes dark (see src/theme/theme.ts).
+      (function () {
+        var pref = "system";
+        try {
+          pref =
+            localStorage.getItem("palimvo.theme") ||
+            localStorage.getItem("aitchn.theme") ||
+            "system";
+        } catch (e) {}
+        var light =
+          pref === "light" ||
+          (pref !== "dark" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: light)").matches);
+        document.documentElement.dataset.theme = light ? "light" : "dark";
+        document.documentElement.style.colorScheme = light ? "light" : "dark";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

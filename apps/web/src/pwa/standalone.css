@@ -1,0 +1,21 @@
+/* Home-screen app (PWA). With viewport-fit=cover the page draws under the iPhone notch and home
+   indicator; keep the app's own edges clear of them. Top edges are handled by the mobile bar and
+   drawers in shell.css. */
+.shell {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (display-mode: standalone) {
+  /* No rubber-band pull of the whole page, no long-press callout on buttons and icons. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+  button,
+  [role="button"],
+  img {
+    -webkit-touch-callout: none;
+  }
+}

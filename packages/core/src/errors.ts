@@ -6,6 +6,8 @@
 export const ERROR_CODES = {
   invalid_request: { status: 400, message: "The request is not valid." },
   invalid_path: { status: 400, message: "The path is not allowed." },
+  invalid_tag: { status: 400, message: "That is not a usable checkpoint tag name." },
+  invalid_backup_remote: { status: 400, message: "That backup address is not allowed." },
   schema_invalid: { status: 400, message: "The stored data has an invalid format." },
   unauthenticated: { status: 401, message: "Sign in to continue." },
   invalid_credentials: { status: 401, message: "The name or password is wrong." },
@@ -27,6 +29,7 @@ export const ERROR_CODES = {
   internal: { status: 500, message: "Something went wrong on the server." },
   not_implemented: { status: 501, message: "This is not supported yet." },
   unavailable: { status: 503, message: "The service is temporarily unavailable." },
+  git_unavailable: { status: 503, message: "git is not installed on the server." },
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

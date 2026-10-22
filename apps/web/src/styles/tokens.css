@@ -1,0 +1,202 @@
+/* Design tokens. Every colour, radius, shadow and motion value the app uses comes from here,
+   so light and dark stay in step. The short names (--bg, --bg-side, --fg, …) are the contract
+   that plugin frames receive too. */
+:root {
+  /* type */
+  --font-sans:
+    "Inter", "InterVariable", system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC",
+    "Microsoft JhengHei", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Cascadia Code", "SF Mono", Consolas, monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+
+  /* shape */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 340ms;
+
+  /* layout */
+  --rail-width: 52px;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-ring);
+}
+
+/* Dark (default) */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1014;
+  --bg-side: #15161b;
+  --bg-elev: #1b1c22;
+  --bg-elev-2: #22232a;
+  --bg-input: #111216;
+  --bg-hover: rgba(255, 255, 255, 0.055);
+  --bg-active: rgba(255, 255, 255, 0.09);
+  --bg-selected: rgba(139, 124, 246, 0.16);
+  --rail: #111216;
+  --glass: rgba(21, 22, 27, 0.72);
+
+  --fg: #e7e7ec;
+  --fg-strong: #ffffff;
+  --fg-muted: #9a9ba7;
+  --fg-subtle: #686a76;
+
+  --border: rgba(255, 255, 255, 0.075);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --accent: #8b7cf6;
+  --accent-hover: #9e91f8;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(139, 124, 246, 0.16);
+  --accent-text: #b7adff;
+  --accent-ring: rgba(139, 124, 246, 0.55);
+  --accent-gradient: linear-gradient(135deg, #8b7cf6 0%, #6a8cf7 100%);
+
+  --danger: #f0616d;
+  --danger-soft: rgba(240, 97, 109, 0.14);
+  --danger-text: #ffb3b9;
+  --success: #45c088;
+  --success-soft: rgba(69, 192, 136, 0.14);
+  --success-text: #a8ebc8;
+  --warning: #e8b84a;
+  --warning-soft: rgba(232, 184, 74, 0.13);
+  --warning-text: #f3d98b;
+  --warning-border: rgba(232, 184, 74, 0.35);
+  --info: #5b9cf5;
+
+  --code-bg: #0a0b0e;
+  --code-inline-bg: rgba(255, 255, 255, 0.07);
+  --checker-a: #34353b;
+  --checker-b: #25262b;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.38), 0 0 0 1px var(--border);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border-strong);
+  --backdrop: rgba(4, 5, 8, 0.58);
+
+  /* syntax */
+  --syn-heading: #f2f2f6;
+  --syn-mono: #e5c07b;
+  --syn-link: #b7adff;
+  --syn-url: #8a8b96;
+  --syn-quote: #b9bac4;
+  --syn-meta: #6f7180;
+  --syn-keyword: #c792ea;
+  --syn-string: #9ece6a;
+  --syn-number: #ff9e64;
+  --syn-comment: #737789;
+  --syn-function: #7aa2f7;
+  --syn-type: #e0af68;
+  --syn-property: #f7768e;
+  --syn-operator: #a9b1d6;
+  --syn-invalid: #ff6b6b;
+  /* data visualisation: categorical slots in a fixed order, one sequential hue, the empty cell */
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-5: #d55181;
+  --viz-6: #008300;
+  --viz-7: #9085e9;
+  --viz-8: #e66767;
+  --viz-seq: #8b7cf6;
+  --viz-empty: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-side: #f6f6f8;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #f1f1f4;
+  --bg-input: #ffffff;
+  --bg-hover: rgba(17, 19, 28, 0.05);
+  --bg-active: rgba(17, 19, 28, 0.085);
+  --bg-selected: rgba(109, 92, 240, 0.11);
+  --rail: #efeff3;
+  --glass: rgba(255, 255, 255, 0.74);
+
+  --fg: #1c1d23;
+  --fg-strong: #0b0c10;
+  --fg-muted: #5f616d;
+  --fg-subtle: #9496a2;
+
+  --border: rgba(17, 19, 28, 0.09);
+  --border-strong: rgba(17, 19, 28, 0.16);
+
+  --accent: #6d5cf0;
+  --accent-hover: #5b49e4;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(109, 92, 240, 0.11);
+  --accent-text: #5847d8;
+  --accent-ring: rgba(109, 92, 240, 0.45);
+  --accent-gradient: linear-gradient(135deg, #6d5cf0 0%, #4f7cf0 100%);
+
+  --danger: #d63b48;
+  --danger-soft: rgba(214, 59, 72, 0.1);
+  --danger-text: #b42834;
+  --success: #1c9a61;
+  --success-soft: rgba(28, 154, 97, 0.1);
+  --success-text: #157a4c;
+  --warning: #b97d12;
+  --warning-soft: rgba(233, 167, 40, 0.14);
+  --warning-text: #8a5b05;
+  --warning-border: rgba(185, 125, 18, 0.35);
+  --info: #2f74e0;
+
+  --code-bg: #f5f5f8;
+  --code-inline-bg: rgba(17, 19, 28, 0.06);
+  --checker-a: #e4e4e8;
+  --checker-b: #f6f6f8;
+
+  --shadow-sm: 0 1px 2px rgba(17, 19, 28, 0.08);
+  --shadow-md: 0 8px 24px rgba(17, 19, 28, 0.1), 0 0 0 1px var(--border);
+  --shadow-lg: 0 28px 70px rgba(17, 19, 28, 0.18), 0 0 0 1px var(--border);
+  --backdrop: rgba(22, 22, 34, 0.32);
+
+  --syn-heading: #111218;
+  --syn-mono: #9a5b00;
+  --syn-link: #5847d8;
+  --syn-url: #7c7f8c;
+  --syn-quote: #5f616d;
+  --syn-meta: #9a9caa;
+  --syn-keyword: #8a3fd1;
+  --syn-string: #2f8a3c;
+  --syn-number: #c4501b;
+  --syn-comment: #8a8e9c;
+  --syn-function: #2f62d0;
+  --syn-type: #a2680a;
+  --syn-property: #c8344e;
+  --syn-operator: #4c5161;
+  --syn-invalid: #d63b48;
+
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-5: #e87ba4;
+  --viz-6: #008300;
+  --viz-7: #6250d6;
+  --viz-8: #e34948;
+  --viz-seq: #6d5cf0;
+  --viz-empty: rgba(17, 19, 28, 0.05);
+}

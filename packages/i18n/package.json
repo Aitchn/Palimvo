@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./negotiate": "./src/negotiate.ts",
+    "./load": "./src/load.ts"
   },
   "scripts": {
     "typecheck": "tsc6 -p .",
