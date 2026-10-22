@@ -260,7 +260,7 @@ describe("decisions plugin", () => {
       deciders: odd,
       related: ["notes/a, b.md"],
     });
-    expect(r.result.decision.deciders).toEqual(odd.map((o) => o.replace("\n", "\n")));
+    expect(r.result.decision.deciders).toEqual(odd);
     expect(r.result.decision.related).toEqual(["notes/a, b.md"]);
     // Written by hand in a folder that does not name the tree.
     await server.services.vaults.writeFile(
