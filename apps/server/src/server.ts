@@ -17,6 +17,7 @@ import { createVaultIndexes } from "./search/index.ts";
 import { findWebDir } from "./web.ts";
 import { VaultService, type VaultHooks } from "./vault/service.ts";
 import { VaultTrash } from "./vault/trash.ts";
+import type { AnyTool, ToolProvider } from "./mcp/registry.ts";
 
 export const VERSION: string = pkg.version;
 
@@ -53,6 +54,8 @@ export interface StartOptions {
   /** Commit timing (tests make it short). */
   history?: Pick<HistoryOptions, "commitDelayMs" | "commitMaxDelayMs" | "maxFileBytes">;
   backup?: Pick<BackupOptions, "tickMs" | "allowLocalRemotes" | "credentials">;
+  /** Extra MCP tools and per-vault tool providers (tests; later plugins). */
+  mcp?: { tools?: AnyTool[]; providers?: ToolProvider[] };
 }
 
 export async function startServer({
@@ -62,6 +65,7 @@ export async function startServer({
   vaultHooks,
   history: historyOptions,
   backup: backupOptions,
+  mcp: mcpOptions,
 }: StartOptions): Promise<RunningServer> {
   const { config } = loaded;
   const log = logger ?? createLogger({ level: config.logLevel });
@@ -163,6 +167,8 @@ export async function startServer({
       history: history,
       indexes: createVaultIndexes(vaults),
       backup,
+      ...(mcpOptions?.tools ? { mcpTools: mcpOptions.tools } : {}),
+      ...(mcpOptions?.providers ? { toolProviders: mcpOptions.providers } : {}),
     });
 
     const server = await listen(app.fetch, config.host, config.port);

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@palimvo/core": "workspace:*",
     "@palimvo/i18n": "workspace:*",
     "hono": "^4.13.13",
