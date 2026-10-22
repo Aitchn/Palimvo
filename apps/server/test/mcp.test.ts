@@ -70,6 +70,15 @@ const probeTools = [
     handler: () => ({ admin: true }),
   }),
   defineTool({
+    name: "probe_open",
+    tier: "advanced",
+    scope: "vault",
+    permission: [],
+    input: z.object({}),
+    description: "Declares no permission; still needs a visible vault.",
+    handler: record("probe_open"),
+  }),
+  defineTool({
     name: "probe_boom",
     tier: "native",
     scope: "server",
@@ -322,6 +331,16 @@ describe("calling tools", () => {
     });
   });
 
+  it("does not accept a blank reason from the header", async () => {
+    const { mia } = await world();
+    const c = await connect("/mcp/a", await makeToken(mia, { name: "x", access: "write" }), {
+      "x-palimvo-reason": "%20",
+    });
+    const r = body(await c.callTool({ name: "probe_write", arguments: { path: "x.md" } }));
+    expect(r.error.code).toBe("invalid_request");
+    expect(calls).toHaveLength(0);
+  });
+
   it("needs a vault on /mcp and rejects other vaults on /mcp/:vault", async () => {
     const { mia } = await world();
     const secret = await makeToken(mia, { name: "x", access: "write" });
@@ -372,6 +391,26 @@ describe("calling tools", () => {
     ).toBe(true);
   });
 
+  it("requires a visible vault even for tools that declare no permission", async () => {
+    const { mia } = await world();
+    const c = await connect(
+      "/mcp",
+      await makeToken(mia, { name: "x", access: "write", vaultId: "a" }),
+    );
+    expect(
+      body(await c.callTool({ name: "call_tool", arguments: { name: "probe_open", vault: "a" } }))
+        .ok,
+    ).toBe(true);
+    const hidden = body(
+      await c.callTool({ name: "call_tool", arguments: { name: "probe_open", vault: "nope" } }),
+    );
+    expect(["vault_not_found", "token_scope_denied"]).toContain(hidden.error.code);
+    const other = body(
+      await c.callTool({ name: "call_tool", arguments: { name: "probe_open", vault: "b" } }),
+    );
+    expect(other.ok).toBeUndefined();
+  });
+
   it("answers unknown tools and crashes as results, without leaking internals", async () => {
     const { mia } = await world();
     const c = await connect("/mcp", await makeToken(mia, { name: "x", access: "write" }));
@@ -409,15 +448,22 @@ describe("entry tools", () => {
     const { mia } = await world();
     const c = await connect("/mcp", await makeToken(mia, { name: "x", access: "write" }));
     const plain = body(await c.callTool({ name: "list_tools", arguments: {} }));
-    expect(plain.tools.map((t: { name: string }) => t.name)).toEqual(["probe_advanced"]);
+    expect(plain.tools.map((t: { name: string }) => t.name).sort()).toEqual([
+      "probe_advanced",
+      "probe_open",
+    ]);
     expect(plain.tools[0]).toMatchObject({ summary: "An advanced tool.", writes: true });
     const inA = body(await c.callTool({ name: "list_tools", arguments: { vault: "a" } }));
     expect(inA.tools.map((t: { name: string }) => t.name).sort()).toEqual([
       "plugin_hello",
       "probe_advanced",
+      "probe_open",
     ]);
     const inB = body(await c.callTool({ name: "list_tools", arguments: { vault: "b" } }));
-    expect(inB.tools.map((t: { name: string }) => t.name)).toEqual(["probe_advanced"]);
+    expect(inB.tools.map((t: { name: string }) => t.name).sort()).toEqual([
+      "probe_advanced",
+      "probe_open",
+    ]);
     const q = body(
       await c.callTool({ name: "list_tools", arguments: { vault: "a", query: "plugin" } }),
     );

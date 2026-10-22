@@ -10,6 +10,7 @@ import type { Store } from "../store/index.ts";
 import type { VaultService } from "../vault/service.ts";
 import {
   argumentsOf,
+  REASON_ARG,
   mayUse,
   notFound,
   onEndpoint,
@@ -162,13 +163,17 @@ export function createDispatcher(opts: {
 
       // Permission first: someone without access should not learn what the arguments look like.
       try {
+        if (def.scope === "vault") access.requireVault("vault.view", vault);
         for (const p of permissionsOf(def))
           if (def.scope === "server") access.requireServer(p);
           else access.requireVault(p, vault);
       } catch (err) {
         return fail(err, "denied");
       }
-      const headerReason = requestNote(c).reason;
+      // A header reason must pass the same rules as the argument (not blank, at most 300 characters).
+      const rawHeader = requestNote(c).reason;
+      const headerReason =
+        rawHeader === undefined ? undefined : REASON_ARG.safeParse(rawHeader).data;
       const parsed = argumentsOf(def, endpoint, headerReason !== undefined).safeParse(given);
       if (!parsed.success) return fail(invalid(def, parsed.error), "failed");
       const args = parsed.data as Record<string, unknown>;

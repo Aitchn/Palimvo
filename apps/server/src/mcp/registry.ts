@@ -102,7 +102,7 @@ export function summary(def: AnyTool): string {
 }
 
 const VAULT_ARG = z.string().min(1).describe("The vault to use (see list_vaults).");
-const REASON_ARG = z
+export const REASON_ARG = z
   .string()
   .trim()
   .min(1)
@@ -175,6 +175,8 @@ export function mayUse(access: RequestAccess, def: AnyTool, vault?: string): boo
   const scope =
     def.scope === "server" ? serverScope : vault === undefined ? undefined : vaultScope(vault);
   if (!scope) return false;
+  // Seeing the vault is the baseline for every vault-scoped tool, whatever it declares.
+  if (def.scope === "vault" && !access.can("vault.view", scope)) return false;
   return permissionsOf(def).every((p) => access.can(p, scope));
 }
 
