@@ -248,10 +248,11 @@ export class RequestAccess {
   /**
    * Checks a write-type permission on a file or folder: the folder that holds it, the path itself
    * (a folder), and every folder with its own override inside it, so a delete or move of a parent
-   * cannot get around a restriction further down.
+   * cannot get around a restriction further down. The vault-wide answer is not asked separately:
+   * folder rules layer on top of it, so a folder may allow what the vault as a whole denies
+   * ("this role may only write in design/").
    */
   requireTree(name: PermissionName, vaultId: string, path: string): void {
-    this.require(name, vaultScope(vaultId));
     const scopes = new Set<string>([dirname(path), path]);
     for (const o of this.vaultFolderOverrides(vaultId))
       if (o.folder !== undefined && isInside(o.folder, path)) scopes.add(o.folder);

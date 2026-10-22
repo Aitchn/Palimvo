@@ -11,6 +11,7 @@ export function SettingsPage() {
   const { session } = useSession();
   const location = useLocation();
   const canUsers = useServerCan("users.manage");
+  const canRoles = useServerCan("roles.manage");
 
   if (session.status === "guest")
     return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
@@ -20,6 +21,7 @@ export function SettingsPage() {
     { to: "/settings/account", label: t("settings.account"), show: true },
     { to: "/settings/vaults", label: t("vaults.title"), show: true },
     { to: "/settings/users", label: t("users.title"), show: canUsers },
+    { to: "/settings/roles", label: t("roles.title"), show: canRoles },
   ];
 
   return (

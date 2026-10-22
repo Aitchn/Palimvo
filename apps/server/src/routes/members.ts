@@ -6,9 +6,12 @@ import {
   VAULT_MASK,
   folderScope,
   isPermissionName,
+  makeAuthor,
   namesOf,
+  resolvePermissions,
   normalizeVaultPath,
   vaultScope,
+  type PermissionSubject,
 } from "@palimvo/core";
 import { z } from "zod";
 import { accessOf } from "../auth/access.ts";
@@ -70,7 +73,12 @@ export function memberRoutes(auth: AuthService, vaults: VaultService): Hono {
       account: publicAccount(store.accounts.require(accountId)),
       position: member.position,
       addedAt: member.addedAt,
-      roles: store.roles.rolesOf(accountId).map((r) => ({ id: r.id, name: r.name })),
+      roles: store.roles.rolesOf(accountId).map((r) => ({
+        id: r.id,
+        name: r.name,
+        ...(r.color ? { color: r.color } : {}),
+        position: r.position,
+      })),
     };
   };
 
@@ -121,14 +129,110 @@ export function memberRoutes(auth: AuthService, vaults: VaultService): Hono {
     return c.body(null, 204);
   });
 
-  const listPermissions = (vault: string) => ({
-    roles: store.roles.list().map((r) => ({
-      id: r.id,
-      name: r.name,
-      ...(r.color ? { color: r.color } : {}),
-      position: r.position,
-    })),
-    overrides: store.roles.vaultOverrides(vault).map(describeOverride),
+  const listPermissions = (vault: string) => {
+    const overrides = store.roles.vaultOverrides(vault);
+    return {
+      roles: store.roles.list().map((r) => ({
+        id: r.id,
+        name: r.name,
+        ...(r.color ? { color: r.color } : {}),
+        position: r.position,
+      })),
+      /** Names of the people the overrides are about, so a screen needs no user list. */
+      people: [
+        ...new Set(overrides.filter((o) => o.subjectType === "account").map((o) => o.subjectId)),
+      ].flatMap((id) => {
+        const a = store.accounts.get(id);
+        return a ? [{ id: a.id, username: a.username, displayName: a.displayName }] : [];
+      }),
+      overrides: overrides.map(describeOverride),
+    };
+  };
+
+  /**
+   * People who could be added to the vault or given a personal override, found by name. Vault
+   * administrators need no `users.manage` for this; only the matching accounts' names come back.
+   */
+  app.get("/api/vaults/:vault/people", async (c) => {
+    const vault = c.req.param("vault")!;
+    const access = accessOf(c);
+    if (!access.can("members.manage", vaultScope(vault)))
+      access.requireVault("permissions.manage", vault);
+    await vaults.assertVault(vault);
+    const q = (c.req.query("q") ?? "").trim().toLowerCase();
+    const found = store.accounts
+      .list()
+      .filter((a) => !a.disabled)
+      .filter((a) => q === "" || `${a.username}\n${a.displayName}`.toLowerCase().includes(q))
+      .slice(0, 20);
+    return c.json({
+      people: found.map((a) => ({
+        id: a.id,
+        username: a.username,
+        displayName: a.displayName,
+        member: store.accounts.getMember(vault, a.id) !== undefined,
+      })),
+    });
+  });
+
+  /**
+   * What a role (as an ordinary member) or a person can do in the vault or one of its folders:
+   * the "view as" preview. It reads the same overrides every request does.
+   */
+  app.get("/api/vaults/:vault/permissions/preview", async (c) => {
+    const vault = await known(c, "permissions.manage");
+    const roleId = c.req.query("roleId");
+    const accountId = c.req.query("accountId");
+    if ((roleId === undefined) === (accountId === undefined)) throw new AppError("invalid_request");
+    const folder = folderOf(c.req.query("folder") || undefined);
+    const scope = folder === undefined ? vaultScope(vault) : folderScope(vault, folder);
+    const subject: PermissionSubject =
+      roleId !== undefined
+        ? {
+            id: `preview:${store.roles.require(roleId).id}`,
+            serverAdmin: false,
+            roleIds: [roleId],
+            vaults: new Map([[vault, c.req.query("position") === "admin" ? "admin" : "member"]]),
+          }
+        : (() => {
+            const account = store.accounts.require(accountId!);
+            return {
+              id: account.id,
+              serverAdmin: account.serverAdmin,
+              roleIds: store.roles.rolesOf(account.id).map((r) => r.id),
+              vaults: new Map(
+                store.accounts.listMemberships(account.id).map((m) => [m.vaultId, m.position]),
+              ),
+            };
+          })();
+    const permissions = namesOf(resolvePermissions(subject, scope, accessOf(c).dataFor(vault)));
+    return c.json({ permissions });
+  });
+
+  /**
+   * The vault's people with their role labels, so author badges, cursors and the activity feed
+   * can show a role's colour next to a name. Anyone who can see the vault may read it.
+   */
+  app.get("/api/vaults/:vault/roster", async (c) => {
+    const vault = c.req.param("vault")!;
+    accessOf(c).require("vault.view", vaultScope(vault));
+    await vaults.assertVault(vault);
+    return c.json({
+      people: store.accounts.listMembers(vault).map((m) => {
+        const a = store.accounts.require(m.accountId);
+        return {
+          authorId: makeAuthor("human", a.displayName, { id: a.username }).id,
+          name: a.displayName,
+          position: m.position,
+          roles: store.roles.rolesOf(a.id).map((r) => ({
+            id: r.id,
+            name: r.name,
+            ...(r.color ? { color: r.color } : {}),
+            position: r.position,
+          })),
+        };
+      }),
+    });
   });
 
   app.get("/api/vaults/:vault/permissions", async (c) => {
