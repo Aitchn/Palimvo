@@ -107,7 +107,8 @@ export function setDay(text, field, day) {
 export function newNoteText(template, field, day) {
   if (template == null) return `---\n${field}: ${day}\n---\n\n# ${day}\n`;
   const filled = template.replaceAll("{{date}}", day).replaceAll("{{title}}", day);
-  return readProperty(filled, field) ? filled : setDay(filled, field, day);
+  // Always the clicked day, also when the template carries a date of its own.
+  return setDay(filled, field, day);
 }
 
 export function newNotePath(folder, day) {
@@ -196,7 +197,7 @@ export function mount(palimvo, container, options = {}, now = new Date()) {
   const todayKey = keyOfDate(now);
   const state = {
     view: options.view === "week" ? "week" : "month",
-    anchor: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    anchor: options.anchor ?? new Date(now.getFullYear(), now.getMonth(), now.getDate()),
     field: options.field || DEFAULT_FIELD,
     folder: options.folder || "",
     template: options.template || "",
@@ -446,15 +447,25 @@ export function mount(palimvo, container, options = {}, now = new Date()) {
   }
 
   let timer;
-  const off = palimvo.events.on("file:changed", () => {
+  let dispose = () => {};
+  const offFile = palimvo.events.on("file:changed", () => {
     clearTimeout(timer);
     timer = setTimeout(() => load().catch(fail), 300);
+  });
+  // Labels, date formats and the first day of the week all depend on the language: start over
+  // in the new one, keeping where the person was.
+  const offLocale = palimvo.events.on("locale:changed", () => {
+    dispose();
+    const { view, anchor, field, folder, template } = state;
+    dispose = mount(palimvo, container, { ...options, view, anchor, field, folder, template }, now);
   });
   draw();
   load().catch(fail);
   return () => {
     disposed = true;
     clearTimeout(timer);
-    off();
+    offFile();
+    offLocale();
+    dispose();
   };
 }

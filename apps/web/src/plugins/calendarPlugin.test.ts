@@ -79,6 +79,9 @@ describe("calendar helpers", () => {
     expect(cal.newNoteText("---\ndate: {{date}}\n---\nx", "date", "2026-03-14")).toBe(
       "---\ndate: 2026-03-14\n---\nx",
     );
+    expect(cal.newNoteText("---\ndate: 2025-01-01\n---\nx", "date", "2026-03-14")).toBe(
+      "---\ndate: 2026-03-14\n---\nx",
+    );
     expect(cal.newNotePath("", "2026-03-14")).toBe("2026-03-14.md");
     expect(cal.newNotePath("/Daily/", "2026-03-14")).toBe("Daily/2026-03-14.md");
   });
@@ -131,17 +134,20 @@ function fakePalimvo(files: Map<string, string>, locale = "en") {
   const opened: string[] = [];
   const writes: Array<[string, string]> = [];
   const notices: string[] = [];
-  let changed: (() => void) | undefined;
+  const handlers = new Map<string, () => void>();
+  let locale_ = locale;
   const palimvo = {
     i18n: {
-      locale,
+      get locale() {
+        return locale_;
+      },
       t: (key: string, params: Record<string, string | number> = {}) =>
         (strings[key] ?? key).replace(/\{(\w+)\}/g, (_, k: string) => String(params[k])),
     },
     events: {
-      on: (_event: string, handler: () => void) => {
-        changed = handler;
-        return () => {};
+      on: (event: string, handler: () => void) => {
+        handlers.set(event, handler);
+        return () => handlers.delete(event);
       },
     },
     vault: {
@@ -166,7 +172,17 @@ function fakePalimvo(files: Map<string, string>, locale = "en") {
       showNotice: (message: string) => notices.push(message),
     },
   };
-  return { palimvo, opened, writes, notices, fire: () => changed?.() };
+  return {
+    palimvo,
+    opened,
+    writes,
+    notices,
+    fire: () => handlers.get("file:changed")?.(),
+    setLocale: (next: string) => {
+      locale_ = next;
+      handlers.get("locale:changed")?.();
+    },
+  };
 }
 
 const NOW = new Date(2026, 2, 18);
@@ -305,6 +321,16 @@ describe("calendar view", () => {
     cal.mount(palimvo, el, { view: "week" }, NOW);
     await flush();
     expect(el.querySelector(".cal-day")?.getAttribute("data-day")).toBe("2026-03-16");
+  });
+
+  it("redraws in the new language, keeping the week and the first day", async () => {
+    const { palimvo, setLocale } = fakePalimvo(files());
+    cal.mount(palimvo, el, { view: "week" }, NOW);
+    await flush();
+    expect(el.querySelector(".cal-day")?.getAttribute("data-day")).toBe("2026-03-15");
+    setLocale("zh-CN");
+    expect(el.querySelector(".cal-day")?.getAttribute("data-day")).toBe("2026-03-16");
+    expect(el.querySelectorAll(".cal-day")).toHaveLength(7);
   });
 
   it("reloads when a file changes and stops after cleanup", async () => {
