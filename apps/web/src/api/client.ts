@@ -1,7 +1,7 @@
 import { ApiError, errorFromResponse } from "./errors.ts";
 
 export interface RequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   /** Sent as JSON. */
   body?: unknown;
   /** Extra headers, e.g. `If-Match`. */
@@ -14,8 +14,16 @@ export function encodePath(path: string): string {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
+let csrfToken: string | null = null;
+
+/** The token the server issued with the session; sent on every request that changes something. */
+export function setCsrfToken(token: string | null): void {
+  csrfToken = token;
+}
+
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
+  if (csrfToken && (options.method ?? "GET") !== "GET") headers["X-Palimvo-Csrf"] = csrfToken;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   try {
     return await fetch(path, {
@@ -31,13 +39,24 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   }
 }
 
+/** Raised on `window` when the server says the session is gone, so the app can show the sign-in. */
+export const SESSION_LOST_EVENT = "palimvo:session-lost";
+
+async function failed(response: Response): Promise<ApiError> {
+  const error = await errorFromResponse(response);
+  // A stale token (another tab signed in as someone else) is as good as a lost session.
+  if (error.code === "unauthenticated" || error.code === "csrf_invalid")
+    window.dispatchEvent(new Event(SESSION_LOST_EVENT));
+  return error;
+}
+
 /**
  * The one place that talks to the server. Every domain module (`vaults.ts`, `files.ts`, …) calls
  * this, so errors always arrive as {@link ApiError} with a code the interface can translate.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await send(path, options);
-  if (!response.ok) throw await errorFromResponse(response);
+  if (!response.ok) throw await failed(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
@@ -56,6 +75,6 @@ export async function requestIfChanged<T>(
     headers: etag ? { "If-None-Match": etag } : undefined,
   });
   if (response.status === 304) return null;
-  if (!response.ok) throw await errorFromResponse(response);
+  if (!response.ok) throw await failed(response);
   return { data: (await response.json()) as T, etag: response.headers.get("ETag") };
 }

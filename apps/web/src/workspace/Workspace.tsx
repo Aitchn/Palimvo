@@ -16,6 +16,7 @@ import { BacklinksPanel } from "../search/BacklinksPanel.tsx";
 import { Icon } from "../ui/index.ts";
 import { fileHref, pathFromLocation, vaultHref } from "./deepLinks.ts";
 import { FileView } from "./FileView.tsx";
+import { useVaultPermissions } from "./useVaultPermissions.ts";
 import { Sidebar, type SidebarView } from "./Sidebar.tsx";
 import { useExpanded } from "./useExpanded.ts";
 import { useTabs } from "./useTabs.ts";
@@ -61,6 +62,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
   const target = tree.status === "ready" && location ? findNode(nodes, location) : undefined;
   const activeFile = target?.type === "file" ? target : null;
   const activePath = activeFile?.path ?? null;
+  const can = useVaultPermissions(vault, folderOfPath(activePath));
 
   const openFile = useCallback(
     (path: string) => navigate(fileHref(vault, path)),
@@ -143,18 +145,24 @@ function VaultWorkspace({ vault }: { vault: string }) {
   useEffect(
     () =>
       registerCommands([
-        {
-          id: "file.newNote",
-          title: t("files.newNote"),
-          icon: "add",
-          run: () => operations.openPrompt({ kind: "note", folder: folderOfPath(activePath) }),
-        },
-        {
-          id: "file.newFolder",
-          title: t("files.newFolder"),
-          icon: "folderAdd",
-          run: () => operations.openPrompt({ kind: "folder", folder: folderOfPath(activePath) }),
-        },
+        ...(can.write
+          ? [
+              {
+                id: "file.newNote",
+                title: t("files.newNote"),
+                icon: "add" as const,
+                run: () =>
+                  operations.openPrompt({ kind: "note", folder: folderOfPath(activePath) }),
+              },
+              {
+                id: "file.newFolder",
+                title: t("files.newFolder"),
+                icon: "folderAdd" as const,
+                run: () =>
+                  operations.openPrompt({ kind: "folder", folder: folderOfPath(activePath) }),
+              },
+            ]
+          : []),
         {
           id: "file.quickOpen",
           title: t("quickOpen.title"),
@@ -181,7 +189,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
           icon: "files",
           run: () => navigate("/"),
         },
-        ...(activeFile
+        ...(activeFile && can.write && can.delete
           ? [
               {
                 id: "file.rename",
@@ -190,12 +198,20 @@ function VaultWorkspace({ vault }: { vault: string }) {
                 hint: "F2",
                 run: () => operations.openPrompt({ kind: "rename", node: activeFile }),
               },
+            ]
+          : []),
+        ...(activeFile && can.delete
+          ? [
               {
                 id: "file.delete",
                 title: t("common.delete"),
                 icon: "trash" as const,
                 run: () => operations.askDelete(activeFile),
               },
+            ]
+          : []),
+        ...(activeFile
+          ? [
               {
                 id: "file.close",
                 title: t("workspace.closeTab"),
@@ -206,7 +222,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
           : []),
       ]),
     // The commands close over the latest handlers; re-register when what they act on changes.
-    [t, i18n.language, vault, activePath, nodes],
+    [t, i18n.language, vault, activePath, nodes, can.write, can.delete, can.upload],
   );
 
   useEffect(() => {
@@ -245,6 +261,7 @@ function VaultWorkspace({ vault }: { vault: string }) {
             expanded={folders.expanded}
             activePath={activePath}
             operations={operations}
+            can={can}
             onToggle={folders.toggle}
             onOpen={openFile}
             onQuickOpen={() => setQuickOpen(true)}
@@ -295,7 +312,10 @@ function VaultWorkspace({ vault }: { vault: string }) {
             kind={activeFile.kind ?? "other"}
             paths={files}
             onOpen={openFile}
-            onCreate={(target) => void operations.createLinked(target)}
+            readOnly={!can.write}
+            onCreate={(target) => {
+              if (can.write) void operations.createLinked(target);
+            }}
           />
         ) : (
           <div className="state">

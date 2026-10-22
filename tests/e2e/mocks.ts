@@ -3,6 +3,30 @@ import type { Page } from "@playwright/test";
 
 /** A small fake server: one vault with a few files. */
 export async function mockApi(page: Page): Promise<void> {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        state: "account",
+        account: {
+          id: "a1",
+          username: "ada",
+          displayName: "Ada",
+          serverAdmin: true,
+          disabled: false,
+          createdAt: 1,
+        },
+        csrfToken: "csrf",
+      },
+    }),
+  );
+  await page.route("**/api/me/permissions**", (route) =>
+    route.fulfill({
+      json: {
+        server: ["server.manage", "users.manage", "roles.manage", "vaults.create"],
+        vault: ["vault.view", "note.read", "note.write", "note.delete", "file.upload"],
+      },
+    }),
+  );
   await page.route("**/api/vaults", (route) =>
     route.fulfill({ json: { vaults: [{ id: "sample", name: "sample" }] } }),
   );
