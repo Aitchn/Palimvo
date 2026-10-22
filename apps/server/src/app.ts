@@ -11,6 +11,8 @@ import type { SetupService } from "./auth/setup.ts";
 import { adminRoutes } from "./routes/admin.ts";
 import { archiveRoutes } from "./routes/archive.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { memberRoutes } from "./routes/members.ts";
+import { roleRoutes } from "./routes/roles.ts";
 import { fileRoutes } from "./routes/files.ts";
 import { historyRoutes } from "./routes/history.ts";
 import { publicRoutes } from "./routes/public.ts";
@@ -106,6 +108,8 @@ export function createApp(deps: AppDeps): Hono {
     }),
   );
   app.route("/", adminRoutes({ auth: deps.auth, vaults: deps.vaults, publicUrl: deps.publicUrl }));
+  app.route("/", roleRoutes(deps.auth));
+  app.route("/", memberRoutes(deps.auth, deps.vaults));
   app.route("/", publicRoutes(deps.auth, deps.vaults));
   app.route("/", vaultRoutes(deps));
   app.route("/", fileRoutes(deps.vaults, deps.history, deps.auth));

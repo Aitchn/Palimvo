@@ -91,8 +91,15 @@ export interface SetupResult {
 export const DEFAULT_ROLES = [
   { name: "Creator", color: "#3b82f6", position: 10, permissions: ["vaults.create"] },
   { name: "AI user", color: "#8b5cf6", position: 20, permissions: ["assistant.use"] },
-  // Its effect (no writing) is a per-vault override added when the person is given the role.
-  { name: "Reader", color: "#64748b", position: 30, permissions: [] },
+  // Its effect (no writing) is a per-vault override that `Store.joinVault` / `Store.grantRole`
+  // add the first time the role meets a vault.
+  {
+    name: "Reader",
+    color: "#64748b",
+    position: 30,
+    permissions: [],
+    joinDeny: ["note.write", "note.delete", "file.upload"],
+  },
 ] as const;
 
 /**
@@ -180,7 +187,7 @@ export class SetupService {
           serverAdmin: true,
         });
         this.createDefaultRoles();
-        this.store.accounts.setMember(input.vault, created.id, "admin");
+        this.store.joinVault(input.vault, created.id, "admin");
         this.store.settings.set("setup.completedAt", Date.now());
         this.store.audit.append({
           actorType: "account",
@@ -214,6 +221,7 @@ export class SetupService {
         color: r.color,
         position: r.position,
         permissions: maskOf(r.permissions),
+        ...("joinDeny" in r ? { joinDeny: maskOf(r.joinDeny) } : {}),
       });
   }
 

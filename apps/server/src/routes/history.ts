@@ -1,6 +1,7 @@
-import { Hono } from "hono";
-import { AppError, normalizeVaultPath } from "@palimvo/core";
+import { Hono, type Context } from "hono";
+import { AppError, normalizeVaultPath, type PermissionName } from "@palimvo/core";
 import { z } from "zod";
+import { accessOf } from "../auth/access.ts";
 import type { BackupService } from "../history/backup.ts";
 import type { VaultHistory } from "../history/history.ts";
 import type { VaultService } from "../vault/service.ts";
@@ -29,14 +30,19 @@ const backupBody = z.object({
 export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Hono {
   const app = new Hono();
 
-  /** Fails with `vault_not_found` before git is asked about a vault that does not exist. */
-  const known = async (vault: string) => {
+  /**
+   * Checks the caller's permission first, so a vault the person cannot see answers like a missing
+   * one, then fails with `vault_not_found` before git is asked about a vault that does not exist.
+   */
+  const known = async (c: Context, name: PermissionName) => {
+    const vault = c.req.param("vault")!;
+    accessOf(c).requireVault(name, vault);
     await vaults.assertVault(vault);
     return vault;
   };
 
   app.get("/api/vaults/:vault/history", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "history.view");
     const limit = Number(c.req.query("limit") ?? 50);
     const commits = await history.list(vault, {
       ...(c.req.query("path") ? { path: normalizePath(c.req.query("path")!) } : {}),
@@ -46,7 +52,7 @@ export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Ho
   });
 
   app.get("/api/vaults/:vault/history/:commit/diff", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "history.view");
     const file = c.req.query("path");
     return c.json({
       diff: await history.diff(
@@ -58,16 +64,18 @@ export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Ho
   });
 
   app.get("/api/vaults/:vault/history/:commit/file", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "history.view");
     const file = normalizePath(c.req.query("path") ?? "");
     const bytes = await history.blob(vault, c.req.param("commit"), file);
     return c.json({ path: file, content: bytes.toString("utf8") });
   });
 
   app.post("/api/vaults/:vault/restore", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "history.restore");
     const { path: target, commit, from } = await readJson(c, restoreBody);
     const dest = normalizePath(target);
+    // Restoring rewrites the file, so the folder's write rules apply as well.
+    accessOf(c).requireTree("note.write", vault, dest);
     const bytes = await history.blob(vault, commit, from ? normalizePath(from) : dest);
     const author = requestAuthor(c);
     const note = requestNote(c, `Restore ${dest} to ${commit.slice(0, 7)}`);
@@ -78,22 +86,22 @@ export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Ho
   });
 
   app.get("/api/vaults/:vault/checkpoints", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "history.view");
     return c.json({ checkpoints: await history.checkpoints(vault) });
   });
 
   app.post("/api/vaults/:vault/checkpoints", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "note.write");
     const { message, tag } = await readJson(c, checkpointBody);
     return c.json(await history.checkpoint(vault, { message, tag, author: requestAuthor(c) }), 201);
   });
 
   app.get("/api/vaults/:vault/backup", async (c) =>
-    c.json(await backup.get(await known(c.req.param("vault")))),
+    c.json(await backup.get(await known(c, "vault.settings"))),
   );
 
   app.put("/api/vaults/:vault/backup", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "vault.settings");
     const { remote, intervalMinutes } = await readJson(c, backupBody);
     return c.json(
       await backup.set(
@@ -105,7 +113,7 @@ export function historyRoutes({ vaults, history, backup }: HistoryRouteDeps): Ho
   });
 
   app.post("/api/vaults/:vault/backup/push", async (c) => {
-    const vault = await known(c.req.param("vault"));
+    const vault = await known(c, "vault.settings");
     await backup.push(vault);
     return c.json(await backup.get(vault));
   });

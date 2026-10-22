@@ -210,4 +210,13 @@ create table public_access (
 ) strict;
 `,
   },
+  {
+    version: 3,
+    name: "role join defaults",
+    sql: `
+-- Vault-level permissions a role denies once its holder joins a vault (the Reader template).
+-- The deny is copied into a vault override the first time the role meets that vault.
+alter table roles add column join_deny integer not null default 0;
+`,
+  },
 ];

@@ -7,6 +7,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "./password.ts";
+import { AccessControl } from "./access.ts";
 import { FailureLimiter } from "./rateLimit.ts";
 
 export const SESSION_COOKIE = "palimvo_session";
@@ -92,12 +93,15 @@ export class AuthService {
   private readonly now: () => number;
   private readonly byName: FailureLimiter;
   private readonly byIp: FailureLimiter;
+  /** Permission answers for requests; call `access.invalidate()` after changing roles or members. */
+  readonly access: AccessControl;
 
   constructor(
     readonly store: Store,
     options: AuthOptions = {},
   ) {
     this.now = options.now ?? (() => Date.now());
+    this.access = new AccessControl(store);
     this.byName = new FailureLimiter(LOGIN_MAX_PER_NAME, LOGIN_WINDOW_MS, this.now);
     this.byIp = new FailureLimiter(LOGIN_MAX_PER_IP, LOGIN_WINDOW_MS, this.now);
   }
@@ -266,10 +270,9 @@ export class AuthService {
       // Someone may have used the link while the password was being hashed.
       if (!this.store.invites.markUsed(invite.id, created.id)) throw new AppError("invite_invalid");
       for (const roleId of invite.roleIds) {
-        if (this.store.roles.get(roleId)) this.store.roles.assign(roleId, created.id);
+        if (this.store.roles.get(roleId)) this.store.grantRole(roleId, created.id);
       }
-      for (const v of invite.vaults)
-        this.store.accounts.setMember(v.vaultId, created.id, v.position);
+      for (const v of invite.vaults) this.store.joinVault(v.vaultId, created.id, v.position);
       return created;
     });
     this.audit("auth.invite_accepted", account, ctx, { invite: invite.id });

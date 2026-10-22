@@ -51,7 +51,8 @@ export async function startTestServer(
     fetch: (p, init) => fetch(new URL(p, running.url), init),
     dispose: async () => {
       await running.close();
-      await rm(dataDir, { recursive: true, force: true });
+      // Windows may hold a directory briefly after handles close (EBUSY, EPERM).
+      await rm(dataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
     },
   };
 }

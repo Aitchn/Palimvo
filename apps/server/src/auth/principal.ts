@@ -3,6 +3,7 @@ import { getConnInfo } from "@hono/node-server/conninfo";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { AppError } from "@palimvo/core";
 import type { Account } from "../store/index.ts";
+import { attachAccess } from "./access.ts";
 import { PublicPolicy } from "./publicPolicy.ts";
 import { CSRF_HEADER, SESSION_COOKIE, SESSION_TTL_MS, type AuthService } from "./service.ts";
 
@@ -11,7 +12,7 @@ import { CSRF_HEADER, SESSION_COOKIE, SESSION_TTL_MS, type AuthService } from ".
  * - `setup`: no account exists yet, so only the first-time setup endpoints answer.
  * - `open`: `--dev-insecure` and no account yet: nothing is enforced (loopback-only, see config).
  * - `guest`: nobody is signed in; may read only what is made public.
- * - `account`: a signed-in person. Detailed permissions arrive with roles (T52).
+ * - `account`: a signed-in person.
  */
 export type Principal =
   | { kind: "setup" }
@@ -28,12 +29,6 @@ export function principalOf(c: Context): Principal {
 export function requireAccount(c: Context): Extract<Principal, { kind: "account" }> {
   const p = principalOf(c);
   if (p.kind !== "account") throw new AppError("unauthenticated");
-  return p;
-}
-
-export function requireServerAdmin(c: Context): Extract<Principal, { kind: "account" }> {
-  const p = requireAccount(c);
-  if (!p.account.serverAdmin) throw new AppError("forbidden");
   return p;
 }
 
@@ -135,6 +130,7 @@ export function principalMiddleware({
           : { kind: "setup" };
     }
     principals.set(c.req.raw, principal);
+    attachAccess(c, auth.access, principal);
     if (resolved?.renewed && cookie)
       setSessionCookie(c, cookie, { secure: publicUrl?.startsWith("https://") ?? false });
     await next();
@@ -153,18 +149,10 @@ const GUEST_READS = [
   /^\/api\/vaults\/[^/]+\/search$/,
 ];
 
-/** Paths only a server administrator may use until roles arrive (T52). */
-const ADMIN_ONLY = [
-  { method: "POST", pattern: /^\/api\/vaults$/ },
-  { method: "DELETE", pattern: /^\/api\/vaults\/[^/]+$/ },
-  { method: "GET", pattern: /^\/api\/removed-vaults$/ },
-  { method: "POST", pattern: /^\/api\/removed-vaults\/[^/]+\/restore$/ },
-];
-
 /**
- * Applies the first access rules to every `/api` call. Guests may only read the tree, files and
- * search (the routes filter what they return); everything else needs a sign-in. Fine-grained
- * permissions per vault and folder replace the account rules in T52.
+ * Applies the first access rules to every `/api` call: guests may only read the vault list, tree,
+ * files and search (the routes filter what they return); everything else needs a sign-in. Which
+ * signed-in person may do what is decided per route with `accessOf(c).require(...)`.
  */
 export function accessGate(): MiddlewareHandler {
   return async (c, next) => {
@@ -179,10 +167,7 @@ export function accessGate(): MiddlewareHandler {
     if (principal.kind === "guest") {
       const allowed = c.req.method === "GET" && GUEST_READS.some((re) => re.test(path));
       if (!allowed) throw new AppError("unauthenticated");
-      return next();
     }
-    const adminOnly = ADMIN_ONLY.some((r) => r.method === c.req.method && r.pattern.test(path));
-    if (adminOnly && !principal.account.serverAdmin) throw new AppError("forbidden");
     return next();
   };
 }

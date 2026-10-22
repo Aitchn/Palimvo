@@ -12,6 +12,8 @@ export interface Role {
   permissions: number;
   /** The implicit role every account has. */
   isEveryone: boolean;
+  /** Vault-level bits denied in each vault the holder joins (copied to an override on first use). */
+  joinDeny: number;
   createdAt: number;
 }
 
@@ -46,6 +48,7 @@ const toRole = (r: Row): Role => ({
   position: r.position as number,
   permissions: r.permissions as number,
   isEveryone: r.is_everyone === 1,
+  joinDeny: r.join_deny as number,
   createdAt: r.created_at as number,
 });
 
@@ -73,18 +76,20 @@ export class RolesRepo {
     position: number;
     permissions?: number;
     isEveryone?: boolean;
+    joinDeny?: number;
   }): Role {
     const id = randomUUID();
     try {
       this.db.run(
-        `insert into roles (id, name, color, position, permissions, is_everyone, created_at)
-         values (?, ?, ?, ?, ?, ?, ?)`,
+        `insert into roles (id, name, color, position, permissions, is_everyone, join_deny, created_at)
+         values (?, ?, ?, ?, ?, ?, ?, ?)`,
         id,
         input.name,
         input.color ?? null,
         input.position,
         input.permissions ?? 0,
         input.isEveryone ? 1 : 0,
+        input.joinDeny ?? 0,
         this.now(),
       );
     } catch (err) {
@@ -118,17 +123,20 @@ export class RolesRepo {
 
   update(
     id: string,
-    patch: Partial<Pick<Role, "name" | "position" | "permissions">> & { color?: string | null },
+    patch: Partial<Pick<Role, "name" | "position" | "permissions" | "joinDeny">> & {
+      color?: string | null;
+    },
   ): Role {
     const current = this.require(id);
     const color = patch.color === undefined ? (current.color ?? null) : patch.color;
     try {
       this.db.run(
-        "update roles set name = ?, color = ?, position = ?, permissions = ? where id = ?",
+        "update roles set name = ?, color = ?, position = ?, permissions = ?, join_deny = ? where id = ?",
         patch.name ?? current.name,
         color,
         patch.position ?? current.position,
         patch.permissions ?? current.permissions,
+        patch.joinDeny ?? current.joinDeny,
         id,
       );
     } catch (err) {
@@ -229,6 +237,35 @@ export class RolesRepo {
     if (!found) return false;
     this.db.run("delete from permission_overrides where id = ?", found.id);
     return true;
+  }
+
+  /** Forgets a person's own overrides in a vault (when they leave it). */
+  deleteAccountOverrides(vaultId: string, accountId: string): void {
+    this.db.run(
+      "delete from permission_overrides where vault_id = ? and subject_type = 'account' and subject_id = ?",
+      vaultId,
+      accountId,
+    );
+  }
+
+  /** Every override of one vault and folder scope, in no particular order. */
+  listOverrides(filter: { scope?: OverrideScope; vaultId?: string }): PermissionOverride[] {
+    const where: string[] = [];
+    const params: string[] = [];
+    if (filter.scope) {
+      where.push("scope = ?");
+      params.push(filter.scope);
+    }
+    if (filter.vaultId !== undefined) {
+      where.push("vault_id = ?");
+      params.push(filter.vaultId);
+    }
+    return this.db
+      .all(
+        `select * from permission_overrides ${where.length ? `where ${where.join(" and ")}` : ""} order by id`,
+        ...params,
+      )
+      .map(toOverride);
   }
 
   serverOverrides(): PermissionOverride[] {
