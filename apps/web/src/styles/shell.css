@@ -92,6 +92,7 @@
 .sidebar-header {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3);
 }
 .sidebar-vault {

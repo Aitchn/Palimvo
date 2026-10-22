@@ -156,11 +156,12 @@ const GUEST_READS = [
   /^\/api\/vaults$/,
   /^\/api\/vaults\/[^/]+\/files(\/.*)?$/,
   /^\/api\/vaults\/[^/]+\/search$/,
+  /^\/api\/vaults\/[^/]+\/home$/,
 ];
 
 /**
  * Applies the first access rules to every `/api` call: guests may only read the vault list, tree,
- * files and search (the routes filter what they return); everything else needs a sign-in. Which
+ * files, search and home page (the routes filter what they return); everything else needs a sign-in. Which
  * signed-in person may do what is decided per route with `accessOf(c).require(...)`.
  */
 export function accessGate(): MiddlewareHandler {

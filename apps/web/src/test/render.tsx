@@ -48,6 +48,21 @@ export async function renderRoute(path: string, locale: Locale = "en") {
   };
 }
 
+/** The home page of the `sample` vault most tests open: the default blocks with nothing in them. */
+export const SAMPLE_HOME = {
+  config: {
+    schemaVersion: 1,
+    widgets: [
+      { id: "proposals", type: "proposals" },
+      { id: "activity", type: "activity" },
+      { id: "pinned", type: "pinned" },
+    ],
+    pinned: [],
+    publicNote: null,
+  },
+  version: null,
+};
+
 /** Every page asks who is using it first; unless a test says otherwise, someone administrator is. */
 const SIGNED_IN: Record<string, () => Response> = {
   "/api/auth/me": () =>
@@ -63,6 +78,9 @@ const SIGNED_IN: Record<string, () => Response> = {
       },
       csrfToken: "csrf",
     }),
+  "/api/vaults/sample/home": () => Response.json(SAMPLE_HOME),
+  "/api/vaults/sample/home/activity": () =>
+    Response.json({ filter: "all", entries: [], authors: [] }),
   "/api/me/permissions": () =>
     Response.json({
       server: ["server.manage", "users.manage", "roles.manage", "vaults.create"],
