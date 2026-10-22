@@ -40,10 +40,21 @@ history as a listed tool). They appear only when the caller may use them.
 | Data      | `create_base` (database from a folder and/or tags, columns, table or cards)                                           |
 | Files     | `list_file_types`                                                                                                     |
 | Admin     | `create_vault`, `remove_vault` (`/mcp` only, see below)                                                               |
+| Plugins   | `list_plugins`, `list_library_plugins`, `read_plugin`; admin grants also get the ones below                           |
 
-Still to come with the services they need: plugin management and the plugin library
-(`publish_library_plugin`, T32), components (`add_component`...), chunked
+Still to come with the services they need: components (`add_component`...), chunked
 uploads and upload links (T22), vault settings.
+
+### Plugin management
+
+Anyone who can view a vault can list its plugins, list the server's plugin library and read an
+installed plugin (`list_plugins`, `list_library_plugins`, `read_plugin`). Changing them is
+administration, because tokens never carry `plugin.install`: `install_plugin` (files you wrote),
+`install_library_plugin`, `set_plugin_enabled` and `uninstall_plugin` need an admin grant and
+`plugin.install` held by the person; `publish_library_plugin` and `remove_library_plugin` need an
+admin grant and `library.publish`. An installed plugin starts switched off and **cannot be
+approved over MCP**: a person approves its exact hash in the web app, so an AI can propose a
+plugin but never run one. See [plugins](plugins.md#installing-approving-and-the-library).
 
 ### Administration
 
