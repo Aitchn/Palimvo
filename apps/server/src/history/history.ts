@@ -377,6 +377,28 @@ export class VaultHistory implements ChangeRecorder {
     }
   }
 
+  /** Unified diff from commit `from` to commit `to` (optionally limited to one file). */
+  async compare(vault: string, from: string, to: string, file?: string): Promise<string> {
+    checkCommit(from);
+    checkCommit(to);
+    await this.ensureRepo(vault);
+    const args = ["diff", "--find-renames", from, to];
+    if (file) args.push("--", file);
+    try {
+      return await this.gitIn(vault, args);
+    } catch (err) {
+      if (err instanceof GitError) {
+        throw new AppError(
+          "not_found",
+          undefined,
+          { from, to },
+          { message: `Commit ${from.slice(0, 7)} or ${to.slice(0, 7)} was not found.` },
+        );
+      }
+      throw err;
+    }
+  }
+
   /**
    * Saves a checkpoint: commits everything now (including recorded changes still waiting for
    * their timer), optionally tags it, and returns the commit. A bad or taken tag name is

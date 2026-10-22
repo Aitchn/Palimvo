@@ -167,6 +167,32 @@ describe("version history", () => {
     expect((await server.fetch("/api/vaults/nope/history")).status).toBe(404);
   });
 
+  it("compares any two versions and lists changes that are still waiting to be committed", async () => {
+    await put("c.md", "one\n", aitchn);
+    await commit();
+    await put("c.md", "two\n", claude, "Reworded");
+    await commit();
+    await put("c.md", "three\n", gpt, "Final wording");
+    // No commit() here: listing the history commits what is pending.
+    const [third, second, first] = await log("c.md");
+    expect(third).toMatchObject({
+      author: { kind: "ai", name: "GPT" },
+      reasons: ["Final wording"],
+    });
+
+    const compare = async (from: string, to: string) =>
+      (await (
+        await server.fetch(`/api/vaults/demo/history/compare?from=${from}&to=${to}&path=c.md`)
+      ).json()) as { diff: string };
+    const wide = (await compare(first!.id, third!.id)).diff;
+    expect(wide).toContain("-one\n+three");
+    expect(wide).not.toContain("two");
+    expect((await compare(second!.id, third!.id)).diff).toContain("-two\n+three");
+    expect(
+      (await server.fetch(`/api/vaults/demo/history/compare?from=nothex&to=${third!.id}`)).status,
+    ).toBe(404);
+  });
+
   it("restores a deleted file", async () => {
     await put("gone.md", "still here\n", aitchn);
     await commit();
