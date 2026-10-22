@@ -39,13 +39,14 @@ const quote = (v: string) => JSON.stringify(v);
 /** Reads a condition back as words, for the common shapes; anything else is shown as written. */
 export function describeCondition(expr: string, t: TFunction): string {
   const s = expr.trim();
-  let m = /^(!?)file\.hasTag\(((?:\s*"[^"]*"\s*,?)+)\)$/.exec(s);
-  if (m) {
-    const tags = [...m[2]!.matchAll(/"([^"]*)"/g)]
-      .map((x) => `#${x[1]}`)
-      .join(t("bases.filters.or"));
-    return t(m[1] ? "bases.filters.descNoTag" : "bases.filters.descHasTag", { tags });
+  const tagCall = /^(!?)file\.hasTag\((.*)\)$/s.exec(s);
+  // Only quoted names separated by commas; checked without a nested repetition, which could backtrack badly.
+  const quoted = tagCall ? [...tagCall[2]!.matchAll(/"([^"]*)"/g)] : [];
+  if (tagCall && quoted.length > 0 && tagCall[2]!.replace(/"[^"]*"|[\s,]/g, "") === "") {
+    const tags = quoted.map((x) => `#${x[1]}`).join(t("bases.filters.or"));
+    return t(tagCall[1] ? "bases.filters.descNoTag" : "bases.filters.descHasTag", { tags });
   }
+  let m: RegExpExecArray | null;
   m = /^(!?)file\.inFolder\("([^"]*)"\)$/.exec(s);
   if (m)
     return t(m[1] ? "bases.filters.descNotInFolder" : "bases.filters.descInFolder", {
