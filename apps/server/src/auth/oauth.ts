@@ -1,14 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { TokenAccess } from "@palimvo/core";
 import type { Account, OAuthClient, OAuthGrant, Store } from "../store/index.ts";
-import {
-  OAUTH_ACCESS_PREFIX,
-  OAUTH_CODE_PREFIX,
-  OAUTH_REFRESH_PREFIX,
-  newSecret,
-  scopeOfAccess,
-  sha256Hex,
-} from "./tokens.ts";
+import { KIND_TAG, newCredential, scopeOfAccess, sha256Hex } from "./tokens.ts";
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
@@ -159,7 +152,7 @@ export class OAuthService {
     this.store.oauth.purgeUnusedClients(this.now() - UNUSED_CLIENT_TTL_MS);
     if (this.store.oauth.clientCount() >= MAX_CLIENTS)
       throw new OAuthError("server_error", "Too many registered apps. Try again later.", 429);
-    const secret = meta.authMethod === "none" ? undefined : newSecret("pls_");
+    const secret = meta.authMethod === "none" ? undefined : newCredential("pls_");
     const client = this.store.oauth.registerClient({
       clientName,
       redirectUris: uris,
@@ -218,7 +211,7 @@ export class OAuthService {
 
   /** The person said yes: records the grant and returns the one-time code to give the client. */
   approve(account: Account, request: AuthorizeRequest, access: TokenAccess): string {
-    const code = newSecret(OAUTH_CODE_PREFIX);
+    const code = newCredential(KIND_TAG.code);
     this.store.tx(() => {
       const grant = this.store.oauth.createGrant({
         clientId: request.client.clientId,
@@ -342,8 +335,8 @@ export class OAuthService {
   }
 
   private issue(grant: OAuthGrant): Tokens {
-    const access = newSecret(OAUTH_ACCESS_PREFIX);
-    const refresh = newSecret(OAUTH_REFRESH_PREFIX);
+    const access = newCredential(KIND_TAG.access);
+    const refresh = newCredential(KIND_TAG.refresh);
     this.store.tx(() => {
       this.store.oauth.issueToken({
         grantId: grant.id,

@@ -3,10 +3,8 @@ import { AppError, normalizeVaultPath, type TokenAccess, type TokenScope } from 
 import type { Account, ApiToken, Store } from "../store/index.ts";
 import { RateWindow } from "./rateLimit.ts";
 
-export const API_TOKEN_PREFIX = "plm_";
-export const OAUTH_ACCESS_PREFIX = "plo_";
-export const OAUTH_REFRESH_PREFIX = "plr_";
-export const OAUTH_CODE_PREFIX = "plc_";
+/** Leading letters that tell the kinds of random credentials apart. */
+export const KIND_TAG = { api: "plm_", access: "plo_", refresh: "plr_", code: "plc_" } as const;
 
 const DAY = 24 * 60 * 60 * 1000;
 export const TOKEN_DEFAULT_TTL_DAYS = 90;
@@ -21,7 +19,7 @@ const TOUCH_EVERY_MS = 60_000;
 
 export const sha256Hex = (value: string) => createHash("sha256").update(value).digest("hex");
 
-export function newSecret(prefix: string): string {
+export function newCredential(prefix: string): string {
   return prefix + randomBytes(32).toString("base64url");
 }
 
@@ -90,7 +88,7 @@ export class TokenService {
     if (rate !== undefined && (!Number.isInteger(rate) || rate < 1 || rate > MAX_RATE_PER_MINUTE))
       throw badRequest("rateLimitPerMinute", `1-${MAX_RATE_PER_MINUTE}`);
 
-    const secret = newSecret(API_TOKEN_PREFIX);
+    const secret = newCredential(KIND_TAG.api);
     const token = this.store.tx(() => {
       const active = this.store.tokens
         .listForAccount(account.id)
@@ -147,7 +145,7 @@ export class TokenService {
    */
   authenticate(secret: string): BearerIdentity | undefined {
     const hash = sha256Hex(secret);
-    if (secret.startsWith(API_TOKEN_PREFIX)) {
+    if (secret.startsWith(KIND_TAG.api)) {
       const token = this.store.tokens.getActiveByHash(hash);
       if (!token) return undefined;
       const account = this.activeAccount(token.accountId);
@@ -165,7 +163,7 @@ export class TokenService {
         label: token.name,
       };
     }
-    if (secret.startsWith(OAUTH_ACCESS_PREFIX)) {
+    if (secret.startsWith(KIND_TAG.access)) {
       const issued = this.store.oauth.getUsableToken("access", hash);
       if (!issued) return undefined;
       const grant = this.store.oauth.getGrant(issued.grantId);
