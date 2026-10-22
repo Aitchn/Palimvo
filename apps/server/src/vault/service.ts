@@ -176,6 +176,11 @@ export class VaultService {
 
   // ---- vaults -------------------------------------------------------------------------------
 
+  /** Throws `vault_not_found` unless the vault exists (and opens it the first time). */
+  async assertVault(vaultId: string): Promise<void> {
+    await this.vaultDir(vaultId);
+  }
+
   async listVaults(): Promise<VaultInfo[]> {
     const entries = await readdir(this.root, { withFileTypes: true });
     return entries
@@ -370,7 +375,8 @@ export class VaultService {
   /**
    * Writes a text file atomically. With `baseVersion` the write only happens if the file is
    * still at that version (`null` = it must not exist yet); otherwise a `version_conflict`
-   * error carries the current content. Without it the file is overwritten.
+   * error carries the current content. Without it the file is overwritten. `onWritten` runs
+   * while the write queue is still held (so history can record who wrote before it snapshots).
    */
   async writeFile(
     vaultId: string,
@@ -386,15 +392,16 @@ export class VaultService {
     if (bytes.byteLength > MAX_TEXT_BYTES) {
       throw new AppError("payload_too_large", undefined, { path: rel, limit: MAX_TEXT_BYTES });
     }
-    const written = await this.putFile(vaultId, filePath, bytes, options.baseVersion);
-    const file: FileContent = {
-      path: written.path,
-      content,
-      mtime: written.mtime,
-      version: written.version,
-    };
-    options.onWritten?.(file);
-    return file;
+    const { onWritten } = options;
+    const written = await this.putFile(
+      vaultId,
+      filePath,
+      bytes,
+      options.baseVersion,
+      onWritten &&
+        ((r) => onWritten({ path: r.path, content, mtime: r.mtime, version: r.version })),
+    );
+    return { path: written.path, content, mtime: written.mtime, version: written.version };
   }
 
   /**
@@ -407,9 +414,7 @@ export class VaultService {
     bytes: Uint8Array,
     options: { baseVersion?: string | null; onWritten?: (result: WriteResult) => void } = {},
   ): Promise<WriteResult> {
-    const result = await this.putFile(vaultId, filePath, bytes, options.baseVersion);
-    options.onWritten?.(result);
-    return result;
+    return this.putFile(vaultId, filePath, bytes, options.baseVersion, options.onWritten);
   }
 
   private async putFile(
@@ -417,6 +422,7 @@ export class VaultService {
     filePath: string,
     bytes: Uint8Array,
     baseVersion: string | null | undefined,
+    onWritten?: (result: WriteResult) => void,
   ): Promise<WriteResult> {
     const { abs, rel, lock } = await this.resolve(vaultId, filePath);
     return this.queueFileWrite(vaultId, lock, () =>
@@ -433,13 +439,15 @@ export class VaultService {
           throw mapFsError(err, rel);
         }
         const info = await stat(abs);
-        this.emit({ vault: vaultId, type: "changed", path: rel });
-        return {
+        const result = {
           path: rel,
           size: bytes.byteLength,
           mtime: info.mtimeMs,
           version: bytesVersion(bytes),
         };
+        onWritten?.(result);
+        this.emit({ vault: vaultId, type: "changed", path: rel });
+        return result;
       }),
     );
   }
@@ -449,7 +457,11 @@ export class VaultService {
    * installing one file fails the others are put back. A crash in the middle of installing can
    * still leave some files written (each file on its own is always whole).
    */
-  async writeBatch(vaultId: string, changes: readonly BatchWrite[]): Promise<WriteResult[]> {
+  async writeBatch(
+    vaultId: string,
+    changes: readonly BatchWrite[],
+    options: { onWritten?: (results: WriteResult[]) => void } = {},
+  ): Promise<WriteResult[]> {
     if (changes.length === 0) return [];
     if (changes.length > MAX_BATCH_FILES) {
       throw new AppError("payload_too_large", undefined, { limit: MAX_BATCH_FILES, what: "files" });
@@ -459,7 +471,11 @@ export class VaultService {
       this.afterwards(
         vaultId,
         changes.map((c) => c.path),
-        () => this.writeBatchLocked(vaultId, changes),
+        async () => {
+          const results = await this.writeBatchLocked(vaultId, changes);
+          options.onWritten?.(results);
+          return results;
+        },
       ),
     );
   }
