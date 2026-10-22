@@ -10,10 +10,12 @@ import { assertGit } from "./history/git.ts";
 import { SYSTEM_AUTHOR, VaultHistory, type HistoryOptions } from "./history/history.ts";
 import { describeConfig, type LoadedConfig } from "./config/index.ts";
 import { errorFields } from "./errors.ts";
+import { findPluginsDir } from "./plugins/dir.ts";
 import { acquireLock } from "./lock.ts";
 import { createLogger, type Logger } from "./log.ts";
 import { Store } from "./store/index.ts";
 import { createVaultIndexes } from "./search/index.ts";
+import { PluginManager } from "./plugins/manager.ts";
 import { findWebDir } from "./web.ts";
 import { VaultService, type VaultHooks } from "./vault/service.ts";
 import { VaultTrash } from "./vault/trash.ts";
@@ -41,7 +43,12 @@ export interface RunningServer {
    */
   onShutdown(name: string, hook: ShutdownHook): void;
   /** The services behind the API, for code that runs inside the server process (and tests). */
-  services: { vaults: VaultService; history: VaultHistory; backup: BackupService };
+  services: {
+    vaults: VaultService;
+    history: VaultHistory;
+    backup: BackupService;
+    plugins: PluginManager;
+  };
   /** Idempotent. Resolves when everything has stopped. */
   close(): Promise<void>;
 }
@@ -56,6 +63,8 @@ export interface StartOptions {
   history?: Pick<HistoryOptions, "commitDelayMs" | "commitMaxDelayMs" | "maxFileBytes">;
   backup?: Pick<BackupOptions, "tickMs" | "allowLocalRemotes" | "credentials">;
   /** Extra MCP tools and per-vault tool providers (tests; later plugins). */
+  /** Folder with the official plugins; default: look for `plugins/` next to the server (see `findPluginsDir`). */
+  pluginsDir?: string;
   mcp?: { tools?: AnyTool[]; providers?: ToolProvider[]; plugins?: PluginCatalog };
 }
 
@@ -67,6 +76,7 @@ export async function startServer({
   history: historyOptions,
   backup: backupOptions,
   mcp: mcpOptions,
+  pluginsDir,
 }: StartOptions): Promise<RunningServer> {
   const { config } = loaded;
   const log = logger ?? createLogger({ level: config.logLevel });
@@ -112,6 +122,19 @@ export async function startServer({
       writeLock: (vault, fn) => vaults.exclusive(vault, fn),
       ...historyOptions,
     }));
+    const plugins = new PluginManager({
+      store: openStore,
+      vaults,
+      history,
+      libraryDir: path.join(config.dataDir, "library", "plugins"),
+      palimvoVersion: VERSION,
+      logger: log,
+    });
+    const officialDir = await findPluginsDir(pluginsDir, import.meta.dirname);
+    if (officialDir) {
+      const added = await plugins.seedBuiltins(officialDir);
+      if (added.length > 0) log.info("official plugins added to the library", { plugins: added });
+    }
     const backup = new BackupService(vaults, history, { logger: log, ...backupOptions });
     vaults.onChange((change) => {
       if (change.type === "removed") history.forget(change.vault);
@@ -170,6 +193,7 @@ export async function startServer({
       backup,
       ...(mcpOptions?.tools ? { mcpTools: mcpOptions.tools } : {}),
       ...(mcpOptions?.providers ? { toolProviders: mcpOptions.providers } : {}),
+      pluginManager: plugins,
       ...(mcpOptions?.plugins ? { plugins: mcpOptions.plugins } : {}),
     });
 
@@ -209,7 +233,7 @@ export async function startServer({
       logger: log,
       store: openStore,
       auth,
-      services: { vaults, history: history, backup },
+      services: { vaults, history: history, backup, plugins },
       onShutdown: (name, hook) => void hooks.push({ name, hook }),
       close,
     };

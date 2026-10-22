@@ -19,6 +19,7 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@palimvo/core": "workspace:*",
     "@palimvo/i18n": "workspace:*",
+    "@palimvo/plugin-sdk": "workspace:*",
     "hono": "^4.13.13",
     "zod": "^4.6.7"
   },

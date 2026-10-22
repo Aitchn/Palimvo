@@ -636,6 +636,7 @@
     "setup_code_required": "The setup code is required.",
     "setup_required": "Finish the first-time setup first.",
     "setup_complete": "Setup has already been completed.",
+    "plugin_invalid": "The plugin package is not valid.",
     "plugin_not_approved": "This plugin version has not been approved.",
     "not_found": "That item could not be found.",
     "vault_not_found": "The vault does not exist.",

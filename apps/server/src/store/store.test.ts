@@ -22,7 +22,7 @@ const mkAccount = (username: string, serverAdmin = false) =>
 
 describe("schema", () => {
   it("is at the latest version with all tables and a sound file", () => {
-    expect(store.schemaVersion).toBe(3);
+    expect(store.schemaVersion).toBe(4);
     expect(store.integrityProblems()).toEqual([]);
   });
 
