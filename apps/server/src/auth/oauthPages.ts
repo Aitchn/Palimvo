@@ -111,6 +111,8 @@ export function consentPage(
     /** Path the server is published under (from the public address), without a trailing slash. */
     base: string;
     defaultAccess: TokenAccess;
+    /** Show the "also allow administering" box (the person holds a right worth handing over). */
+    canAdminister: boolean;
   },
 ): string {
   const title = t(locale, "oauth.pageTitle");
@@ -128,6 +130,13 @@ export function consentPage(
 <input type="hidden" name="csrf" value="${escapeHtml(input.csrf)}">
 <fieldset><legend>${escapeHtml(t(locale, "oauth.accessLabel"))}</legend>
 ${option("read", "oauth.accessRead")}${option("propose", "oauth.accessPropose")}${option("write", "oauth.accessWrite")}</fieldset>
+${
+  input.canAdminister
+    ? `<fieldset><legend>${escapeHtml(t(locale, "oauth.adminLabel"))}</legend>
+<label class="opt"><input type="checkbox" name="admin" value="1"> ${escapeHtml(t(locale, "oauth.adminOption"))}</label>
+<p class="muted">${escapeHtml(t(locale, "oauth.adminHint"))}</p></fieldset>`
+    : ""
+}
 <p class="muted">${escapeHtml(t(locale, "oauth.signedInAs", { name: input.account }))} · ${escapeHtml(t(locale, "oauth.revokeHint"))}</p>
 <div class="row"><button type="submit" name="decision" value="deny">${escapeHtml(t(locale, "oauth.deny"))}</button><button class="primary" type="submit" name="decision" value="allow">${escapeHtml(t(locale, "oauth.allow"))}</button></div></form>`,
   );

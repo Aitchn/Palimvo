@@ -443,40 +443,32 @@ describe("calling tools", () => {
   });
 });
 
+/** The test's own tools: the real advanced ones (ADR 0016) are listed beside them. */
+const probeNames = (tools: { name: string }[]) =>
+  tools
+    .map((t) => t.name)
+    .filter((n) => /^(probe_|plugin_)/.test(n))
+    .sort();
+
 describe("entry tools", () => {
   it("list_tools shows advanced tools, and plugin tools once a vault is named", async () => {
     const { mia } = await world();
     const c = await connect("/mcp", await makeToken(mia, { name: "x", access: "write" }));
     const plain = body(await c.callTool({ name: "list_tools", arguments: {} }));
-    expect(plain.tools.map((t: { name: string }) => t.name).sort()).toEqual([
-      "get_edit_proposal",
-      "list_edit_proposals",
-      "probe_advanced",
-      "probe_open",
-    ]);
+    expect(probeNames(plain.tools)).toEqual(["probe_advanced", "probe_open"]);
     expect(plain.tools.find((t: { name: string }) => t.name === "probe_advanced")).toMatchObject({
       summary: "An advanced tool.",
       writes: true,
     });
     const inA = body(await c.callTool({ name: "list_tools", arguments: { vault: "a" } }));
-    expect(inA.tools.map((t: { name: string }) => t.name).sort()).toEqual([
-      "get_edit_proposal",
-      "list_edit_proposals",
-      "plugin_hello",
-      "probe_advanced",
-      "probe_open",
-    ]);
+    expect(probeNames(inA.tools)).toEqual(["plugin_hello", "probe_advanced", "probe_open"]);
     const inB = body(await c.callTool({ name: "list_tools", arguments: { vault: "b" } }));
-    expect(inB.tools.map((t: { name: string }) => t.name).sort()).toEqual([
-      "get_edit_proposal",
-      "list_edit_proposals",
-      "probe_advanced",
-      "probe_open",
-    ]);
+    expect(probeNames(inB.tools)).toEqual(["probe_advanced", "probe_open"]);
     const q = body(
-      await c.callTool({ name: "list_tools", arguments: { vault: "a", query: "plugin" } }),
+      await c.callTool({ name: "list_tools", arguments: { vault: "a", query: "plugin_hello" } }),
     );
     expect(q.total).toBe(1);
+    expect(probeNames(q.tools)).toEqual(["plugin_hello"]);
   });
 
   it("never offers server-wide administration to a token, even an administrator's", async () => {

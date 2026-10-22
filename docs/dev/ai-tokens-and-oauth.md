@@ -20,7 +20,9 @@ holds the `secret` (`plm_…`) once. Use it as `Authorization: Bearer <secret>`.
 
 - `GET /api/tokens` lists your tokens; `DELETE /api/tokens/:id` revokes one.
 - `GET /api/admin/tokens` and `DELETE /api/admin/tokens/:id` need `users.manage`.
-- `GET /api/oauth/grants` and `DELETE /api/oauth/grants/:id` list and end the OAuth connections.
+- `GET /api/oauth/grants` and `DELETE /api/oauth/grants/:id` list and end the OAuth connections;
+  each grant says whether it `admin`isters (the person ticked "also allow administering": see
+  [MCP server](./mcp.md#administration)).
 
 ## OAuth (Claude.ai, ChatGPT)
 

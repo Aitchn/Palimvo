@@ -4,7 +4,7 @@ import { AppError, TOKEN_ACCESS_PERMISSIONS, vaultScope } from "@palimvo/core";
 import { accessOf } from "../auth/access.ts";
 import { requireAccount } from "../auth/principal.ts";
 import type { AuthService } from "../auth/service.ts";
-import { accessOfScope, type TokenService } from "../auth/tokens.ts";
+import { accessOfScope, adminOfScope, type TokenService } from "../auth/tokens.ts";
 import type { ApiToken } from "../store/index.ts";
 import type { VaultService } from "../vault/service.ts";
 import { readJson } from "./util.ts";
@@ -99,6 +99,7 @@ export function tokenRoutes({ auth, tokens, vaults }: TokenRouteDeps): Hono {
         id: g.id,
         clientName: store.oauth.getClient(g.clientId)?.clientName ?? "",
         access: accessOfScope(g.scope),
+        admin: adminOfScope(g.scope),
         createdAt: g.createdAt,
         revokedAt: g.revokedAt ?? null,
       })),

@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import type { z } from "zod";
-import { AppError, isAppError } from "@palimvo/core";
+import { AppError, isAppError, vaultScope } from "@palimvo/core";
 import type { Author } from "@palimvo/core";
-import { accessOf } from "../auth/access.ts";
+import { accessOf, type AccessControl } from "../auth/access.ts";
 import { principalOf } from "../auth/principal.ts";
 import { requestAuthor, requestNote } from "../routes/author.ts";
 import type { VaultHistory } from "../history/history.ts";
@@ -11,6 +11,7 @@ import type { ProposalService } from "../proposals/proposals.ts";
 import type { VaultIndexes } from "../search/index.ts";
 import type { Store } from "../store/index.ts";
 import type { VaultService } from "../vault/service.ts";
+import type { VaultTrash } from "../vault/trash.ts";
 import {
   argumentsOf,
   REASON_ARG,
@@ -32,6 +33,10 @@ export interface McpDeps {
   vaults: VaultService;
   history: VaultHistory;
   indexes: VaultIndexes;
+  /** Where removed vaults go; `remove_vault` only moves a vault here. */
+  trash: VaultTrash;
+  /** Call after a change to who may do what (a new vault's administrator). */
+  access: AccessControl;
   proposals: ProposalService;
   /** Which plugins are enabled in a vault; `list_vaults` shows them. Absent until the plugin platform exists. */
   plugins?: PluginCatalog;
@@ -176,9 +181,14 @@ export function createDispatcher(opts: {
 
       // Permission first: someone without access should not learn what the arguments look like.
       try {
+        if (def.adminGrant && !access.adminGrant)
+          throw new AppError("forbidden", undefined, undefined, {
+            message: `${name} is only available to an OAuth connection the person allowed to administer. API tokens cannot use it.`,
+          });
         if (def.scope === "vault") access.requireVault("vault.view", vault);
         for (const p of permissionsOf(def))
           if (def.scope === "server") access.requireServer(p);
+          else if (def.adminGrant) access.requirePerson(p, vaultScope(vault));
           else access.requireVault(p, vault);
       } catch (err) {
         return fail(err, "denied");
