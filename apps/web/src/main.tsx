@@ -12,6 +12,7 @@ import "./styles/base.css";
 import "./styles/ui.css";
 import "./styles/shell.css";
 import "./styles/files.css";
+import "./styles/editor.css";
 import "./pwa/standalone.css";
 
 initTheme();

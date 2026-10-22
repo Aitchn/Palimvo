@@ -138,6 +138,38 @@
     "unresolved": "找不到",
     "embed": "嵌入"
   },
+  "editor": {
+    "properties": "筆記屬性",
+    "copy": "複製",
+    "copied": "已複製",
+    "embedFailed": "無法載入這則筆記",
+    "taskDone": "已完成",
+    "taskTodo": "未完成",
+    "diagramDrawing": "繪製圖表中…",
+    "diagramError": "圖表語法錯誤：{message}",
+    "conflict": "別人已經先存了這則筆記，你的內容還沒有儲存。",
+    "useTheirs": "改用對方的版本",
+    "keepMine": "保留我的",
+    "peers": "{count} 人在線",
+    "viewOnly": "唯讀",
+    "edit": "編輯",
+    "read": "閱讀",
+    "switchToEditing": "切換到編輯",
+    "switchToReading": "切換到閱讀模式",
+    "status": {
+      "loading": "開啟中…",
+      "saved": "已儲存",
+      "saving": "儲存中…",
+      "unsaved": "尚未儲存",
+      "offline": "離線，稍後重試",
+      "conflict": "發生衝突",
+      "error": "無法開啟"
+    },
+    "notice": {
+      "recovered": "已找回先前沒送出的內容",
+      "reloaded": "已更新為最新版本"
+    }
+  },
   "errors": {
     "unknown": "發生未知的錯誤。",
     "network": "無法連線到伺服器。",

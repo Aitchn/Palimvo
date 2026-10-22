@@ -25,8 +25,9 @@ interface Options {
 }
 
 /** A note without an extension is a Markdown note. */
-function withExtension(name: string): string {
-  return name.includes(".") ? name : `${name}.md`;
+export function withExtension(name: string): string {
+  // Only the last segment counts: `projects.v2/Plan` is still a note.
+  return (name.split("/").pop() ?? name).includes(".") ? name : `${name}.md`;
 }
 
 /**
@@ -71,6 +72,18 @@ export function useFileOperations({
     reveal(ancestorsOf(path));
     await refresh();
     openFile(path);
+  };
+
+  /** A [[link]] to a note that does not exist: make it at the top of the vault and open it. */
+  const createLinked = async (target: string) => {
+    const path = withExtension(target.trim());
+    try {
+      if (!taken(path)) await writeFile(vault, path, "", null);
+      await refresh();
+      openFile(path);
+    } catch (error) {
+      fail(error);
+    }
   };
 
   const makeFolder = async (folder: string, name: string) => {
@@ -179,6 +192,7 @@ export function useFileOperations({
       setConfirmDelete(null);
     },
     move,
+    createLinked,
     dropFiles,
     pickFiles,
     exists: (path: string) => findNode(nodes, path) !== undefined,
