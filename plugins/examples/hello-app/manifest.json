@@ -1,0 +1,16 @@
+{
+  "manifestVersion": 2,
+  "id": "hello-app",
+  "version": "1.0.0",
+  "name": { "en": "Hello app", "zh-TW": "示範應用", "zh-CN": "演示应用" },
+  "description": {
+    "en": "A whole-page application: it takes over the main area and keeps the app's navigation and sign-in."
+  },
+  "minPalimvo": "0.1.0",
+  "permissions": { "read": ["**"], "write": [], "network": false },
+  "contributes": {
+    "app": { "name": { "en": "Hello app", "zh-TW": "示範應用", "zh-CN": "演示应用" } }
+  },
+  "locales": { "en": "locales/en.json" },
+  "main": "main.js"
+}

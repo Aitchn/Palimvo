@@ -31,6 +31,8 @@ import { uploadLinkRoutes } from "./routes/uploadLinks.ts";
 import { historyRoutes } from "./routes/history.ts";
 import { homeRoutes } from "./routes/home.ts";
 import { HomeService } from "./home/home.ts";
+import { pluginRoutes } from "./routes/plugins.ts";
+import type { PluginManager } from "./plugins/manager.ts";
 import { proposalRoutes } from "./routes/proposals.ts";
 import { ProposalService } from "./proposals/proposals.ts";
 import { publicRoutes } from "./routes/public.ts";
@@ -66,10 +68,12 @@ export interface AppDeps {
   toolProviders?: ToolProvider[];
   /** Extra core MCP tools beyond the built-in ones. */
   mcpTools?: AnyTool[];
-  /** Which plugins are enabled per vault, for `list_vaults`. */
+  /** Which plugins are enabled per vault, for `list_vaults`. Defaults to the plugin manager. */
   plugins?: PluginCatalog;
   /** File types that enabled plugins add to what a vault accepts as uploads. */
   fileTypes?: FileTypeSource;
+  /** Plugin installation, approval and the plugin library. */
+  pluginManager?: PluginManager;
 }
 
 /** Builds the HTTP application. Domain routers are mounted here as they are added. */
@@ -169,6 +173,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route("/", historyRoutes(deps));
   app.route("/", proposalRoutes(deps.vaults, proposals, deps.auth));
   app.route("/", homeRoutes(deps.vaults, new HomeService(deps.vaults, deps.history), deps.auth));
+  if (deps.pluginManager) app.route("/", pluginRoutes(deps.pluginManager, deps.vaults));
   app.route("/", searchRoutes(deps.vaults, deps.indexes, deps.auth));
   app.route("/", archiveRoutes(deps.vaults));
   app.route("/", rawRoutes(deps.vaults, deps.auth, transfers.policy));
@@ -188,6 +193,7 @@ export function createApp(deps: AppDeps): Hono {
     tokens: deps.auth.tokens,
     publicUrl: deps.publicUrl,
   });
+  const catalog = deps.plugins ?? deps.pluginManager;
   const registry = new ToolRegistry([...coreTools(), ...(deps.mcpTools ?? [])]);
   for (const provider of deps.toolProviders ?? []) registry.addProvider(provider);
   // "/mcp/*" also matches "/mcp"; registering both would run the gate (and count the rate limit) twice.
@@ -209,7 +215,8 @@ export function createApp(deps: AppDeps): Hono {
         uploadLinks,
         publicUrl: deps.publicUrl,
         trustProxy: deps.trustProxy ?? false,
-        ...(deps.plugins ? { plugins: deps.plugins } : {}),
+        ...(catalog ? { plugins: catalog } : {}),
+        ...(deps.pluginManager ? { pluginManager: deps.pluginManager } : {}),
       },
       registry,
       version: deps.version,

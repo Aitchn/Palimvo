@@ -9,6 +9,7 @@ import { principalOf } from "../auth/principal.ts";
 import { requestAuthor, requestNote } from "../routes/author.ts";
 import type { VaultHistory } from "../history/history.ts";
 import type { Logger } from "../log.ts";
+import type { PluginManager } from "../plugins/manager.ts";
 import type { ProposalService } from "../proposals/proposals.ts";
 import type { VaultIndexes } from "../search/index.ts";
 import type { Store } from "../store/index.ts";
@@ -48,6 +49,8 @@ export interface McpDeps {
   trustProxy: boolean;
   /** Which plugins are enabled in a vault; `list_vaults` shows them. Absent until the plugin platform exists. */
   plugins?: PluginCatalog;
+  /** Installs, library and approvals; the plugin tools need it. */
+  pluginManager?: PluginManager;
   [key: string]: unknown;
 }
 

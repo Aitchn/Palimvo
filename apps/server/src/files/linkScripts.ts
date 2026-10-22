@@ -4,7 +4,11 @@ export function publicBase(
   publicUrl?: string,
   trustProxy = false,
 ): string {
-  if (publicUrl) return publicUrl.replace(/\/+$/, "");
+  if (publicUrl) {
+    let end = publicUrl.length;
+    while (end > 0 && publicUrl[end - 1] === "/") end -= 1;
+    return publicUrl.slice(0, end);
+  }
   const url = new URL(c.req.url);
   const proto =
     (trustProxy ? c.req.header("x-forwarded-proto")?.split(",")[0]?.trim() : undefined) ||

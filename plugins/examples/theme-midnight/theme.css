@@ -1,0 +1,20 @@
+/* Only custom properties (and a few font settings) on :root or the light/dark selectors are kept. */
+:root[data-theme="dark"] {
+  --bg: #0b1020;
+  --bg-side: #0e1428;
+  --bg-elev: #141b34;
+  --bg-elev-2: #1a2342;
+  --bg-hover: #1d2750;
+  --fg: #d7def5;
+  --fg-muted: #9aa6cf;
+  --border: #243058;
+  --accent: #6c8cff;
+  --accent-hover: #86a0ff;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f8ff;
+  --bg-side: #eef1fc;
+  --accent: #3d5afe;
+  --accent-hover: #2f49d6;
+}

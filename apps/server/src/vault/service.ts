@@ -827,6 +827,49 @@ export class VaultService {
     });
   }
 
+  /** Like `readMeta` but the exact bytes; plugin packages are hashed as stored. */
+  async readMetaBytes(vaultId: string, name: string): Promise<Uint8Array | null> {
+    const abs = await this.metaPath(vaultId, name);
+    return (await readBytesIfExists(abs))?.bytes ?? null;
+  }
+
+  /** Writes a `.palimvo/` file from bytes, atomically. */
+  async writeMetaBytes(vaultId: string, name: string, bytes: Uint8Array): Promise<void> {
+    const abs = await this.metaPath(vaultId, name);
+    await this.queueFileWrite(vaultId, `\0${name}`, async () => {
+      await mkdir(path.dirname(abs), { recursive: true });
+      await atomicWrite(abs, bytes);
+    });
+  }
+
+  /** Every file below a `.palimvo/` folder, as paths relative to it (empty when it does not exist). */
+  async listMetaFiles(vaultId: string, dir: string): Promise<string[]> {
+    const root = await this.metaPath(vaultId, dir);
+    const out: string[] = [];
+    const walk = async (abs: string, rel: string): Promise<void> => {
+      const entries = await readdir(abs, { withFileTypes: true }).catch((err: unknown) => {
+        if (isMissing(err)) return [];
+        throw err;
+      });
+      for (const e of entries) {
+        const child = rel === "" ? e.name : `${rel}/${e.name}`;
+        // Links are skipped: a package is plain files, and a link could point out of the vault.
+        if (e.isDirectory()) await walk(path.join(abs, e.name), child);
+        else if (e.isFile()) out.push(child);
+      }
+    };
+    await walk(root, "");
+    return out.sort();
+  }
+
+  /** Deletes a `.palimvo/` folder and everything in it. */
+  async removeMeta(vaultId: string, dir: string): Promise<void> {
+    const abs = await this.metaPath(vaultId, dir);
+    await this.queueWrite(vaultId, async () => {
+      await rm(abs, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    });
+  }
+
   private async metaPath(vaultId: string, name: string): Promise<string> {
     if (
       !/^[a-z0-9_-][a-z0-9_.-]*(\/[a-z0-9_.-]+)*$/i.test(name) ||

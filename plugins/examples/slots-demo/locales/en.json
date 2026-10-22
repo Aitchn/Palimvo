@@ -1,0 +1,8 @@
+{
+  "counted": "This vault has {count} notes.",
+  "hello": "Hello from a plugin command.",
+  "size": "{path} is {count} characters long.",
+  "where": "Open file: {path}",
+  "none": "Nothing open",
+  "about": "Every slot entry of this plugin runs in its own sandbox. This section is drawn by the plugin; the heading around it is the app's."
+}

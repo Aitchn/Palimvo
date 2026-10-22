@@ -221,6 +221,39 @@ alter table roles add column join_deny integer not null default 0;
   },
   {
     version: 4,
+    name: "vault plugins",
+    sql: `
+-- Plugins installed in a vault. The files live in the vault's .palimvo/plugins/<id>/ folder;
+-- this row says which package they are (by content hash) and whether the plugin is switched on.
+create table vault_plugins (
+  vault_id text not null,
+  plugin_id text not null,
+  version text not null,
+  sha256 text not null,
+  manifest text not null, -- JSON: the validated manifest of this package
+  enabled integer not null default 0 check (enabled in (0, 1)),
+  source text not null check (source in ('library', 'upload')),
+  installed_by text references accounts (id) on delete set null,
+  installed_at integer not null,
+  primary key (vault_id, plugin_id)
+) strict;
+
+-- A person's approval of one exact package hash in one vault. Approvals stay with the server, not
+-- the vault's files, so a vault copied to another server has to be approved again.
+create table plugin_approvals (
+  vault_id text not null,
+  plugin_id text not null,
+  sha256 text not null,
+  version text not null,
+  approved_by text references accounts (id) on delete set null,
+  approved_at integer not null,
+  permissions text not null, -- JSON: the permissions the person saw when approving
+  primary key (vault_id, plugin_id, sha256)
+) strict;
+`,
+  },
+  {
+    version: 5,
     name: "upload links",
     sql: `
 -- A link that lets one file be uploaded without signing in. The secret is shown once; only its

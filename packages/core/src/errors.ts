@@ -7,6 +7,7 @@ export const ERROR_CODES = {
   invalid_request: { status: 400, message: "The request is not valid." },
   invalid_path: { status: 400, message: "The path is not allowed." },
   effort_unsupported: { status: 400, message: "This model does not support that reasoning level." },
+  plugin_invalid: { status: 400, message: "The plugin package is not valid." },
   invalid_tag: { status: 400, message: "That is not a usable checkpoint tag name." },
   invalid_backup_remote: { status: 400, message: "That backup address is not allowed." },
   schema_invalid: { status: 400, message: "The stored data has an invalid format." },

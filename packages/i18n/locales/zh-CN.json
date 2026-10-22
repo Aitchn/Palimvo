@@ -60,6 +60,7 @@
     "errors.setup_code_required",
     "errors.setup_required",
     "errors.setup_complete",
+    "errors.plugin_invalid",
     "errors.plugin_not_approved",
     "errors.not_found",
     "errors.vault_not_found",
@@ -522,7 +523,16 @@
     "home.settings.startHereHelp",
     "home.settings.saved",
     "home.settings.conflict",
-    "errors.effort_unsupported"
+    "errors.effort_unsupported",
+    "plugins.unavailable",
+    "plugins.loading",
+    "plugins.error",
+    "plugins.stopped.navigated",
+    "plugins.stopped.revoked",
+    "plugins.viewer.label",
+    "plugins.viewer.text",
+    "plugins.views.title",
+    "plugins.views.missing"
   ],
   "common": {
     "appName": "Palimvo",
@@ -767,7 +777,7 @@
       "title": "数据库：{name}"
     },
     "plugin": {
-      "unavailable": "插件 {plugin} 的视图 {view} 会在插件功能就绪后显示。"
+      "unavailable": "插件 {plugin} 的小组件 {view} 在这个笔记库无法使用。"
     },
     "settings": {
       "blocks": "这个页面的区块",
@@ -1143,6 +1153,35 @@
     "errorRequest": "连接请求不完整，或使用了 Palimvo 不支持的内容。",
     "errorNoVaults": "你没有权限把 AI 连接到任何笔记库。"
   },
+  "plugins": {
+    "unavailable": "插件 {plugin} 没有在这个笔记库运行。",
+    "loading": "正在加载插件…",
+    "error": "插件 {name} 报告了问题：{detail}",
+    "stopped": {
+      "navigated": "插件 {name} 尝试离开它的沙箱页面，已被停止。请检查它的代码，必要时在笔记库设置中停用。",
+      "revoked": "插件 {name} 已无法使用，可能是批准或你的权限有变动。"
+    },
+    "viewer": {
+      "label": "查看器",
+      "text": "文本"
+    },
+    "views": {
+      "title": "插件视图",
+      "missing": "这个插件视图无法使用。"
+    },
+    "theme": {
+      "label": "插件主题",
+      "none": "无（使用默认）"
+    },
+    "slot": {
+      "failed": "插件 {name} 未能完成：{detail}",
+      "statusBar": "插件状态"
+    },
+    "apps": {
+      "title": "插件应用",
+      "missing": "这个插件应用当前不可用。"
+    }
+  },
   "errors": {
     "unknown": "发生未知的错误。",
     "network": "无法连接到服务器。",
@@ -1161,6 +1200,7 @@
     "setup_code_required": "需要设置代码。",
     "setup_required": "请先完成首次设置。",
     "setup_complete": "设置已经完成。",
+    "plugin_invalid": "这个插件包不正确。",
     "plugin_not_approved": "这个插件版本尚未批准。",
     "not_found": "找不到该项目。",
     "vault_not_found": "这个笔记库不存在。",

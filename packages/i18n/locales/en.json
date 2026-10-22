@@ -242,7 +242,7 @@
       "title": "Database: {name}"
     },
     "plugin": {
-      "unavailable": "The view {view} of the plugin {plugin} is shown once plugins are available."
+      "unavailable": "The widget {view} of the plugin {plugin} is not available in this vault."
     },
     "settings": {
       "blocks": "Blocks on this page",
@@ -618,6 +618,35 @@
     "errorRequest": "The connection request is incomplete or uses something Palimvo does not support.",
     "errorNoVaults": "You are not allowed to connect AI to any vault."
   },
+  "plugins": {
+    "unavailable": "The plugin {plugin} is not running in this vault.",
+    "loading": "Loading plugin…",
+    "error": "The plugin {name} reported a problem: {detail}",
+    "stopped": {
+      "navigated": "The plugin {name} tried to leave its sandbox page and was stopped. Check its code and disable it in the vault settings if needed.",
+      "revoked": "The plugin {name} is no longer available. Its approval or your access may have changed."
+    },
+    "viewer": {
+      "label": "Viewer",
+      "text": "Text"
+    },
+    "views": {
+      "title": "Plugin views",
+      "missing": "This plugin view is not available."
+    },
+    "theme": {
+      "label": "Plugin theme",
+      "none": "None (app default)"
+    },
+    "slot": {
+      "failed": "The plugin {name} could not finish: {detail}",
+      "statusBar": "Plugin status"
+    },
+    "apps": {
+      "title": "Plugin apps",
+      "missing": "This plugin app is not available."
+    }
+  },
   "errors": {
     "unknown": "Something went wrong.",
     "network": "The server could not be reached.",
@@ -636,6 +665,7 @@
     "setup_code_required": "The setup code is required.",
     "setup_required": "Finish the first-time setup first.",
     "setup_complete": "Setup has already been completed.",
+    "plugin_invalid": "The plugin package is not valid.",
     "plugin_not_approved": "This plugin version has not been approved.",
     "not_found": "That item could not be found.",
     "vault_not_found": "The vault does not exist.",

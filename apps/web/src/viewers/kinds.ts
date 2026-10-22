@@ -20,6 +20,7 @@ export function viewerKind(path: string): ViewerKind {
     case "yml":
       return "yaml";
     case "txt":
+    case "log":
       return "text";
     default:
       return "none";

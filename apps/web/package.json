@@ -25,6 +25,7 @@
     "@lezer/markdown": "^1.8.1",
     "@palimvo/core": "workspace:*",
     "@palimvo/i18n": "workspace:*",
+    "@palimvo/plugin-sdk": "workspace:*",
     "i18next": "^26.5.4",
     "i18next-icu": "^2.6.1",
     "intl-messageformat": "^12.1.4",

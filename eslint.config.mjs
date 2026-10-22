@@ -39,6 +39,50 @@ export default tseslint.config(
     },
   },
   {
+    // Example plugins run in the sandbox iframe: browser ES modules.
+    files: ["plugins/examples/**/*.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: { document: "readonly" },
+    },
+  },
+  {
+    // Runs inside the plugin sandbox iframe, as a raw string; it is a browser script.
+    files: ["apps/web/src/plugins/runtime.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        parent: "readonly",
+        crypto: "readonly",
+        console: "readonly",
+        URL: "readonly",
+        Blob: "readonly",
+        ResizeObserver: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
+    },
+  },
+  {
+    // Official plugins: ES modules that run in the plugin sandbox iframe (a browser).
+    files: ["plugins/*/main.js", "plugins/examples/*/main.js"],
+    languageOptions: {
+      sourceType: "module",
+      globals: {
+        document: "readonly",
+        console: "readonly",
+        Intl: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        Event: "readonly",
+      },
+    },
+  },
+  {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-unused-vars": [

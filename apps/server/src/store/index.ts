@@ -6,6 +6,7 @@ import { InvitesRepo } from "./invites.ts";
 import { LibraryRepo } from "./library.ts";
 import { MIGRATIONS } from "./migrations.ts";
 import { OAuthRepo } from "./oauth.ts";
+import { PluginsRepo } from "./plugins.ts";
 import { PublicAccessRepo } from "./publicAccess.ts";
 import { RolesRepo, type Role } from "./roles.ts";
 import { SessionsRepo } from "./sessions.ts";
@@ -18,6 +19,7 @@ export * from "./accounts.ts";
 export * from "./audit.ts";
 export * from "./invites.ts";
 export * from "./library.ts";
+export * from "./plugins.ts";
 export * from "./publicAccess.ts";
 export * from "./oauth.ts";
 export * from "./roles.ts";
@@ -47,6 +49,7 @@ export class Store {
   readonly invites: InvitesRepo;
   readonly publicAccess: PublicAccessRepo;
   readonly uploadLinks: UploadLinksRepo;
+  readonly plugins: PluginsRepo;
 
   private constructor(
     private readonly db: Db,
@@ -63,6 +66,7 @@ export class Store {
     this.invites = new InvitesRepo(db, now);
     this.publicAccess = new PublicAccessRepo(db, now);
     this.uploadLinks = new UploadLinksRepo(db, now);
+    this.plugins = new PluginsRepo(db, now);
   }
 
   static async open(options: StoreOptions): Promise<Store> {

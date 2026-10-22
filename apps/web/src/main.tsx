@@ -16,6 +16,7 @@ import "./styles/viewers.css";
 import "./styles/history.css";
 import "./styles/proposals.css";
 import "./styles/home.css";
+import "./styles/plugins.css";
 import "./styles/editor.css";
 import "./styles/auth.css";
 import "./pwa/standalone.css";

@@ -1,0 +1,8 @@
+{
+  "radar.name": "Radar chart",
+  "radar.empty": "A radar chart needs at least three axes and one series.",
+  "treemap.name": "Treemap",
+  "treemap.empty": "A treemap needs items with a positive value.",
+  "sparkline.name": "Sparkline",
+  "sparkline.empty": "A sparkline needs a list of numbers in values."
+}
