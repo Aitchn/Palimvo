@@ -648,6 +648,7 @@
     "rate_limited": "請求過於頻繁，請稍後再試。",
     "git_unavailable": "伺服器上找不到 Git。",
     "invalid_backup_remote": "這個備份位置無效。",
+    "effort_unsupported": "這個模型不支援該推理程度。",
     "invalid_tag": "這不是可用的檢查點名稱。",
     "internal": "伺服器發生未預期的錯誤。",
     "not_implemented": "目前尚不支援。",
