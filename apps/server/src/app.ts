@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { bearerMiddleware } from "./auth/bearer.ts";
 import { coreTools } from "./mcp/tools/index.ts";
 import { mcpCors, mcpRoutes } from "./mcp/server.ts";
+import type { PluginCatalog } from "./mcp/dispatch.ts";
 import { ToolRegistry, type AnyTool, type ToolProvider } from "./mcp/registry.ts";
 import { accessGate, principalMiddleware } from "./auth/principal.ts";
 import type { AuthService } from "./auth/service.ts";
@@ -56,6 +57,8 @@ export interface AppDeps {
   toolProviders?: ToolProvider[];
   /** Extra core MCP tools beyond the built-in ones. */
   mcpTools?: AnyTool[];
+  /** Which plugins are enabled per vault, for `list_vaults`. */
+  plugins?: PluginCatalog;
 }
 
 /** Builds the HTTP application. Domain routers are mounted here as they are added. */
@@ -161,7 +164,14 @@ export function createApp(deps: AppDeps): Hono {
   app.route(
     "/",
     mcpRoutes({
-      deps: { logger: deps.logger, store: deps.store, vaults: deps.vaults },
+      deps: {
+        logger: deps.logger,
+        store: deps.store,
+        vaults: deps.vaults,
+        history: deps.history,
+        indexes: deps.indexes,
+        ...(deps.plugins ? { plugins: deps.plugins } : {}),
+      },
       registry,
       version: deps.version,
     }),
