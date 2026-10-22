@@ -32,13 +32,13 @@ async function killAfter(ms: number, target: string): Promise<void> {
 
 it("leaves the file whole when the process is killed in the middle of writes", async () => {
   const target = path.join(dir, "note.md");
-  for (const ms of [0, 5, 20, 50, 100]) {
+  for (const ms of [0, 2, 5, 10, 20, 50, 100]) {
     await killAfter(ms, target);
     const text = await readFile(target, "utf8");
     const m = /^(\d+):x+:(\d+)$/.exec(text);
     expect(m, `a whole file after killing at +${ms}ms`).not.toBeNull();
     expect(m![1]).toBe(m![2]);
-    expect(text.length).toBe(4 * 1024 * 1024 + m![1]!.length * 2 + 2);
+    expect(text.length).toBe(256 * 1024 + m![1]!.length * 2 + 2);
   }
   // A killed write may leave a hidden temp file; it never replaces the real one.
   const leftovers = (await readdir(dir)).filter((n) => n !== "note.md");

@@ -3,7 +3,7 @@
 import { atomicWrite } from "./atomic.ts";
 
 const target = process.argv[2]!;
-const size = 4 * 1024 * 1024;
+const size = 256 * 1024;
 
 for (let n = 1; ; n++) {
   const body = `${n}:${"x".repeat(size)}:${n}`;
