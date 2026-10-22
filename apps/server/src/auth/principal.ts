@@ -124,6 +124,8 @@ export function principalMiddleware({ auth, publicUrl }: PrincipalOptions): Midd
       principal = auth.hasAccounts ? { kind: "guest" } : { kind: "open" };
     }
     principals.set(c.req.raw, principal);
+    if (resolved?.renewed && cookie)
+      setSessionCookie(c, cookie, { secure: publicUrl?.startsWith("https://") ?? false });
     await next();
   };
 }

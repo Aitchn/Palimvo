@@ -838,6 +838,11 @@ export class VaultService {
    * `direct`: the path leads to its file without passing through a symlink. `lock`: the file's
    * real vault-relative path, so writes through different spellings or symlinks share one lock.
    */
+  /** False when the path goes through a symbolic link, so it does not name the file it seems to. */
+  async isDirectPath(vaultId: string, filePath: string): Promise<boolean> {
+    return (await this.resolve(vaultId, filePath)).direct;
+  }
+
   private async resolve(
     vaultId: string,
     filePath: string,

@@ -62,16 +62,9 @@ export function searchRoutes(vaults: VaultService, indexes: VaultIndexes, auth: 
     const policy = guestPolicy(auth, c, vault);
     if (policy && !policy.any) throw new AppError("vault_not_found");
     if (policy) {
-      // Filter first, then page, so counts and pages never include what guests may not see.
-      const all = await indexes.search.search(vault, q, { limit: 100_000, offset: 0, folder });
-      const hits = all.hits.filter((h) => policy.covers(h.path));
-      return c.json({
-        ...all,
-        total: hits.length,
-        offset,
-        limit,
-        hits: hits.slice(offset, offset + limit),
-      });
+      // The index filters before counting and paging, so totals never include what guests may not see.
+      const include = (p: string) => policy.covers(p);
+      return c.json(await indexes.search.search(vault, q, { limit, offset, folder, include }));
     }
     return c.json(await indexes.search.search(vault, q, { limit, offset, folder }));
   });

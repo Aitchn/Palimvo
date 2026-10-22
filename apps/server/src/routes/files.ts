@@ -75,7 +75,8 @@ export function fileRoutes(vaults: VaultService, history: VaultHistory, auth: Au
     const vault = c.req.param("vault");
     const target = filePathOf(c);
     const policy = guestPolicy(auth, c, vault);
-    if (policy && !policy.covers(target)) throw new AppError("not_found");
+    if (policy && (!policy.covers(target) || !(await vaults.isDirectPath(vault, target))))
+      throw new AppError("not_found");
     const file = await vaults.readFile(vault, target);
     if (policy) c.header("Cache-Control", "no-store");
     const tag = `"${file.version}"`;

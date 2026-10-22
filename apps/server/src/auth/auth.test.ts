@@ -81,7 +81,7 @@ describe("PublicPolicy", () => {
     const p = new PublicPolicy(["docs", "home.md"]);
     expect(p.covers("home.md")).toBe(true);
     expect(p.covers("docs/deep/b.md")).toBe(true);
-    expect(p.covers("Docs/A.md")).toBe(true); // case-insensitive like the vault
+    expect(p.covers("Docs/A.md")).toBe(false); // exact, as on a case-sensitive disk
     expect(p.covers("private/secret.md")).toBe(false);
     expect(p.covers("docsx/a.md")).toBe(false);
   });

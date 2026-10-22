@@ -1,3 +1,5 @@
+import { symlink } from "node:fs/promises";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestServer, type TestServer } from "./harness.ts";
 
@@ -161,6 +163,21 @@ describe("login and sessions", () => {
       await c.login("root");
       vi.setSystemTime(Date.now() + 15 * 24 * 60 * 60 * 1000);
       expect(await body(await c.get("/api/auth/me"))).toEqual({ state: "guest" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reissues the cookie when the session expiry slides", async () => {
+    await makeAdmin();
+    const c = new Client();
+    await c.login("root");
+    expect((await c.get("/api/auth/me")).headers.getSetCookie()).toHaveLength(0);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(Date.now() + 8 * 24 * 60 * 60 * 1000);
+      const res = await c.get("/api/auth/me");
+      expect(res.headers.getSetCookie().join(";")).toMatch(/palimvo_session=.*Max-Age=1209600/i);
     } finally {
       vi.useRealTimers();
     }
@@ -527,6 +544,44 @@ describe("guests", () => {
     expect(tree).not.toContain(".palimvo");
     // The other vault stays invisible.
     expect((await guest.get("/api/vaults/secret/files")).status).toBe(404);
+  });
+
+  it("does not follow symbolic links out of the public part", async () => {
+    const { admin } = await setup();
+    await admin.put("/api/vaults/site/public", { paths: ["docs"] });
+    const vaultDir = path.join(server.dataDir, "vaults", "site");
+    try {
+      await symlink(path.join(vaultDir, "private"), path.join(vaultDir, "docs", "link"));
+    } catch {
+      return; // no permission to create links on this machine
+    }
+    const guest = new Client();
+    expect((await guest.get("/api/vaults/site/files/docs/guide.md")).status).toBe(200);
+    expect((await guest.get("/api/vaults/site/files/docs/link/plan.md")).status).toBe(404);
+    expect((await admin.get("/api/vaults/site/files/docs/link/plan.md")).status).toBe(200);
+  });
+
+  it("does not mix up names that differ only in case", async () => {
+    const { admin, write } = await setup();
+    await write("site", "Public.md", "visible");
+    await write("site", "public.md", "hidden");
+    await admin.put("/api/vaults/site/public", { paths: ["Public.md"] });
+    const guest = new Client();
+    expect((await guest.get("/api/vaults/site/files/Public.md")).status).toBe(200);
+    expect((await guest.get("/api/vaults/site/files/public.md")).status).toBe(404);
+  });
+
+  it("pages guest search results after filtering", async () => {
+    const { admin, write } = await setup();
+    for (let i = 0; i < 6; i++) await write("site", `private/n${i}.md`, "needle");
+    for (let i = 0; i < 3; i++) await write("site", `docs/n${i}.md`, "needle");
+    await admin.put("/api/vaults/site/public", { paths: ["docs"] });
+    const guest = new Client();
+    const page = await body<{ total: number; hits: unknown[] }>(
+      await guest.get("/api/vaults/site/search?q=needle&limit=2&offset=2"),
+    );
+    expect(page.total).toBe(3);
+    expect(page.hits).toHaveLength(1);
   });
 
   it("follows later changes to the public set", async () => {

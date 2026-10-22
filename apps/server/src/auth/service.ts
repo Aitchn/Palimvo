@@ -66,6 +66,8 @@ export interface ResolvedSession {
   account: Account;
   session: Session;
   csrf: string;
+  /** The expiry was just pushed forward, so the browser's cookie needs a fresh lifetime too. */
+  renewed: boolean;
 }
 
 export interface InviteInput {
@@ -151,9 +153,9 @@ export class AuthService {
     if (!session) return undefined;
     const account = this.store.accounts.get(session.accountId);
     if (!account || account.disabled) return undefined;
-    if (session.expiresAt - this.now() < SESSION_RENEW_BELOW_MS)
-      this.store.sessions.touch(session.id, this.now() + SESSION_TTL_MS);
-    return { account, session, csrf: this.csrfToken(cookie) };
+    const renewed = session.expiresAt - this.now() < SESSION_RENEW_BELOW_MS;
+    if (renewed) this.store.sessions.touch(session.id, this.now() + SESSION_TTL_MS);
+    return { account, session, csrf: this.csrfToken(cookie), renewed };
   }
 
   /** Bound to the session cookie, which scripts on other sites cannot read. */
